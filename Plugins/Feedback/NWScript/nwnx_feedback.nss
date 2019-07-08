@@ -52,6 +52,47 @@ int NWNX_Feedback_GetCombatLogMessageHidden(int nMessage, object oPC = OBJECT_IN
 // to TRUE but the personal state is set to FALSE, the message will be shown to oPC
 void NWNX_Feedback_SetCombatLogMessageHidden(int nMessage, int nState, object oPC = OBJECT_INVALID);
 
+// Gets if journal updated messages are hidden.
+// Notes:
+// If oPC == OBJECT_INVALID it will return the global state:
+//    TRUE      Journal updated messages are globally hidden
+//    FALSE     Journal updated messages are not globally hidden
+// If oPC is a valid player it will return the personal state:
+//    TRUE      Journal updated messages are hidden for oPC
+//    FALSE     Journal updated messages are not hidden for oPC
+//    -1        Personal state is not set
+int NWNX_Feedback_GetJournalUpdatedMessageHidden(object oPC = OBJECT_INVALID);
+
+// Sets if journal updated messages are hidden.
+// Notes:
+// If oPC == OBJECT_INVALID it will set the global state:
+//    TRUE      Journal updated messages are globally hidden
+//    FALSE     Journal updated messages are not globally hidden
+// If oPC is a valid player it will set the personal state:
+//    TRUE      Journal updated messages are hidden for oPC
+//    FALSE     Journal updated messages are not hidden for oPC
+//    -1        Remove the personal state
+//
+// Personal state overrides the global state which means if a global state is set
+// to TRUE but the personal state is set to FALSE, the message will be shown to oPC
+void NWNX_Feedback_SetJournalUpdatedMessageHidden(int nState, object oPC = OBJECT_INVALID);
+
+// Set whether to use a blacklist or whitelist mode for feedback messages
+// Default: Blacklist
+//
+// TRUE = Whitelist, all messages hidden by default
+// FALSE = Blacklist, all messages shown by default
+void NWNX_Feedback_SetFeedbackMessageMode(int bWhitelist);
+
+// Set whether to use a blacklist or whitelist mode for combatlog messages
+// Default: Blacklist
+//
+// TRUE = Whitelist, all messages hidden by default
+// FALSE = Blacklist, all messages shown by default
+//
+// NOTE: If using Whitelist, be sure to whitelist NWNX_FEEDBACK_COMBATLOG_FEEDBACK for feedback messages to work
+void NWNX_Feedback_SetCombatLogMessageMode(int bWhitelist);
+
 // ***
 // For a list of the various combatlog / feedback messages see below.
 // ***
@@ -106,6 +147,51 @@ void NWNX_Feedback_SetCombatLogMessageHidden(int nMessage, int nState, object oP
     NWNX_PushArgumentInt(NWNX_Feedback, sFunc, nMessage);
     NWNX_PushArgumentInt(NWNX_Feedback, sFunc, nMessageType);
     NWNX_PushArgumentObject(NWNX_Feedback, sFunc, oPC);
+    NWNX_CallFunction(NWNX_Feedback, sFunc);
+}
+
+int NWNX_Feedback_GetJournalUpdatedMessageHidden(object oPC = OBJECT_INVALID)
+{
+    string sFunc = "GetMessageHidden";
+    int nMessageType = 2;
+
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, 0);
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, nMessageType);
+    NWNX_PushArgumentObject(NWNX_Feedback, sFunc, oPC);
+    NWNX_CallFunction(NWNX_Feedback, sFunc);
+
+    return NWNX_GetReturnValueInt(NWNX_Feedback, sFunc);
+}
+
+void NWNX_Feedback_SetJournalUpdatedMessageHidden(int nState, object oPC = OBJECT_INVALID)
+{
+    string sFunc = "SetMessageHidden";
+    int nMessageType = 2;
+
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, nState);
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, 0);
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, nMessageType);
+    NWNX_PushArgumentObject(NWNX_Feedback, sFunc, oPC);
+    NWNX_CallFunction(NWNX_Feedback, sFunc);
+}
+
+void NWNX_Feedback_SetFeedbackMessageMode(int bWhitelist)
+{
+    string sFunc = "SetFeedbackMode";
+    int nMessageType = 0;
+
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, bWhitelist);
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, nMessageType);
+    NWNX_CallFunction(NWNX_Feedback, sFunc);
+}
+
+void NWNX_Feedback_SetCombatLogMessageMode(int bWhitelist)
+{
+    string sFunc = "SetFeedbackMode";
+    int nMessageType = 1;
+
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, bWhitelist);
+    NWNX_PushArgumentInt(NWNX_Feedback, sFunc, nMessageType);
     NWNX_CallFunction(NWNX_Feedback, sFunc);
 }
 
@@ -195,7 +281,8 @@ const int NWNX_FEEDBACK_TRAP_TRIGGERED                     = 82;
 const int NWNX_FEEDBACK_DAMAGE_HEALED                      = 151;
 const int NWNX_FEEDBACK_EXPERIENCE_GAINNED                 = 182;
 const int NWNX_FEEDBACK_EXPERIENCE_LOST                    = 183;
-const int NWNX_FEEDBACK_JOURNALUPDATED                     = 184;
+const int NWNX_FEEDBACK_JOURNALUPDATED                     = 184; // Doesn't actually work, use:
+                                                                  // NWNX_Feedback_{Get/Set}JournalUpdatedMessageHidden()
 const int NWNX_FEEDBACK_BARTER_CANCELLED                   = 185;
 
 // Mode activation/deactivation Messages

@@ -32,6 +32,7 @@
     Event data:
         Variable Name           Type        Notes
         EXAMINEE_OBJECT_ID      object      Convert to object with NWNX_Object_StringToObject()
+        TRAP_EXAMINE_SUCCESS    int         For trap examine only, whether the examine succeeded
 ////////////////////////////////////////////////////////////////////////////////
     NWNX_ON_USE_ITEM_BEFORE
     NWNX_ON_USE_ITEM_AFTER
@@ -74,6 +75,83 @@
     Event data:
         Variable Name           Type        Notes
         ITEM                    object      Convert to object with NWNX_Object_StringToObject()
+
+    NWNX_ON_ITEM_AMMO_RELOAD_BEFORE
+    NWNX_ON_ITEM_AMMO_RELOAD_AFTER
+
+    Note: Search for the next available ammunition to autoequip
+
+    Usage:
+        OBJECT_SELF = The creature whose inventory we're searching for the item type
+
+    Event data:
+        Variable Name           Type        Notes
+        BASE_ITEM_ID            int
+        BASE_ITEM_NTH           int         Find the Nth instance of this item
+        ACTION_RESULT           int         The object that was determined in BEFORE (only in after)
+
+    NWNX_ON_ITEM_SCROLL_LEARN_BEFORE
+    NWNX_ON_ITEM_SCROLL_LEARN_AFTER
+
+    Usage:
+        OBJECT_SELF = The creature learning the scroll
+
+    Event data:
+        Variable Name           Type        Notes
+        SCROLL                  object      Convert to object with NWNX_Object_StringToObject()
+
+    NWNX_ON_ITEM_EQUIP_BEFORE
+    NWNX_ON_ITEM_EQUIP_AFTER
+
+    Usage:
+        OBJECT_SELF = The creature equipping the item
+
+    Event data:
+        Variable Name           Type        Notes
+        ITEM                    object      Convert to object with NWNX_Object_StringToObject()
+        SLOT                    int
+
+    NWNX_ON_ITEM_UNEQUIP_BEFORE
+    NWNX_ON_ITEM_UNEQUIP_AFTER
+
+    Usage:
+        OBJECT_SELF = The creature unequipping the item
+
+    Event data:
+        Variable Name           Type        Notes
+        ITEM                    object      Convert to object with NWNX_Object_StringToObject()
+
+    NWNX_ON_ITEM_DESTROY_OBJECT_BEFORE
+    NWNX_ON_ITEM_DESTROY_OBJECT_AFTER
+    NWNX_ON_ITEM_DECREMENT_STACKSIZE_BEFORE
+    NWNX_ON_ITEM_DECREMENT_STACKSIZE_AFTER
+
+    Usage:
+        OBJECT_SELF = The item triggering the event
+
+    Note: Use of NWNX_ON_ITEM_(DESTROY_OBJECT|DECREMENT_STACKSIZE)_* conflicts with object event handler profiling
+
+    NWNX_ON_ITEM_USE_LORE_BEFORE
+    NWNX_ON_ITEM_USE_LORE_AFTER
+
+    Usage:
+        OBJECT_SELF = The player attempting to identify an item with their lore skill
+
+    Event data:
+        Variable Name           Type        Notes
+        ITEM                    object      Convert to object with NWNX_Object_StringToObject()
+
+    NWNX_ON_ITEM_PAY_TO_IDENTIFY_BEFORE
+    NWNX_ON_ITEM_PAY_TO_IDENTIFY_AFTER
+
+    Usage:
+        OBJECT_SELF = The player attempting to pay to identify an item
+
+    Event data:
+        Variable Name           Type        Notes
+        ITEM                    object      Convert to object with NWNX_Object_StringToObject()
+        STORE                   object      Convert to object with NWNX_Object_StringToObject()
+
 ////////////////////////////////////////////////////////////////////////////////
     NWNX_ON_USE_FEAT_BEFORE
     NWNX_ON_USE_FEAT_AFTER
@@ -106,7 +184,7 @@
     Event data:
         Variable Name           Type        Notes
         AMOUNT                  int
-        TARGET                  object      Convert to object with NWNX_Object_StringToObject()
+        OBJECT                  object      Convert to object with NWNX_Object_StringToObject()
         ALIGNMENT_TYPE          int         Only valid for NWNX_ON_DM_GIVE_ALIGNMENT_*
 
     NWNX_ON_DM_SPAWN_OBJECT_BEFORE
@@ -282,6 +360,7 @@
         PLAYER_NAME             string      Player name of the connecting client
         CDKEY                   string      Public cdkey of the connecting client
         IS_DM                   int         Whether the client is connect as DM (1/0)
+        IP_ADDRESS              string      The IP address of the connecting client
 ////////////////////////////////////////////////////////////////////////////////
     NWNX_ON_START_COMBAT_ROUND_BEFORE
     NWNX_ON_START_COMBAT_ROUND_AFTER
@@ -312,6 +391,35 @@
         COUNTERING_SPELL        int         Returns TRUE if cast as counter else FALSE
         PROJECTILE_PATH_TYPE    int
         IS_INSTANT_SPELL        int         Returns TRUE if spell was instant else FALSE
+
+    NWNX_SET_MEMORIZED_SPELL_SLOT_BEFORE
+    NWNX_SET_MEMORIZED_SPELL_SLOT_AFTER
+
+    Usage:
+        OBJECT_SELF = The creature who's memorizing the spell
+
+    Event data:
+        Variable Name           Type        Notes
+        SPELL_MULTICLASS        int         Index of the spell casting class (0-2)
+        SPELL_LEVEL             int
+        SPELL_SLOT              int
+        SPELL_ID                int
+        SPELL_DOMAIN            int
+        SPELL_METAMAGIC         int
+        SPELL_FROMCLIENT        int
+        ACTION_RESULT           int
+
+    NWNX_CLEAR_MEMORIZED_SPELL_SLOT_BEFORE
+    NWNX_CLEAR_MEMORIZED_SPELL_SLOT_AFTER
+
+    Usage:
+        OBJECT_SELF = The creature whose spellbook is being changed
+
+    Event data:
+        Variable Name           Type        Notes
+        SPELL_MULTICLASS        int         Index of the spell casting class (0-2)
+        SPELL_LEVEL             int
+        SPELL_SLOT              int
 ////////////////////////////////////////////////////////////////////////////////
     NWNX_ON_USE_HEALER_KIT_BEFORE
     NWNX_ON_USE_HEALER_KIT_AFTER
@@ -462,6 +570,174 @@
         in x2_s2_gwildshp with the minotaur form with the following line:
             IPWildShapeCopyItemProperties(oWeaponOld,oWeaponNew, TRUE);
         If you want to skip this, you need to make sure oWeaponOld != oWeaponNew
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_EFFECT_APPLIED_BEFORE
+    NWNX_ON_EFFECT_APPLIED_AFTER
+    NWNX_ON_EFFECT_REMOVED_BEFORE
+    NWNX_ON_EFFECT_REMOVED_AFTER
+
+    Usage:
+        OBJECT_SELF = The target of the effect
+
+    Event data:
+        Variable Name           Type        Notes
+        UNIQUE_ID               int
+        CREATOR                 object      Convert to object with NWNX_Object_StringToObject()
+        TYPE                    int         The effect type, does not match NWScript constants
+                                            See: https://github.com/nwnxee/unified/blob/master/NWNXLib/API/Constants/Effect.hpp#L8
+        SUB_TYPE                int         SUBTYPE_*
+        DURATION_TYPE           int         DURATION_TYPE_*
+        DURATION                float
+        SPELL_ID                int
+        CASTER_LEVEL            int
+        CUSTOM_TAG              string
+        INT_PARAM_*             int         * = 1-8
+        FLOAT_PARAM_*           float       * = 1-4
+        STRING_PARAM_*          string      * = 1-6
+        OBJECT_PARAM_*          object      * = 1-4, Convert to object with NWNX_Object_StringToObject()
+
+    Note:
+        Only fires for Temporary or Permanent effects, does not include VisualEffects or ItemProperty effects.
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_QUICKCHAT_BEFORE
+    NWNX_ON_QUICKCHAT_AFTER
+
+    Usage:
+        OBJECT_SELF = The player using the quick chat command
+
+    Event data:
+        Variable Name           Type        Notes
+        QUICKCHAT_COMMAND       int
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_INVENTORY_OPEN_BEFORE
+    NWNX_ON_INVENTORY_OPEN_AFTER
+
+    Usage:
+        OBJECT_SELF = The player opening the inventory
+
+    Event data:
+        Variable Name           Type        Notes
+        TARGET_INVENTORY        object      Pretty sure this is always the player
+
+    NWNX_ON_INVENTORY_SELECT_PANEL_BEFORE
+    NWNX_ON_INVENTORY_SELECT_PANEL_AFTER
+
+    Usage:
+        OBJECT_SELF = The player changing inventory panels
+
+    Event data:
+        Variable Name           Type        Notes
+        CURRENT_PANEL           int         The current panel, index starts at 0
+        SELECTED_PANEL          int         The selected panel, index starts at 0
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_BARTER_START_BEFORE
+    NWNX_ON_BARTER_START_AFTER
+
+    Usage:
+        OBJECT_SELF = The player who initiated the barter
+
+    Event data:
+        Variable Name           Type        Notes
+        BARTER_TARGET           object      The other player involved in the barter
+
+    NWNX_ON_BARTER_END_BEFORE
+    NWNX_ON_BARTER_END_AFTER
+
+    Usage:
+        OBJECT_SELF = The player who initiated the barter
+
+    Event data:
+        Variable Name                 Type        Notes
+        BARTER_TARGET                 object      The other player involved in the barter
+        BARTER_COMPLETE               int         TRUE/FALSE - whether the barter completed successfully
+        BARTER_INITIATOR_ITEM_COUNT   int         How many items the initiator traded away, only in _BEFORE events
+        BARTER_TARGET_ITEM_COUNT      int         How many items the target traded away, only in _BEFORE events
+        BARTER_INITIATOR_ITEM_*       object      Convert to object with NWNX_Object_StringToObject(), only in _BEFORE events
+        BARTER_TARGET_ITEM_*          object      Convert to object with NWNX_Object_StringToObject(), only in _BEFORE events
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_TRAP_DISARM_BEFORE
+    NWNX_ON_TRAP_DISARM_AFTER
+    NWNX_ON_TRAP_ENTER_BEFORE
+    NWNX_ON_TRAP_ENTER_AFTER
+    NWNX_ON_TRAP_EXAMINE_BEFORE
+    NWNX_ON_TRAP_EXAMINE_AFTER
+    NWNX_ON_TRAP_FLAG_BEFORE
+    NWNX_ON_TRAP_FLAG_AFTER
+    NWNX_ON_TRAP_RECOVER_BEFORE
+    NWNX_ON_TRAP_RECOVER_AFTER
+    NWNX_ON_TRAP_SET_BEFORE
+    NWNX_ON_TRAP_SET_AFTER
+    Usage:
+        OBJECT_SELF = The creature performing the trap action
+
+    Event data:
+        Variable Name     Type        Notes
+        TRAP_OBJECT_ID    object      Convert to object with NWNX_Object_StringToObject()
+        TRAP_FORCE_SET    int         TRUE/FALSE, only in ENTER events
+        ACTION_RESULT     int         TRUE/FALSE, only in _AFTER events (not ENTER)
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_TIMING_BAR_START_BEFORE
+    NWNX_ON_TIMING_BAR_START_AFTER
+    NWNX_ON_TIMING_BAR_STOP_BEFORE
+    NWNX_ON_TIMING_BAR_STOP_AFTER
+    NWNX_ON_TIMING_BAR_CANCEL_BEFORE
+    NWNX_ON_TIMING_BAR_CANCEL_AFTER
+
+    Usage:
+        OBJECT_SELF = The player the timing bar is for
+
+    Event data:
+        Variable Name     Type        Notes
+        EVENT_ID          int         The type of timing bar, see constants below, only in _START_ events
+        DURATION          int         Length of time (in milliseconds) the bar is set to last, only in _START_ events
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_WEBHOOK_SUCCESS
+    NWNX_ON_WEBHOOK_FAILURE
+
+    !!! NOTICE: NEEDS THE NWNX_WebHook PLUGIN TO WORK !!!
+
+    Usage:
+        OBJECT_SELF = The module object
+
+    Event data:
+        Variable Name           Type        Notes
+        STATUS                  int         The return code after posting to the server
+        MESSAGE                 string      The full constructed message sent
+        HOST                    string
+        PATH                    string
+        RATELIMIT_LIMIT         int          Discord: The number of requests that can be made in a limited period
+        RATELIMIT_REMAINING     int          Discord: The number of remaining requests that can be made before rate limited
+        RATELIMIT_RESET         int          Discord: Timestamp when the rate limit resets
+        RETRY_AFTER             float        Milliseconds until another webhook is allowed when rate limited
+        FAIL_INFO               string       The reason the hook failed aside from rate limits
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_CHECK_STICKY_PLAYER_NAME_RESERVED_BEFORE
+    NWNX_ON_CHECK_STICKY_PLAYER_NAME_RESERVED_AFTER
+
+    Skipping the _BEFORE event will cause no player names to be accepted unless you SetEventResult("1")
+
+    Usage:
+        OBJECT_SELF = The module
+
+    Event data:
+        Variable Name           Type        Notes
+        PLAYER_NAME             string      Player name of the connecting client
+        CDKEY                   string      Public cdkey of the connecting client
+        LEGACY_CDKEY            string      Public cdkey from earlier versions of NWN
+        IS_DM                   int         Whether the client is connecting as DM (1/0)
+////////////////////////////////////////////////////////////////////////////////
+    NWNX_ON_LEVEL_UP_BEFORE
+    NWNX_ON_LEVEL_UP_AFTER
+    NWNX_ON_LEVEL_UP_AUTOMATIC_BEFORE
+    NWNX_ON_LEVEL_UP_AUTOMATIC_AFTER
+    NWNX_ON_LEVEL_DOWN_BEFORE
+    NWNX_ON_LEVEL_DOWN_AFTER
+
+    Usage:
+        OBJECT_SELF = The creature levelling up or down, automatic is for henchmen levelling
+
+    Event data:
+        Variable Name           Type        Notes
 *///////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -472,6 +748,18 @@ const int NWNX_EVENTS_OBJECT_TYPE_PLACEABLE         = 9;
 const int NWNX_EVENTS_OBJECT_TYPE_WAYPOINT          = 12;
 const int NWNX_EVENTS_OBJECT_TYPE_ENCOUNTER         = 13;
 const int NWNX_EVENTS_OBJECT_TYPE_PORTAL            = 15;
+*/
+
+/*
+const int NWNX_EVENTS_TIMING_BAR_TRAP_FLAG     = 1;
+const int NWNX_EVENTS_TIMING_BAR_TRAP_RECOVER  = 2;
+const int NWNX_EVENTS_TIMING_BAR_TRAP_DISARM   = 3;
+const int NWNX_EVENTS_TIMING_BAR_TRAP_EXAMINE  = 4;
+const int NWNX_EVENTS_TIMING_BAR_TRAP_SET      = 5;
+const int NWNX_EVENTS_TIMING_BAR_REST          = 6;
+const int NWNX_EVENTS_TIMING_BAR_UNLOCK        = 7;
+const int NWNX_EVENTS_TIMING_BAR_LOCK          = 8;
+const int NWNX_EVENTS_TIMING_BAR_CUSTOM        = 10;
 */
 
 // Scripts can subscribe to events.
@@ -513,6 +801,10 @@ string NWNX_Events_GetEventData(string tag);
 // - DMAction events
 // - Client connect event
 // - Spell events
+// - QuickChat events
+// - Barter event (START only)
+// - Trap events
+// - Sticky Player Name event
 void NWNX_Events_SkipEvent();
 
 // Set the return value of the event.
@@ -522,6 +814,9 @@ void NWNX_Events_SkipEvent();
 // - Healer's Kit event
 // - Listen/Spot Detection events -> "1" or "0"
 // - OnClientConnectBefore -> Reason for disconnect if skipped
+// - Ammo Reload event -> Forced ammunition returned
+// - Trap events -> "1" or "0"
+// - Sticky Player Name event -> "1" or "0"
 void NWNX_Events_SetEventResult(string data);
 
 // Returns the current event name

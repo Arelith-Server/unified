@@ -14,6 +14,8 @@ class ParryAllAttacks;
 class SneakAttackCritImmunity;
 class PreserveDepletedItems;
 class HideDMsOnCharList;
+class DisableMonkAbilitiesWhenPolymorphed;
+class StringToIntBaseToAuto;
 
 class Tweaks : public NWNXLib::Plugin
 {
@@ -31,6 +33,8 @@ private:
     std::unique_ptr<SneakAttackCritImmunity> m_SneakAttackCritImmunity;
     std::unique_ptr<PreserveDepletedItems> m_PreserveDepletedItems;
     std::unique_ptr<HideDMsOnCharList> m_HideDMsOnCharList;
+    std::unique_ptr<DisableMonkAbilitiesWhenPolymorphed> m_DisableMonkAbilitiesWhenPolymorphed;
+    std::unique_ptr<StringToIntBaseToAuto> m_StringToIntBaseToAuto;
 };
 
 }

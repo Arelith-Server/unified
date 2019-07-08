@@ -63,7 +63,7 @@ Effect::~Effect()
 ArgumentStack Effect::PackEffect(ArgumentStack&& args)
 {
     ArgumentStack stack;
-    API::CGameEffect *eff = new API::CGameEffect();
+    API::CGameEffect *eff = new API::CGameEffect(true);
 
     eff->m_sCustomTag = Services::Events::ExtractArgument<std::string>(args).c_str();
 
@@ -115,6 +115,9 @@ ArgumentStack Effect::PackEffect(ArgumentStack&& args)
     eff->m_nSubType           = Services::Events::ExtractArgument<int32_t>(args);
     eff->m_nType              = Services::Events::ExtractArgument<int32_t>(args);
 
+    // TODO-64bit: (effectId) Remove this, also on the nwscript side
+    auto effectID = Services::Events::ExtractArgument<int32_t>(args);
+
     if (bLeftLinkValid || bRightLinkValid)
         eff->UpdateLinked();
 
@@ -125,6 +128,9 @@ ArgumentStack Effect::UnpackEffect(ArgumentStack&& args)
 {
     ArgumentStack stack;
     auto eff = Services::Events::ExtractArgument<API::CGameEffect*>(args);
+
+    // TODO-64bit: (effectId) Remove this, also on the nwscript side
+    Services::Events::InsertArgument(stack, 0);
 
     Services::Events::InsertArgument(stack, (int32_t)eff->m_nType);
     Services::Events::InsertArgument(stack, (int32_t)eff->m_nSubType);

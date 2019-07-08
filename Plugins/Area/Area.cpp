@@ -3,6 +3,10 @@
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
 #include "API/CNWSArea.hpp"
+#include "API/CNWSModule.hpp"
+#include "API/CNWSTransition.hpp"
+#include "API/CNWSTrigger.hpp"
+#include "API/CNWSTile.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "Services/Events/Events.hpp"
@@ -63,7 +67,11 @@ Area::Area(const Plugin::CreateParams& params)
     REGISTER(SetShadowOpacity);
     REGISTER(GetDayNightCycle);
     REGISTER(SetDayNightCycle);
+    REGISTER(GetSunMoonColors);
     REGISTER(SetSunMoonColors);
+    REGISTER(CreateTransition);
+    REGISTER(GetTileAnimationLoop);
+    REGISTER(SetTileAnimationLoop);
 
 #undef REGISTER
 }
@@ -90,6 +98,16 @@ CNWSArea *Area::area(ArgumentStack& args)
     }
 
     return pArea;
+}
+
+CNWSTile *Area::GetTile(CNWSArea *pArea, float x, float y)
+{
+    int nTile = (int)(y / 10) * pArea->m_nWidth + (int)(x / 10);
+
+    if (nTile >= 0 && nTile < (pArea->m_nWidth * pArea->m_nHeight))
+        return &pArea->m_pTile[nTile];
+    else
+        return nullptr;
 }
 
 ArgumentStack Area::GetNumberOfPlayersInArea(ArgumentStack&& args)
@@ -470,6 +488,45 @@ ArgumentStack Area::SetDayNightCycle(ArgumentStack&& args)
     return stack;
 }
 
+ArgumentStack Area::GetSunMoonColors(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    int32_t retVal = -1;
+
+    if (auto *pArea = area(args))
+    {
+        auto type = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(type >= 0);
+          ASSERT_OR_THROW(type <= 3);
+
+        switch (type)
+        {
+            case 0:
+                retVal = pArea->m_nMoonAmbientColor;
+                break;
+
+            case 1:
+                retVal = pArea->m_nMoonDiffuseColor;
+                break;
+
+            case 2:
+                retVal = pArea->m_nSunAmbientColor;
+                break;
+
+            case 3:
+                retVal = pArea->m_nSunDiffuseColor;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    Services::Events::InsertArgument(stack, retVal);
+
+    return stack;
+}
+
 ArgumentStack Area::SetSunMoonColors(ArgumentStack&& args)
 {
     ArgumentStack stack;
@@ -505,6 +562,160 @@ ArgumentStack Area::SetSunMoonColors(ArgumentStack&& args)
 
             default:
                 break;
+        }
+    }
+
+    return stack;
+}
+
+ArgumentStack Area::CreateTransition(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+
+    if (auto *pArea = area(args))
+    {
+        auto targetOid = Services::Events::ExtractArgument<Types::ObjectID>(args);
+        auto *pTargetObject = Utils::AsNWSObject(Globals::AppManager()->m_pServerExoApp->GetGameObject(targetOid));
+        if (pTargetObject == nullptr ||
+            (pTargetObject->m_nObjectType != Constants::ObjectType::Door &&
+             pTargetObject->m_nObjectType != Constants::ObjectType::Waypoint))
+        {
+            LOG_ERROR("Transition destination object is not valid. Valid targets are doors or waypoints.");
+            Services::Events::InsertArgument(stack, Constants::OBJECT_INVALID);
+            return stack;
+        }
+
+        Vector vTransitionPosition;
+        vTransitionPosition.x = Services::Events::ExtractArgument<float>(args);
+        ASSERT_OR_THROW(vTransitionPosition.x >= 0.0f);
+        ASSERT_OR_THROW(vTransitionPosition.x < pArea->m_nWidth * 10.0f);
+        vTransitionPosition.y = Services::Events::ExtractArgument<float>(args);
+        ASSERT_OR_THROW(vTransitionPosition.y >= 0.0f);
+        ASSERT_OR_THROW(vTransitionPosition.x < pArea->m_nHeight * 10.0f);
+        vTransitionPosition.z = Services::Events::ExtractArgument<float>(args);
+
+        const auto size = Services::Events::ExtractArgument<float>(args);
+        ASSERT_OR_THROW(size > 0.0f);
+        ASSERT_OR_THROW(vTransitionPosition.x + size < pArea->m_nWidth * 10.0f);
+        ASSERT_OR_THROW(vTransitionPosition.y + size < pArea->m_nHeight * 10.0f);
+
+        // Create our trigger
+        auto *trigger = new CNWSTrigger(API::Constants::OBJECT_INVALID);
+        trigger->LoadFromTemplate(CResRef("newtransition")); // Stock nwn Area Transition resRef
+        trigger->SetPosition(vTransitionPosition, 0);
+        trigger->CreateNewGeometry(size, vTransitionPosition, pArea);
+
+        // Set its tag if supplied
+        const auto tag = Services::Events::ExtractArgument<std::string>(args);
+        if (!tag.empty())
+        {
+            trigger->m_sTag = CExoString(tag.c_str());
+            Utils::GetModule()->AddObjectToLookupTable(trigger->m_sTag, trigger->m_idSelf);
+        }
+
+        // Create and assign our transition to the trigger
+        auto *transition = new CNWSTransition();
+        transition->SetTarget(pTargetObject);
+        trigger->m_pTransition = *transition;
+
+        // And add to area
+        trigger->AddToArea(pArea, vTransitionPosition.x, vTransitionPosition.y, vTransitionPosition.z, false);
+        Services::Events::InsertArgument(stack, trigger->m_idSelf);
+    }
+    else
+        Services::Events::InsertArgument(stack, Constants::OBJECT_INVALID);
+
+    return stack;
+}
+
+ArgumentStack Area::GetTileAnimationLoop(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    int32_t retVal = -1;
+
+    if (auto *pArea = area(args))
+    {
+        const auto tileX = Services::Events::ExtractArgument<float>(args);
+          ASSERT_OR_THROW(tileX >= 0.0f);
+        const auto tileY = Services::Events::ExtractArgument<float>(args);
+          ASSERT_OR_THROW(tileY >= 0.0f);
+        const auto tileAnimLoop = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(tileAnimLoop >= 1);
+          ASSERT_OR_THROW(tileAnimLoop <= 3);
+
+        CNWSTile *pTile = GetTile(pArea, tileX, tileY);
+
+        if (pTile)
+        {
+            switch(tileAnimLoop)
+            {
+                case 1:
+                    retVal = pTile->m_nAnimLoop1;
+                    break;
+
+                case 2:
+                    retVal = pTile->m_nAnimLoop2;
+                    break;
+
+                case 3:
+                    retVal = pTile->m_nAnimLoop3;
+                    break;
+
+                default:
+                    break;
+            }
+        }
+        else
+        {
+            LOG_ERROR("NWNX_Area_GetTileAnimationLoop: invalid tile specified");
+        }
+    }
+
+    Services::Events::InsertArgument(stack, retVal);
+
+    return stack;
+}
+
+ArgumentStack Area::SetTileAnimationLoop(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+
+    if (auto *pArea = area(args))
+    {
+        const auto tileX = Services::Events::ExtractArgument<float>(args);
+          ASSERT_OR_THROW(tileX >= 0.0f);
+        const auto tileY = Services::Events::ExtractArgument<float>(args);
+          ASSERT_OR_THROW(tileY >= 0.0f);
+        const auto tileAnimLoop = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(tileAnimLoop >= 1);
+          ASSERT_OR_THROW(tileAnimLoop <= 3);
+        const auto tileEnabled = !!Services::Events::ExtractArgument<int32_t>(args);
+
+        CNWSTile *pTile = GetTile(pArea, tileX, tileY);
+
+        if (pTile)
+        {
+            switch(tileAnimLoop)
+            {
+                case 1:
+                    pTile->m_nAnimLoop1 = tileEnabled;
+                    break;
+
+                case 2:
+                    pTile->m_nAnimLoop2 = tileEnabled;
+                    break;
+
+                case 3:
+                    pTile->m_nAnimLoop3 = tileEnabled;
+                    break;
+
+                default:
+                    break;
+            }
+        }
+        else
+        {
+            LOG_ERROR("NWNX_Area_SetTileAnimationLoop: invalid tile specified");
         }
     }
 

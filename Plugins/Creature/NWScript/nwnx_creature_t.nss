@@ -1,6 +1,6 @@
 #include "nwnx_creature"
 
-
+const int FEAT_BARBARIAN_RAGE_2 = 326;
 
 void report(string func, int bSuccess)
 {
@@ -51,6 +51,11 @@ void main()
 
     report("GetFeatByLevel", NWNX_Creature_GetFeatByLevel(oCreature, 1, nFeatCountLvl1) == FEAT_PLAYER_TOOL_01);
 
+    NWNX_Creature_AddFeat(oCreature, FEAT_BARBARIAN_RAGE);
+    report("GetHighestLevelOfFeat", NWNX_Creature_GetHighestLevelOfFeat(oCreature, FEAT_BARBARIAN_RAGE) == FEAT_BARBARIAN_RAGE);
+    NWNX_Creature_AddFeat(oCreature, FEAT_BARBARIAN_RAGE_2);
+    report("GetHighestLevelOfFeat", NWNX_Creature_GetHighestLevelOfFeat(oCreature, FEAT_BARBARIAN_RAGE) == FEAT_BARBARIAN_RAGE_2);
+
     NWNX_Creature_AddFeat(oCreature, FEAT_STUNNING_FIST);
     report("GetFeatRemainingUses", NWNX_Creature_GetFeatRemainingUses(oCreature, FEAT_STUNNING_FIST) == 1);
     NWNX_Creature_SetFeatRemainingUses(oCreature, FEAT_STUNNING_FIST, 0);
@@ -96,6 +101,15 @@ void main()
     report("SetAbilityScore", nOldStr != GetAbilityScore(oCreature, ABILITY_STRENGTH, TRUE));
     report("SetAbilityScore", 25      == GetAbilityScore(oCreature, ABILITY_STRENGTH, TRUE));
 
+    ApplyEffectToObject(DURATION_TYPE_PERMANENT, EffectPolymorph(POLYMORPH_TYPE_BADGER), oCreature);
+    report("GetPrePolymorphAbilityScore", 25 == NWNX_Creature_GetPrePolymorphAbilityScore(oCreature, ABILITY_STRENGTH));
+    RemoveEffect(oCreature, GetFirstEffect(oCreature));
+
+    report("GetMovementRateFactor", 1.0 == NWNX_Creature_GetMovementRateFactor(oCreature));
+    ApplyEffectToObject(DURATION_TYPE_PERMANENT, EffectMovementSpeedIncrease(25), oCreature);
+    report("GetMovementRateFactor", 1.25 == NWNX_Creature_GetMovementRateFactor(oCreature));
+    NWNX_Creature_SetMovementRateFactor(oCreature, 1.5);
+    report("SetMovementRateFactor", 1.5 == NWNX_Creature_GetMovementRateFactor(oCreature));
 
     int nLvl1HP = NWNX_Creature_GetMaxHitPointsByLevel(oCreature, 1);
     report("GetMaxHitPointsByLevel", nLvl1HP >= 0);
@@ -164,6 +178,22 @@ void main()
     ApplyEffectToObject(DURATION_TYPE_TEMPORARY, eStr, oCreature, 2.0f);
     int iNewBonus = NWNX_Creature_GetTotalEffectBonus(oCreature, NWNX_CREATURE_BONUS_TYPE_ABILITY, OBJECT_INVALID, 0, 0, -1, -1, -1, ABILITY_STRENGTH);
     report("GetTotalEffectBonus", iOldBonus+1 == iNewBonus);
+
+    int iSR = GetSpellResistance(oCreature);
+    NWNX_Creature_SetSpellResistance(oCreature, iSR + 10);
+    report("SetSpellResistance", GetSpellResistance(oCreature) == (iSR + 10));
+
+    NWNX_Creature_SetAnimalCompanionCreatureType(oCreature, ANIMAL_COMPANION_CREATURE_TYPE_PANTHER);
+    report("SetAnimalCompanionCreatureType", GetAnimalCompanionCreatureType(oCreature) == ANIMAL_COMPANION_CREATURE_TYPE_PANTHER);
+
+    NWNX_Creature_SetFamiliarCreatureType(oCreature, FAMILIAR_CREATURE_TYPE_PSEUDO_DRAGON);
+    report("SetFamiliarCreatureType", GetFamiliarCreatureType(oCreature) == FAMILIAR_CREATURE_TYPE_PSEUDO_DRAGON);
+
+    NWNX_Creature_SetAnimalCompanionName(oCreature, "Fuzzles");
+    report("SetAnimalCompanionName", GetAnimalCompanionName(oCreature) == "Fuzzles");
+
+    NWNX_Creature_SetFamiliarName(oCreature, "Fuzzles");
+    report("SetFamiliarName", GetFamiliarName(oCreature) == "Fuzzles");
 
     WriteTimestampedLogEntry("NWNX_Creature unit test end.");
 }

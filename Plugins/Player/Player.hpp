@@ -2,8 +2,9 @@
 
 #include "Plugin.hpp"
 #include "Services/Events/Events.hpp"
-#include "API/Types.hpp"
-#include "API/CNWSPlayer.hpp"
+#include "API/ObjectVisualTransformData.hpp"
+#include <map>
+#include <set>
 
 using ArgumentStack = NWNXLib::Services::Events::ArgumentStack;
 
@@ -33,9 +34,20 @@ private:
     ArgumentStack SetPlaceableUsable                (ArgumentStack&& args);
     ArgumentStack SetRestDuration                   (ArgumentStack&& args);
     ArgumentStack ApplyInstantVisualEffectToObject  (ArgumentStack&& args);
+    ArgumentStack UpdateCharacterSheet              (ArgumentStack&& args);
+    ArgumentStack OpenInventory                     (ArgumentStack&& args);
+    ArgumentStack GetAreaExplorationState           (ArgumentStack&& args);
+    ArgumentStack SetAreaExplorationState           (ArgumentStack&& args);
+    ArgumentStack SetRestAnimation                  (ArgumentStack&& args);
+    ArgumentStack SetObjectVisualTransformOverride  (ArgumentStack&& args);
+    ArgumentStack ApplyLoopingVisualEffectToObject  (ArgumentStack&& args);
+    ArgumentStack SetPlaceableNameOverride          (ArgumentStack&& args);
+    ArgumentStack GetQuestCompleted                 (ArgumentStack&& args);
 
     NWNXLib::API::CNWSPlayer *player(ArgumentStack& args);
 
+    std::map<std::string, NWNXLib::API::ObjectVisualTransformData> m_OVTData;
+    std::map<std::string, std::set<uint16_t>> m_LVEData;
 };
 
 }

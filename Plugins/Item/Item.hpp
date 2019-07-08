@@ -25,6 +25,8 @@ private:
     ArgumentStack SetItemAppearance       (ArgumentStack&& args);
     ArgumentStack GetEntireItemAppearance (ArgumentStack&& args);
     ArgumentStack RestoreItemAppearance   (ArgumentStack&& args);
+    ArgumentStack GetBaseArmorClass       (ArgumentStack&& args);
+    ArgumentStack GetMinEquipLevel        (ArgumentStack&& args);
 
     NWNXLib::API::CNWSItem *item(ArgumentStack& args);
 };

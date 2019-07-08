@@ -11,6 +11,7 @@
 namespace Events {
 
 class AssociateEvents;
+class BarterEvents;
 class ClientEvents;
 class CombatEvents;
 class DMActionEvents;
@@ -24,6 +25,12 @@ class PartyEvents;
 class HealerKitEvents;
 class SkillEvents;
 class PolymorphEvents;
+class EffectEvents;
+class QuickChatEvents;
+class InventoryEvents;
+class TrapEvents;
+class TimingBarEvents;
+class LevelEvents;
 
 class Events : public NWNXLib::Plugin
 {
@@ -56,6 +63,8 @@ public:
     // Returns true if the event can proceed, or false if the event has been skipped.
     static bool SignalEvent(const std::string& eventName, const NWNXLib::API::Types::ObjectID target, std::string *result=nullptr);
 
+    static void InitOnFirstSubscribe(const std::string& eventName, std::function<void(void)> init);
+
 private: // Structures
     using EventMapType = std::unordered_map<std::string, std::vector<std::string>>;
 
@@ -72,11 +81,16 @@ private:
     // Only does it if needed though, based on the current event depth!
     void CreateNewEventDataIfNeeded();
 
+    void RunEventInit(const std::string& eventName);
+
     EventMapType m_eventMap; // Event name -> subscribers.
     std::stack<EventParams> m_eventData; // Data tag -> data for currently executing event.
     uint8_t m_eventDepth;
 
+    std::unordered_map<std::string, std::function<void(void)>> m_initList;
+
     std::unique_ptr<AssociateEvents> m_associateEvents;
+    std::unique_ptr<BarterEvents> m_barterEvents;
     std::unique_ptr<ClientEvents> m_clientEvents;
     std::unique_ptr<CombatEvents> m_combatEvents;
     std::unique_ptr<DMActionEvents> m_dmActionEvents;
@@ -90,6 +104,12 @@ private:
     std::unique_ptr<HealerKitEvents> m_healerKitEvents;
     std::unique_ptr<SkillEvents> m_skillEvents;
     std::unique_ptr<PolymorphEvents> m_polymorphEvents;
+    std::unique_ptr<EffectEvents> m_effectEvents;
+    std::unique_ptr<QuickChatEvents> m_quickChatEvents;
+    std::unique_ptr<InventoryEvents> m_inventoryEvents;
+    std::unique_ptr<TrapEvents> m_trapEvents;
+    std::unique_ptr<TimingBarEvents> m_timingBarEvents;
+    std::unique_ptr<LevelEvents> m_levelEvents;
 };
 
 }

@@ -25,19 +25,10 @@ static NWNXLib::Hooking::FunctionHook* m_HandlePlayerToServerDungeonMasterMessag
 
 DMActionEvents::DMActionEvents(NWNXLib::ViewPtr<NWNXLib::Services::HooksProxy> hooker)
 {
-    hooker->RequestExclusiveHook<Functions::CNWSMessage__HandlePlayerToServerDungeonMasterMessage>(&HandleDMMessageHook);
-
-    m_HandlePlayerToServerDungeonMasterMessageHook = hooker->FindHookByAddress(Functions::CNWSMessage__HandlePlayerToServerDungeonMasterMessage);
-}
-
-template <typename T>
-static T PeekMessage(CNWSMessage *pMessage, int32_t offset)
-{
-    static_assert(std::is_pod<T>::value);
-    T value;
-    uint8_t *ptr = pMessage->m_pnReadBuffer + pMessage->m_nReadBufferPtr + offset;
-    std::memcpy(&value, ptr, sizeof(T));
-    return value;
+    Events::InitOnFirstSubscribe("NWNX_ON_DM_.*", [hooker]() {
+        hooker->RequestExclusiveHook<Functions::CNWSMessage__HandlePlayerToServerDungeonMasterMessage>(&HandleDMMessageHook);
+        m_HandlePlayerToServerDungeonMasterMessageHook = hooker->FindHookByAddress(Functions::CNWSMessage__HandlePlayerToServerDungeonMasterMessage);
+    });
 }
 
 int32_t DMActionEvents::HandleGiveEvent(CNWSMessage *pMessage, CNWSPlayer *pPlayer, uint8_t nMinor, int32_t bGroup,
@@ -45,11 +36,11 @@ int32_t DMActionEvents::HandleGiveEvent(CNWSMessage *pMessage, CNWSPlayer *pPlay
 {
     int32_t retVal;
     Types::ObjectID oidDM = pPlayer ? pPlayer->m_oidNWSObject : OBJECT_INVALID;
-    std::string amount = std::to_string(PeekMessage<int32_t>(pMessage, 0));
-    std::string target = Utils::ObjectIDToString(PeekMessage<Types::ObjectID>(pMessage, 4) & 0x7FFFFFFF);
+    std::string amount = std::to_string(Utils::PeekMessage<int32_t>(pMessage, 0));
+    std::string target = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(pMessage, 4) & 0x7FFFFFFF);
 
     auto PushAndSignalGiveEvent = [&](std::string ev) -> bool {
-        Events::PushEventData("AREA", amount);
+        Events::PushEventData("AMOUNT", amount);
         Events::PushEventData("OBJECT", target);
         if (alignmentType > 0)
         {
@@ -82,7 +73,7 @@ int32_t DMActionEvents::HandleGroupEvent(CNWSMessage *pMessage, CNWSPlayer *pPla
 
     if (bGroup)
     {
-        groupSize = PeekMessage<int32_t>(pMessage, offset);
+        groupSize = Utils::PeekMessage<int32_t>(pMessage, offset);
         offset += sizeof(groupSize);
     }
 
@@ -91,7 +82,7 @@ int32_t DMActionEvents::HandleGroupEvent(CNWSMessage *pMessage, CNWSPlayer *pPla
 
     for (int32_t target = 0; target < groupSize; target++)
     {
-        targets.push_back(PeekMessage<Types::ObjectID>(pMessage, offset) & 0x7FFFFFFF);
+        targets.push_back(Utils::PeekMessage<Types::ObjectID>(pMessage, offset) & 0x7FFFFFFF);
         offset += sizeof(Types::ObjectID);
     }
 
@@ -123,7 +114,7 @@ int32_t DMActionEvents::HandleSingleTargetEvent(CNWSMessage *pMessage, CNWSPlaye
 {
     int32_t retVal;
     Types::ObjectID oidDM = pPlayer ? pPlayer->m_oidNWSObject : OBJECT_INVALID;
-    std::string target = Utils::ObjectIDToString(PeekMessage<Types::ObjectID>(pMessage, 0) & 0x7FFFFFFF);
+    std::string target = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(pMessage, 0) & 0x7FFFFFFF);
 
     auto PushAndSignalSingleTargetEvent = [&](std::string ev) -> bool {
         Events::PushEventData("TARGET", target);
@@ -153,16 +144,16 @@ int32_t DMActionEvents::HandleTeleportEvent(CNWSMessage *pMessage, CNWSPlayer *p
     int32_t groupSize = 1;
     std::vector<Types::ObjectID> targets;
 
-    std::string targetArea = Utils::ObjectIDToString(PeekMessage<Types::ObjectID>(pMessage, offset) & 0x7FFFFFFF); offset += sizeof(Types::ObjectID);
-    std::string x = std::to_string(PeekMessage<float>(pMessage, offset)); offset += sizeof(float);
-    std::string y = std::to_string(PeekMessage<float>(pMessage, offset)); offset += sizeof(float);
-    std::string z = std::to_string(PeekMessage<float>(pMessage, offset)); offset += sizeof(float);
+    std::string targetArea = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(pMessage, offset) & 0x7FFFFFFF); offset += sizeof(Types::ObjectID);
+    std::string x = std::to_string(Utils::PeekMessage<float>(pMessage, offset)); offset += sizeof(float);
+    std::string y = std::to_string(Utils::PeekMessage<float>(pMessage, offset)); offset += sizeof(float);
+    std::string z = std::to_string(Utils::PeekMessage<float>(pMessage, offset)); offset += sizeof(float);
 
     if (nMinor == MessageDungeonMasterMinor::GotoPointTarget)
     {
         if (bGroup)
         {
-            groupSize = PeekMessage<int32_t>(pMessage, offset);
+            groupSize = Utils::PeekMessage<int32_t>(pMessage, offset);
             offset += sizeof(groupSize);
         }
 
@@ -170,7 +161,7 @@ int32_t DMActionEvents::HandleTeleportEvent(CNWSMessage *pMessage, CNWSPlayer *p
 
         for (int32_t target = 0; target < groupSize; target++)
         {
-            targets.push_back(PeekMessage<Types::ObjectID>(pMessage, offset) & 0x7FFFFFFF);
+            targets.push_back(Utils::PeekMessage<Types::ObjectID>(pMessage, offset) & 0x7FFFFFFF);
             offset += sizeof(Types::ObjectID);
         }
     }
@@ -236,12 +227,12 @@ int32_t DMActionEvents::HandleDMMessageHook(CNWSMessage *thisPtr, CNWSPlayer *pP
             event += "SPAWN_OBJECT";
             int32_t offset = 0;
 
-            std::string area = Utils::ObjectIDToString(PeekMessage<Types::ObjectID>(thisPtr, 0) & 0x7FFFFFFF); offset += sizeof(Types::ObjectID);
+            std::string area = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(thisPtr, 0) & 0x7FFFFFFF); offset += sizeof(Types::ObjectID);
             std::string object = Utils::ObjectIDToString(Globals::AppManager()->m_pServerExoApp->GetObjectArray()->m_nNextObjectArrayID[0]);
             int32_t objectType;
-            std::string x = std::to_string(PeekMessage<float>(thisPtr, offset)); offset += sizeof(float);
-            std::string y = std::to_string(PeekMessage<float>(thisPtr, offset)); offset += sizeof(float);
-            std::string z = std::to_string(PeekMessage<float>(thisPtr, offset));
+            std::string x = std::to_string(Utils::PeekMessage<float>(thisPtr, offset)); offset += sizeof(float);
+            std::string y = std::to_string(Utils::PeekMessage<float>(thisPtr, offset)); offset += sizeof(float);
+            std::string z = std::to_string(Utils::PeekMessage<float>(thisPtr, offset));
 
             switch (nMinor)
             {
@@ -297,7 +288,7 @@ int32_t DMActionEvents::HandleDMMessageHook(CNWSMessage *thisPtr, CNWSPlayer *pP
         {
             event += "CHANGE_DIFFICULTY";
 
-            std::string difficulty = std::to_string(PeekMessage<int32_t>(thisPtr, 0));
+            std::string difficulty = std::to_string(Utils::PeekMessage<int32_t>(thisPtr, 0));
 
             auto PushAndSignal = [&](std::string ev) -> bool {
                 Events::PushEventData("DIFFICULTY_SETTING", difficulty);
@@ -320,8 +311,8 @@ int32_t DMActionEvents::HandleDMMessageHook(CNWSMessage *thisPtr, CNWSPlayer *pP
         {
             event += "VIEW_INVENTORY";
 
-            std::string openInventory = std::to_string(PeekMessage<int32_t>(thisPtr, 0));
-            std::string target = Utils::ObjectIDToString(PeekMessage<Types::ObjectID>(thisPtr, 4) & 0x7FFFFFFF);
+            std::string openInventory = std::to_string(Utils::PeekMessage<int32_t>(thisPtr, 0));
+            std::string target = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(thisPtr, 4) & 0x7FFFFFFF);
 
             auto PushAndSignal = [&](std::string ev) -> bool {
                 Events::PushEventData("OPEN_INVENTORY", openInventory);
@@ -345,8 +336,8 @@ int32_t DMActionEvents::HandleDMMessageHook(CNWSMessage *thisPtr, CNWSPlayer *pP
         {
             event += "SPAWN_TRAP_ON_OBJECT";
 
-            std::string area = Utils::ObjectIDToString(PeekMessage<Types::ObjectID>(thisPtr, 0) & 0x7FFFFFFF);
-            std::string target = Utils::ObjectIDToString(PeekMessage<Types::ObjectID>(thisPtr, 4) & 0x7FFFFFFF);
+            std::string area = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(thisPtr, 0) & 0x7FFFFFFF);
+            std::string target = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(thisPtr, 4) & 0x7FFFFFFF);
 
             auto PushAndSignal = [&](std::string ev) -> bool {
                 Events::PushEventData("AREA", area);
@@ -485,7 +476,7 @@ int32_t DMActionEvents::HandleDMMessageHook(CNWSMessage *thisPtr, CNWSPlayer *pP
         {
             event += "GIVE_ITEM";
 
-            std::string target = Utils::ObjectIDToString(PeekMessage<Types::ObjectID>(thisPtr, 0) & 0x7FFFFFFF);
+            std::string target = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(thisPtr, 0) & 0x7FFFFFFF);
             std::string item = Utils::ObjectIDToString(Globals::AppManager()->m_pServerExoApp->GetObjectArray()->m_nNextObjectArrayID[0]);
 
             auto PushAndSignal = [&](std::string ev) -> bool {

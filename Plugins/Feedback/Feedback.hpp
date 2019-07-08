@@ -18,6 +18,7 @@ public:
 private:
     ArgumentStack GetMessageHidden          (ArgumentStack&& args);
     ArgumentStack SetMessageHidden          (ArgumentStack&& args);
+    ArgumentStack SetFeedbackMode           (ArgumentStack&& args);
 
     static void SendFeedbackMessageHook(
         NWNXLib::API::CNWSCreature* pCreature,
@@ -32,14 +33,19 @@ private:
         NWNXLib::API::CNWCCMessageData* pMessageData,
         NWNXLib::API::CNWSCombatAttackData* pAttackData);
 
-    bool GetGlobalState(int32_t messageType, int32_t messageId);
-    int32_t GetPersonalState(NWNXLib::API::Types::ObjectID playerId, int32_t messageType, int32_t messageId);
+    static int32_t SendServerToPlayerJournalUpdatedHook(
+        NWNXLib::API::CNWSMessage* pMessage,
+        NWNXLib::API::CNWSPlayer* pPlayer,
+        int32_t bQuest,
+        int32_t bCompleted,
+        NWNXLib::API::CExoLocString* p_locName);
 
-    NWNXLib::Hooking::FunctionHook* m_SendFeedbackMessageHook;
-    std::set<int32_t> m_GlobalHiddenFeedbackMessageSet;
+    static bool GetGlobalState(int32_t messageType, int32_t messageId);
+    static int32_t GetPersonalState(NWNXLib::API::Types::ObjectID playerId, int32_t messageType, int32_t messageId);
 
-    NWNXLib::Hooking::FunctionHook* m_SendServerToPlayerCCMessageHook;
-    std::set<int32_t> m_GlobalHiddenCombatLogMessageSet;
+    std::set<int32_t> m_GlobalHiddenMessageSet;
+    bool m_FeedbackMessageWhitelist = false;
+    bool m_CombatMessageWhitelist = false;
 };
 
 }

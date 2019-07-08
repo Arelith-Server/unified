@@ -72,6 +72,7 @@ Creature::Creature(const Plugin::CreateParams& params)
     REGISTER(SetRawAbilityScore);
     REGISTER(GetRawAbilityScore);
     REGISTER(ModifyRawAbilityScore);
+    REGISTER(GetPrePolymorphAbilityScore);
     REGISTER(GetMemorisedSpell);
     REGISTER(GetMemorisedSpellCountByLevel);
     REGISTER(SetMemorisedSpell);
@@ -87,6 +88,8 @@ Creature::Creature(const Plugin::CreateParams& params)
     REGISTER(GetMaxHitPointsByLevel);
     REGISTER(SetMaxHitPointsByLevel);
     REGISTER(SetMovementRate);
+    REGISTER(GetMovementRateFactor);
+    REGISTER(SetMovementRateFactor);
     REGISTER(SetAlignmentGoodEvil);
     REGISTER(SetAlignmentLawChaos);
     REGISTER(GetClericDomain);
@@ -119,12 +122,18 @@ Creature::Creature(const Plugin::CreateParams& params)
     REGISTER(LevelDown);
     REGISTER(SetChallengeRating);
     REGISTER(GetAttackBonus);
+    REGISTER(GetHighestLevelOfFeat);
     REGISTER(GetFeatRemainingUses);
     REGISTER(GetFeatTotalUses);
     REGISTER(SetFeatRemainingUses);
     REGISTER(GetTotalEffectBonus);
     REGISTER(SetOriginalName);
     REGISTER(GetOriginalName);
+    REGISTER(SetSpellResistance);
+    REGISTER(SetAnimalCompanionCreatureType);
+    REGISTER(SetFamiliarCreatureType);
+    REGISTER(SetAnimalCompanionName);
+    REGISTER(SetFamiliarName);
 
 #undef REGISTER
 }
@@ -461,10 +470,10 @@ ArgumentStack Creature::SetBaseAC(ArgumentStack&& args)
     if (auto *pCreature = creature(args))
     {
         const auto ac = Services::Events::ExtractArgument<int32_t>(args);
-          ASSERT_OR_THROW(ac >= 0);
-          ASSERT_OR_THROW(ac <= 255);
+          ASSERT_OR_THROW(ac >= -128);
+          ASSERT_OR_THROW(ac <= 127);
 
-        pCreature->m_pStats->m_nACNaturalBase = static_cast<char>(ac);
+        pCreature->m_pStats->m_nACNaturalBase = static_cast<int8_t>(ac);
     }
     return stack;
 }
@@ -595,6 +604,36 @@ ArgumentStack Creature::ModifyRawAbilityScore(ArgumentStack&& args)
                 break;
         }
     }
+    return stack;
+}
+
+ArgumentStack Creature::GetPrePolymorphAbilityScore(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    int32_t retVal = -1;
+
+    if (auto *pCreature = creature(args))
+    {
+        const auto ability = Services::Events::ExtractArgument<int32_t>(args);
+
+        switch (ability)
+        {
+            case Constants::Ability::Strength:
+                retVal = pCreature->m_nPrePolymorphSTR;
+                break;
+            case Constants::Ability::Dexterity:
+                retVal = pCreature->m_nPrePolymorphDEX;
+                break;
+            case Constants::Ability::Constitution:
+                retVal = pCreature->m_nPrePolymorphCON;
+                break;
+            default:
+                LOG_NOTICE("Calling NWNX_Creature_GetPrePolymorphAbilityScore with invalid ability ID: %d", ability);
+                ASSERT_FAIL();
+                break;
+        }
+    }
+    Services::Events::InsertArgument(stack, retVal);
     return stack;
 }
 
@@ -1013,6 +1052,29 @@ ArgumentStack Creature::SetMovementRate(ArgumentStack&& args)
     return stack;
 }
 
+ArgumentStack Creature::GetMovementRateFactor(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    float retVal = 0;
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->GetMovementRateFactor();
+    }
+    Services::Events::InsertArgument(stack, retVal);
+    return stack;
+}
+
+ArgumentStack Creature::SetMovementRateFactor(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    if (auto *pCreature = creature(args))
+    {
+        const float factor = Services::Events::ExtractArgument<float>(args);
+        pCreature->SetMovementRateFactor(factor);
+    }
+    return stack;
+}
+
 ArgumentStack Creature::SetAlignmentGoodEvil(ArgumentStack&& args)
 {
     ArgumentStack stack;
@@ -1246,6 +1308,7 @@ ArgumentStack Creature::SetGender(ArgumentStack&& args)
           ASSERT_OR_THROW(gender <= 255);
 
         pCreature->m_pStats->m_nGender = gender;
+        pCreature->m_cAppearance.m_nGender = gender;
     }
     return stack;
 }
@@ -1276,8 +1339,8 @@ ArgumentStack Creature::RestoreSpells(ArgumentStack&& args)
     if (auto *pCreature = creature(args))
     {
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
-          ASSERT_OR_THROW(level >= 0);
-          ASSERT_OR_THROW(level <= 255);
+          ASSERT_OR_THROW(level >= -1);
+          ASSERT_OR_THROW(level <= 9);
 
         if (level >= 0 && level <= 9)
         {
@@ -1487,20 +1550,22 @@ ArgumentStack Creature::SetBaseSavingThrow(ArgumentStack&& args)
     if (auto *pCreature = creature(args))
     {
         const auto which = Services::Events::ExtractArgument<int32_t>(args);
-        const auto value = Services::Events::ExtractArgument<int32_t>(args); ASSERT_OR_THROW(value >= -128); ASSERT_OR_THROW(value <= 127);
+        const auto value = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(value >= -128);
+          ASSERT_OR_THROW(value <= 127);
         int8_t base;
         switch (which)
         {
             case Constants::SavingThrow::Reflex:
-                base = pCreature->m_pStats->m_nReflexSavingThrowMisc + pCreature->m_pStats->GetBaseReflexSavingThrow();
+                base = pCreature->m_pStats->GetBaseReflexSavingThrow();
                 pCreature->m_pStats->m_nReflexSavingThrowMisc = value - base;
                 break;
             case Constants::SavingThrow::Fortitude:
-                base = pCreature->m_pStats->m_nFortSavingThrowMisc + pCreature->m_pStats->GetBaseFortSavingThrow();
+                base = pCreature->m_pStats->GetBaseFortSavingThrow();
                 pCreature->m_pStats->m_nFortSavingThrowMisc = value - base;
                 break;
             case Constants::SavingThrow::Will:
-                base = pCreature->m_pStats->m_nWillSavingThrowMisc + pCreature->m_pStats->GetBaseWillSavingThrow();
+                base = pCreature->m_pStats->GetBaseWillSavingThrow();
                 pCreature->m_pStats->m_nWillSavingThrowMisc = value - base;
                 break;
             default:
@@ -1606,12 +1671,18 @@ ArgumentStack Creature::LevelDown(ArgumentStack&& args)
                 if (pCreature->m_pStats->m_ClassInfo[2].m_nClass != Constants::ClassType::Invalid)
                 {
                     if (--pCreature->m_pStats->m_ClassInfo[2].m_nLevel == 0)
+                    {
                         pCreature->m_pStats->m_ClassInfo[2].m_nClass = Constants::ClassType::Invalid;
+                        pCreature->m_pStats->m_nNumMultiClasses = 2;
+                    }
                 }
                 else if (pCreature->m_pStats->m_ClassInfo[1].m_nClass != Constants::ClassType::Invalid)
                 {
                     if (--pCreature->m_pStats->m_ClassInfo[1].m_nLevel == 0)
+                    {
                         pCreature->m_pStats->m_ClassInfo[1].m_nClass = Constants::ClassType::Invalid;
+                        pCreature->m_pStats->m_nNumMultiClasses = 1;
+                    }
                 }
                 else
                 {
@@ -1619,8 +1690,11 @@ ArgumentStack Creature::LevelDown(ArgumentStack&& args)
                     {
                         LOG_WARNING("Creature out of levels to level down.");
                         pCreature->m_pStats->m_ClassInfo[0].m_nLevel = 1;
+                        pCreature->m_pStats->m_nNumMultiClasses = 1;
                     }
                 }
+
+                pCreature->m_pStats->m_nMultiClassLeveledUpIn = pCreature->m_pStats->m_nNumMultiClasses - 1;
             }
         }
     }
@@ -1662,6 +1736,21 @@ ArgumentStack Creature::GetAttackBonus(ArgumentStack&& args)
     }
 
     Services::Events::InsertArgument(stack, retVal);
+    return stack;
+}
+
+ArgumentStack Creature::GetHighestLevelOfFeat(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    int32_t retval = -1;
+    if (auto *pCreature = creature(args))
+    {
+        const auto feat = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
+          ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
+        retval = pCreature->m_pStats->GetHighestLevelOfFeat(feat);
+    }
+    Services::Events::InsertArgument(stack, retval);
     return stack;
 }
 
@@ -1788,6 +1877,69 @@ ArgumentStack Creature::GetOriginalName(ArgumentStack&& args)
     }
 
     Services::Events::InsertArgument(stack, retVal);
+    return stack;
+}
+
+ArgumentStack Creature::SetSpellResistance(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    if (auto *pCreature = creature(args))
+    {
+        const auto sr = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(sr >= -127);
+          ASSERT_OR_THROW(sr <= 128);
+        pCreature->m_pStats->SetSpellResistance(static_cast<int8_t>(sr));
+    }
+    return stack;
+}
+
+ArgumentStack Creature::SetAnimalCompanionCreatureType(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    if (auto *pCreature = creature(args))
+    {
+        const auto creatureType = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(creatureType >= 0);
+
+        pCreature->m_pStats->m_nAnimalCompanionCreatureType = creatureType;
+    }
+    return stack;
+}
+
+ArgumentStack Creature::SetFamiliarCreatureType(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    if (auto *pCreature = creature(args))
+    {
+        const auto creatureType = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(creatureType >= 0);
+
+        pCreature->m_pStats->m_nFamiliarCreatureType = creatureType;
+    }
+    return stack;
+}
+
+ArgumentStack Creature::SetAnimalCompanionName(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    if (auto *pCreature = creature(args))
+    {
+        const auto name = Services::Events::ExtractArgument<std::string>(args);
+
+        pCreature->m_pStats->m_sAnimalCompanionName = CExoString(name.c_str());
+    }
+    return stack;
+}
+
+ArgumentStack Creature::SetFamiliarName(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    if (auto *pCreature = creature(args))
+    {
+        const auto name = Services::Events::ExtractArgument<std::string>(args);
+
+        pCreature->m_pStats->m_sFamiliarName = CExoString(name.c_str());
+    }
     return stack;
 }
 

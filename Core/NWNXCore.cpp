@@ -2,6 +2,7 @@
 
 #include "API/CAppManager.hpp"
 #include "API/CExoString.hpp"
+#include "API/CServerExoApp.hpp"
 #include "API/Constants.hpp"
 #include "API/Functions.hpp"
 #include "API/Globals.hpp"
@@ -17,6 +18,7 @@
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
 #include "Services/Commands/Commands.hpp"
 #include "Utils.hpp"
+#include "Encoding.hpp"
 
 #include <csignal>
 
@@ -26,6 +28,8 @@ using namespace NWNXLib::Hooking;
 static void (*nwn_crash_handler)(int);
 extern "C" void nwnx_signal_handler(int sig)
 {
+    std::fflush(stdout);
+
     const char *err;
     switch (sig)
     {
@@ -311,6 +315,11 @@ void NWNXCore::CreateServerHandler(API::CAppManager* app)
     // We need to set the NWNXLib log level (separate from Core now) to match the core log level.
     Log::SetLogLevel("NWNXLib", Log::GetLogLevel(NWNX_CORE_PLUGIN_NAME));
 
+    if (auto locale = g_core->m_coreServices->m_config->Get<std::string>("LOCALE"))
+    {
+        Encoding::SetDefaultLocale(*locale);
+    }
+
     Maybe<bool> crashOnAssertFailure = g_core->m_coreServices->m_config->Get<bool>("CRASH_ON_ASSERT_FAILURE");
     if (crashOnAssertFailure)
     {
@@ -343,6 +352,15 @@ void NWNXCore::CreateServerHandler(API::CAppManager* app)
 
 void NWNXCore::DestroyServerHandler(API::CAppManager* app)
 {
+    if (auto shutdownScript = g_core->m_coreServices->m_config->Get<std::string>("SHUTDOWN_SCRIPT"))
+    {
+        if (API::Globals::AppManager()->m_pServerExoApp->GetServerMode() == 2)
+        {
+            LOG_NOTICE("Running module shutdown script: %s", shutdownScript->c_str());
+            Utils::ExecuteScript(*shutdownScript, 0);
+        }
+    }
+
     LOG_NOTICE("Shutting down NWNX.");
     g_core->Shutdown();
 

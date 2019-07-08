@@ -60,7 +60,10 @@ ItemProperty::~ItemProperty()
 ArgumentStack ItemProperty::PackIP(ArgumentStack&& args)
 {
     ArgumentStack stack;
-    API::CGameEffect *ip = new API::CGameEffect();
+    API::CGameEffect *ip = new API::CGameEffect(true);
+
+    // TODO-64bit: (effectId) Remove this, also on the nwscript side
+    auto ipId         = Services::Events::ExtractArgument<int32_t>(args);
 
     auto propname     = Services::Events::ExtractArgument<int32_t>(args);
     auto subtype      = Services::Events::ExtractArgument<int32_t>(args);
@@ -77,6 +80,7 @@ ArgumentStack ItemProperty::PackIP(ArgumentStack&& args)
     auto tag          = Services::Events::ExtractArgument<std::string>(args);
 
     ip->SetNumIntegersInitializeToNegativeOne(9);
+    ip->m_bExpose = 1;
     ip->m_nType = API::Constants::EffectTrueType::ItemProperty;
     ip->m_nSubType = API::Constants::EffectDurationType::Permanent;
     ip->m_oidCreator = creator;
@@ -113,6 +117,9 @@ ArgumentStack ItemProperty::UnpackIP(ArgumentStack&& args)
     Services::Events::InsertArgument(stack, ip->GetInteger(2));
     Services::Events::InsertArgument(stack, ip->GetInteger(1));
     Services::Events::InsertArgument(stack, ip->GetInteger(0));
+
+    // TODO-64bit: (effectId) Remove this, also on the nwscript side
+    Services::Events::InsertArgument(stack, 0);
 
     Utils::DestroyGameEffect(ip);
     return stack;

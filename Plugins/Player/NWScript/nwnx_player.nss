@@ -21,6 +21,16 @@ const int NWNX_PLAYER_VISIBILITY_DEFAULT = 0;
 const int NWNX_PLAYER_VISIBILITY_HIDDEN  = 1;
 const int NWNX_PLAYER_VISIBILITY_VISIBLE = 2;
 
+const int NWNX_PLAYER_TIMING_BAR_TRAP_FLAG     = 1;
+const int NWNX_PLAYER_TIMING_BAR_TRAP_RECOVER  = 2;
+const int NWNX_PLAYER_TIMING_BAR_TRAP_DISARM   = 3;
+const int NWNX_PLAYER_TIMING_BAR_TRAP_EXAMINE  = 4;
+const int NWNX_PLAYER_TIMING_BAR_TRAP_SET      = 5;
+const int NWNX_PLAYER_TIMING_BAR_REST          = 6;
+const int NWNX_PLAYER_TIMING_BAR_UNLOCK        = 7;
+const int NWNX_PLAYER_TIMING_BAR_LOCK          = 8;
+const int NWNX_PLAYER_TIMING_BAR_CUSTOM        = 10;
+
 // Force display placeable examine window for player
 // If used on a placeable in a different area than the player, the portait will not be shown.
 void NWNX_Player_ForcePlaceableExamineWindow(object player, object placeable);
@@ -37,7 +47,8 @@ void NWNX_Player_ForcePlaceableInventoryWindow(object player, object placeable);
 
 // Starts displaying a timing bar.
 // Will run a script at the end of the timing bar, if specified.
-void NWNX_Player_StartGuiTimingBar(object player, float seconds, string script = "");
+// The type variable lets you set a pre-defined text, use NWNX_PLAYER_TIMING_BAR_*
+void NWNX_Player_StartGuiTimingBar(object player, float seconds, string script = "", int type = NWNX_PLAYER_TIMING_BAR_CUSTOM);
 
 // Stops displaying a timing bar.
 // Runs a script if specified.
@@ -112,6 +123,52 @@ void NWNX_Player_SetRestDuration(object player, int duration);
 // Note: Only works with instant effects: VFX_COM_*, VFX_FNF_*, VFX_IMP_*
 void NWNX_Player_ApplyInstantVisualEffectToObject(object player, object target, int visualeffect);
 
+// Refreshes the players character sheet
+// Note: You may need to use DelayCommand if you're manipulating values
+// through nwnx and forcing a UI refresh, 0.5s seemed to be fine
+void NWNX_Player_UpdateCharacterSheet(object player);
+
+// Allows player to open target's inventory
+// Target must be a creature or another player
+//
+// Note: only works if player and target are in the same area
+void NWNX_Player_OpenInventory(object player, object target, int open = TRUE);
+
+// Get player's area exploration state
+string NWNX_Player_GetAreaExplorationState(object player, object area);
+
+// Set player's area exploration state (str is an encoded string obtained with NWNX_Player_GetAreaExplorationState)
+void NWNX_Player_SetAreaExplorationState(object player, object area, string str);
+
+// Override oPlayer's rest animation to nAnimation
+//
+// NOTE: nAnimation does not take ANIMATION_LOOPING_* or ANIMATION_FIREFORGET_* constants
+//       Use NWNX_Consts_TranslateNWScriptAnimation() in nwnx_consts.nss to get their NWNX equivalent
+//       -1 to clear the override
+void NWNX_Player_SetRestAnimation(object oPlayer, int nAnimation);
+
+// Override a visual transform on the given object that only oPlayer will see.
+// - oObject can be any valid Creature, Placeable, Item or Door.
+// - nTransform is one of OBJECT_VISUAL_TRANSFORM_* or -1 to remove the override
+// - fValue depends on the transformation to apply.
+void NWNX_Player_SetObjectVisualTransformOverride(object oPlayer, object oObject, int nTransform, float fValue);
+
+// Apply a looping visualeffect to target that only player can see
+// visualeffect: VFX_DUR_*, call again to remove an applied effect
+//               -1 to remove all effects
+//
+// Note: Only really works with looping effects: VFX_DUR_*
+//       Other types *kind* of work, they'll play when reentering the area and the object is in view
+//       or when they come back in view range.
+void NWNX_Player_ApplyLoopingVisualEffectToObject(object player, object target, int visualeffect);
+
+// Override the name of placeable for player only
+// "" to clear the override
+void NWNX_Player_SetPlaceableNameOverride(object player, object placeable, string name);
+
+// Gets whether a quest has been completed by a player
+// Returns -1 if they don't have the journal entry
+int NWNX_Player_GetQuestCompleted(object player, string sQuestName);
 
 const string NWNX_Player = "NWNX_Player";
 
@@ -157,13 +214,14 @@ void NWNX_Player_INTERNAL_StopGuiTimingBar(object player, string script = "", in
     }
 }
 
-void NWNX_Player_StartGuiTimingBar(object player, float seconds, string script = "")
+void NWNX_Player_StartGuiTimingBar(object player, float seconds, string script = "", int type = NWNX_PLAYER_TIMING_BAR_CUSTOM)
 {
     // only one timing bar at a time!
     if (GetLocalInt(player, "NWNX_PLAYER_GUI_TIMING_ACTIVE"))
         return;
 
     string sFunc = "StartGuiTimingBar";
+    NWNX_PushArgumentInt(NWNX_Player, sFunc, type);
     NWNX_PushArgumentFloat(NWNX_Player, sFunc, seconds);
     NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
 
@@ -422,4 +480,96 @@ void NWNX_Player_ApplyInstantVisualEffectToObject(object player, object target, 
     NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
 
     NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_UpdateCharacterSheet(object player)
+{
+    string sFunc = "UpdateCharacterSheet";
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_OpenInventory(object player, object target, int open = TRUE)
+{
+    string sFunc = "OpenInventory";
+
+    NWNX_PushArgumentInt(NWNX_Player, sFunc, open);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, target);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+string NWNX_Player_GetAreaExplorationState(object player, object area)
+{
+    string sFunc = "GetAreaExplorationState";
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, area);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+    return  NWNX_GetReturnValueString(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_SetAreaExplorationState(object player, object area, string str)
+{
+    string sFunc = "SetAreaExplorationState";
+    NWNX_PushArgumentString(NWNX_Player, sFunc, str);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, area);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_SetRestAnimation(object oPlayer, int nAnimation)
+{
+    string sFunc = "SetRestAnimation";
+
+    NWNX_PushArgumentInt(NWNX_Player, sFunc, nAnimation);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, oPlayer);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_SetObjectVisualTransformOverride(object oPlayer, object oObject, int nTransform, float fValue)
+{
+    string sFunc = "SetObjectVisualTransformOverride";
+
+    NWNX_PushArgumentFloat(NWNX_Player, sFunc, fValue);
+    NWNX_PushArgumentInt(NWNX_Player, sFunc, nTransform);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, oObject);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, oPlayer);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_ApplyLoopingVisualEffectToObject(object player, object target, int visualeffect)
+{
+    string sFunc = "ApplyLoopingVisualEffectToObject";
+    NWNX_PushArgumentInt(NWNX_Player, sFunc, visualeffect);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, target);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_SetPlaceableNameOverride(object player, object placeable, string name)
+{
+    string sFunc = "SetPlaceableNameOverride";
+
+    NWNX_PushArgumentString(NWNX_Player, sFunc, name);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, placeable);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+int NWNX_Player_GetQuestCompleted(object player, string sQuestName)
+{
+    string sFunc = "GetQuestCompleted";
+    NWNX_PushArgumentString(NWNX_Player, sFunc, sQuestName);
+    NWNX_PushArgumentObject(NWNX_Player, sFunc, player);
+
+    NWNX_CallFunction(NWNX_Player, sFunc);
+    return  NWNX_GetReturnValueInt(NWNX_Player, sFunc);
 }

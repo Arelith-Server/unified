@@ -1,6 +1,7 @@
 add_plugin(Events
     "Events.cpp"
     "Events/AssociateEvents.cpp"
+    "Events/BarterEvents.cpp"
     "Events/ClientEvents.cpp"
     "Events/CombatEvents.cpp"
     "Events/DMActionEvents.cpp"
@@ -13,4 +14,10 @@ add_plugin(Events
     "Events/PartyEvents.cpp"
     "Events/HealerKitEvents.cpp"
     "Events/SkillEvents.cpp"
-    "Events/PolymorphEvents.cpp")
+    "Events/PolymorphEvents.cpp"
+    "Events/EffectEvents.cpp"
+    "Events/QuickChatEvents.cpp"
+    "Events/InventoryEvents.cpp"
+    "Events/TrapEvents.cpp"
+    "Events/TimingBarEvents.cpp"
+    "Events/LevelEvents.cpp")
