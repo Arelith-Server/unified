@@ -20,7 +20,8 @@ namespace Tweaks {
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-NWNXLib::Hooking::FunctionHook* StripOVTFromNotVisibleObject::pHookComputeUpdateRequired;
+static NWNXLib::Hooking::FunctionHook* pHookComputeUpdateRequired = nullptr;
+
 StripOVTFromNotVisibleObject::StripOVTFromNotVisibleObject(ViewPtr<Services::HooksProxy> hooker)
 {
     hooker->RequestExclusiveHook<Functions::CNWSMessage__ComputeUpdateRequired>
