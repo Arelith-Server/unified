@@ -72,7 +72,7 @@ Race::Race(const Plugin::CreateParams& params)
     GetServices()->m_hooks->RequestSharedHook<Functions::CNWSCreature__GetTotalEffectBonus, int32_t, CNWSCreature*, uint8_t, CNWSObject*, int32_t, int32_t, uint8_t, uint8_t, uint8_t, uint8_t, int32_t>(&GetTotalEffectBonusHook);
     GetServices()->m_hooks->RequestSharedHook<Functions::CNWSCreature__SavingThrowRoll, int32_t, CNWSCreature*, uint8_t, uint16_t, uint8_t, uint32_t, int32_t, uint16_t, int32_t>(&SavingThrowRollHook);
     GetServices()->m_hooks->RequestSharedHook<Functions::CNWSCreature__GetWeaponPower, int32_t, CNWSCreature*, CNWSObject*, int32_t>(&GetWeaponPowerHook);
-
+    GetServices()->m_hooks->RequestSharedHook<Functions::CNWSEffectListHandler__OnApplyAttackIncrease, int32_t, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&ApplyEffectHook);
     // Special hook for resetting the feat usages after rest etc.
     GetServices()->m_hooks->RequestSharedHook<Functions::CNWSCreatureStats__ResetFeatRemainingUses, void, CNWSCreatureStats*>(&ResetFeatRemainingUsesHook);
 
@@ -426,6 +426,57 @@ void Race::GetWeaponPowerHook(
     }
 }
 
+void Race::ApplyEffectHook(
+        Services::Hooks::CallType cType,
+        CNWSEffectListHandler *thisPtr,
+        CNWSObject *pObject,
+        CGameEffect *eff,
+        int32_t)
+{
+	if(cType == Services::Hooks::CallType::BEFORE_ORIGINAL )
+	{
+        CNWSCreature* tgtCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pObject->m_idSelf);
+ 
+ 		std::vector<uint16_t> cha = g_plugin->m_ChildRaces[eff->m_nParamInteger[2]];
+		API::CGameEffect *effnew;
+		for(std::vector<uint16_t>::iterator it = cha.begin(); it != cha.end(); ++it)
+		{
+			
+
+			effnew = new API::CGameEffect(true);
+			int32_t i;
+			effnew->m_nNumIntegers=effnew->m_nNumIntegers;
+			for(i=0;i<eff->m_nNumIntegers;i++)
+				effnew->m_nParamInteger[i] = eff->m_nParamInteger[i];
+			
+			effnew->m_nID=eff->m_nID;
+			effnew->m_oidCreator = eff->m_oidCreator;
+			effnew->m_nType = eff->m_nType;
+			effnew->m_nSubType = eff->m_nSubType;
+			effnew->m_fDuration = eff->m_fDuration;
+			effnew->m_nExpiryCalendarDay = eff->m_nExpiryCalendarDay;
+			effnew->m_nExpiryTimeOfDay = eff->m_nExpiryTimeOfDay;
+			effnew->m_nParamInteger[2]=*it;
+			effnew->m_nItemPropertySourceId=eff->m_nItemPropertySourceId;
+			effnew->m_bExpose = eff->m_bExpose;
+			effnew->m_bShowIcon = eff->m_bShowIcon;
+			effnew->m_nCasterLevel = eff->m_nCasterLevel;
+			effnew->m_bSkipOnLoad=eff->m_bSkipOnLoad;
+			effnew->m_nSpellId=eff->m_nSpellId;
+			
+
+			for(i=0;i<4;i++)
+			{
+				effnew->m_nParamFloat[i]=eff->m_nParamFloat[i];
+				effnew->m_oidParamObjectID[i]=eff->m_oidParamObjectID[i];
+			}
+			for(i=0;i<6;i++)
+				effnew->m_sParamString[i]=eff->m_sParamString[i];
+			tgtCreature->ApplyEffect(effnew, false, true);
+	    }
+	}
+
+}			
 void Race::GetTotalEffectBonusHook(
         Services::Hooks::CallType cType,
         CNWSCreature *pCreature,
@@ -442,10 +493,10 @@ void Race::GetTotalEffectBonusHook(
     if (pObject != nullptr)
     {
         tgtCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pObject->m_idSelf);
-        if (tgtCreature)
-        {
-            SetOrRestoreRace(cType, nullptr, tgtCreature->m_pStats);
-        }
+        //if (tgtCreature)
+        //{
+        //    SetOrRestoreRace(cType, nullptr, tgtCreature->m_pStats);
+        //}
     }
 
     if (cType == Services::Hooks::CallType::BEFORE_ORIGINAL)
@@ -835,6 +886,7 @@ void Race::SetRaceModifier(int32_t raceId, RaceModifier raceMod, int32_t param1,
         case RACE:
         {
             g_plugin->m_RaceParent[raceId] = param1;
+			g_plugin->m_ChildRaces[param1].push_back(raceId);
             auto parentRaceName = Globals::Rules()->m_lstRaces[param1].GetNameText();
             LOG_INFO("%s: Setting parent race to %s.", raceName, parentRaceName.CStr());
             break;
