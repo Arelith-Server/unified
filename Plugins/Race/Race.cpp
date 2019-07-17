@@ -471,7 +471,7 @@ void Race::ApplyEffectHook(
         }
         std::vector<uint16_t> vChild = g_plugin->m_ChildRaces[eff->m_nParamInteger[nRaceParam]];
         API::CGameEffect *effNew;
-        for(std::vector<uint16_t>::iterator nChild = vChild.begin(); nChild != vChild.end(); ++it)
+        for(std::vector<uint16_t>::iterator nChild = vChild.begin(); nChild != vChild.end(); ++nChild)
         {
 
 
