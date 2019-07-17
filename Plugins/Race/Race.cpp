@@ -16,7 +16,6 @@
 #include "API/CNWSPlayer.hpp"
 #include "API/Globals.hpp"
 #include "API/Functions.hpp"
-#include "API/CNWItemProperty.hpp"
 #include "API/CNWSItem.hpp"
 #include "API/Constants/Effect.hpp"
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
