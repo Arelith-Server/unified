@@ -444,24 +444,7 @@ void Race::GetWeaponPowerHook(
     }
 }
 
-void Race::EffectLog(CGameEffect *eff)
-{
-    LOG_INFO("ID %s, Creator %s, Type, %s, Subtype %s, Duration %s, Day %s, timer %s, itemprop source: %s, expose %s, show icon %s, Caster Level %s, Skip Onload %s, spel id: %s", std::to_string(eff->m_nID).c_str(), std::to_string(eff->m_oidCreator).c_str(), std::to_string(eff->m_nType).c_str(), std::to_string(eff->m_nSubType).c_str(), std::to_string(eff->m_fDuration).c_str(), std::to_string(eff->m_nExpiryCalendarDay).c_str(), std::to_string(eff->m_nExpiryTimeOfDay).c_str(), std::to_string(eff->m_nItemPropertySourceId).c_str(), std::to_string(eff->m_bExpose).c_str(), std::to_string(eff->m_bShowIcon).c_str(), std::to_string(eff->m_nCasterLevel).c_str(), std::to_string(eff->m_bSkipOnLoad).c_str(), std::to_string(eff->m_nSpellId).c_str());
-    int32_t i;
-    for(i=0;i<eff->m_nNumIntegers;i++)
-            LOG_INFO("Float %s: %s", std::to_string(i).c_str(), std::to_string(eff->m_nParamInteger[i]).c_str());
-    for(i=0;i<4;i++)
-        {
-            LOG_INFO("Float %s: %s", std::to_string(i).c_str(), std::to_string(eff->m_nParamFloat[i]).c_str());
-            LOG_INFO("Object %s: %s", std::to_string(i).c_str(), std::to_string(eff->m_oidParamObjectID[i]).c_str());
-        }
-        //for(i=0;i<6;i++)
-            //LOG_INFO("String %s: %s",std::string(i).c_str(), Utils::ExtractString(eff->m_sParamString[i]).c_str());
-    if(eff->m_pLinkRight)
-        EffectLog(eff->m_pLinkRight);
-    if(eff->m_pLinkLeft)
-        EffectLog(eff->m_pLinkLeft);
-}
+
 void Race::ApplyEffectHook(
         Services::Hooks::CallType cType,
         CNWSEffectListHandler*,
