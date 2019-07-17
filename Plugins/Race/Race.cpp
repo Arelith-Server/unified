@@ -766,6 +766,7 @@ int32_t Race::CheckItemRaceRestrictionsHook(CNWSCreature *pCreature, CNWSItem *p
 {
 
     int32_t nOriginal = pCreature->m_pStats->m_nRace;
+    // 64 Is ITEM_PROPERTY_USE_RESTRICTION_RACE
     if(pItem->GetPropertyByTypeExists(64, nOriginal) || pItem->GetPropertyByTypeExists(64, g_plugin->m_RaceParent[nOriginal]))
         return true;
     //fail safe, call original function
