@@ -80,6 +80,8 @@ private:
     unordered_map<uint16_t, tuple<uint8_t, uint8_t, uint8_t>>                         m_RaceSR;
     unordered_map<uint16_t, std::vector<uint16_t>>                                    m_ChildRaces;
 
+    NWNXLib::Hooking::FunctionHook* m_CheckRacialResHook;
+
     static void DoEffect(CNWSCreature*, uint16_t, int32_t, int32_t = 0, int32_t = 0, int32_t = 0, int32_t = 0, int32_t = 0);
     static void ApplyRaceEffects(CNWSCreature*);
     static void SetOrRestoreRace(Hooks::CallType, CNWSCreatureStats*, CNWSCreatureStats* = nullptr);
@@ -100,6 +102,7 @@ private:
     static void SavingThrowRollHook(Hooks::CallType, CNWSCreature*, uint8_t, uint16_t, uint8_t, uint32_t, int32_t, uint16_t, int32_t);
     static void GetWeaponPowerHook(Hooks::CallType, CNWSCreature*, CNWSObject*, int32_t);
     static void LoadRaceInfoHook(Hooks::CallType, CNWRules*);
+    static int32_t CheckItemRaceRestrictionsHook(CNWSCreature*, CNWSItem*);
 };
 
 }

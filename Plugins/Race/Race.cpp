@@ -16,6 +16,8 @@
 #include "API/CNWSPlayer.hpp"
 #include "API/Globals.hpp"
 #include "API/Functions.hpp"
+#include "API/CNWItemProperty.hpp"
+#include "API/CNWSItem.hpp"
 #include "API/Constants/Effect.hpp"
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
 #include "Services/Messaging/Messaging.hpp"
@@ -108,7 +110,9 @@ Race::Race(const Plugin::CreateParams& params)
     GetServices()->m_hooks->RequestSharedHook<Functions::CNWSCreature__CreateDefaultQuickButtons, void, CNWSCreature*>(&CreateDefaultQuickButtonsHook);
     GetServices()->m_hooks->RequestSharedHook<Functions::CNWSCreatureStats__LevelUpAutomatic, int32_t, CNWSCreatureStats*, uint8_t, int32_t, uint8_t>(&LevelUpAutomaticHook);
     GetServices()->m_hooks->RequestSharedHook<Functions::CNWSCreatureStats__GetMeetsPrestigeClassRequirements, int32_t, CNWSCreatureStats*, CNWClass*>(&GetMeetsPrestigeClassRequirementsHook);
-
+    //Don't swap, check as both parent and child race
+    GetServices()->m_hooks->RequestExclusiveHook<Functions::CNWSCreature__CheckItemRaceRestrictions>(&CheckItemRaceRestrictionsHook);
+    m_CheckRacialResHook = GetServices()->m_hooks->FindHookByAddress(Functions::CNWSCreature__CheckItemRaceRestrictions);
     // Need to set up default parent race to invalid before the on module load sets up the parents
     GetServices()->m_hooks->RequestSharedHook<Functions::CNWRules__LoadRaceInfo, void, CNWRules *>(&LoadRaceInfoHook);
 }
@@ -495,6 +499,7 @@ void Race::ApplyEffectHook(
             effNew->m_nCasterLevel = eff->m_nCasterLevel;
             effNew->m_bSkipOnLoad=eff->m_bSkipOnLoad;
             effNew->m_nSpellId=eff->m_nSpellId;
+            effNew->m_sCustomTag=eff->m_sCustomTag;
 
 
             for(i=0;i<4;i++)
@@ -758,7 +763,15 @@ void Race::GetMeetsPrestigeClassRequirementsHook(
 {
     SetOrRestoreRace(cType, pCreatureStats);
 }
+int32_t Race::CheckItemRaceRestrictionsHook(CNWSCreature *pCreature, CNWSItem *pItem)
+{
 
+    int32_t nOriginal = pCreature->m_pStats->m_nRace;
+    if(pItem->GetPropertyByTypeExists(64, nOriginal) || pItem->GetPropertyByTypeExists(64, g_plugin->m_RaceParent[nOriginal]))
+        return true;
+    //fail safe, call original function
+    return g_plugin->m_CheckRacialResHook->CallOriginal<int32_t>(pCreature, pItem);;
+}
 void Race::LoadRaceInfoHook(Services::Hooks::CallType type, CNWRules*)
 {
     // We only want to do this in the AFTER
