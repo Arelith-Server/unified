@@ -63,6 +63,11 @@ bool StripOVTFromNotVisibleObject::CheckObjectVisibility(CNWSPlayer* pPlayer, CN
         return false;
     }
     
+    if (pPlayerGameObject->m_idSelf == pGameObject->m_idSelf)
+    {
+        return true;
+    }
+    
     if (pPlayerCreature->GetArea() != pGameObject->GetArea())
     {
         return false;
