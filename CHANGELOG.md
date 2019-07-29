@@ -32,6 +32,7 @@ NOTICE: The ABI has changed, please make sure to update your nwnx.nss and recomp
 - Events: Added Level{Up|UpAutomatic|Down} events to LevelEvents
 - Events: Added WebHook Success/Failure events with rate limit feedback
 - Events: Added UseLoreOnItem and PayToIdentifyItem events
+- Events: Added {Add|Remove}Gold events to InventoryEvents
 - Profiler: Support profiler perf scopes via nwscript
 - SQL: Added support for SQLite
 - Tweaks: DisableQuickSave
@@ -194,6 +195,7 @@ The following plugins were added:
 ### Changed
 - Core: The nwnx.txt logfile will now be written to the UserDirectory
 - Chat: LOG_DEBUG suppresses player to player tell specifics
+- Item: SetWeight now recomputes the possessor's encumbrance
 - Docker: Set default log level to 6
 - Docker: Skip all plugins except ServerLogRedirector by default
 - Redis: Lots of stuff, be sure to update the redis nwscripts!
@@ -212,5 +214,6 @@ The following plugins were added:
 - Chat: Fix recursive message skipping
 - Object: GetLocalVariable and GetLocalVariableCount now work with Area and Module object
 - Events: DMActionEvents now return valid TARGET event data
+- Core: Serialization now stores locals and effects for all objects, instead of only items
 
 [Unreleased]: https://github.com/nwnxee/unified/compare/build8186-2...HEAD
