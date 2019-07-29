@@ -10,7 +10,6 @@
 #include "Tweaks/HideDMsOnCharList.hpp"
 #include "Tweaks/DisableMonkAbilitiesWhenPolymorphed.hpp"
 #include "Tweaks/StringToIntBaseToAuto.hpp"
-#include "Tweaks/StripOVTFromNotVisibleObject.hpp"
 
 #include "Services/Config/Config.hpp"
 
@@ -133,12 +132,6 @@ Tweaks::Tweaks(const Plugin::CreateParams& params)
     {
         LOG_INFO("Setting StringToInt() base to auto to allow for conversion of hex strings to proper values.");
         m_StringToIntBaseToAuto = std::make_unique<StringToIntBaseToAuto>(GetServices()->m_hooks.get());
-    }
-    
-    if (GetServices()->m_config->Get<bool>("STRIP_OVT_FROM_NOT_VISIBLE_OBJECT", false))
-    {
-        LOG_INFO("Strip the Object Visual Transform flag from objects that aren't visible to the player.");
-        m_StripOVTFromNotVisibleObject = std::make_unique<StripOVTFromNotVisibleObject>(GetServices()->m_hooks.get());
     }
 }
 
