@@ -34,7 +34,7 @@ uint32_t StripOVTFromNotVisibleObject::HookComputeUpdateRequired(CNWSMessage* th
 {
     auto CURFlags = pHookComputeUpdateRequired->CallOriginal<uint32_t>(thisMessage, pPlayer, pGameObject, pLastUpdateObject, bPlayerObject);
 
-    if (CURFlags & UPDATE_OBJECT_VISUAL_TRANSFORM_FLAG && pGameObject->m_idSelf != pPlayer->GetGameObject()->m_idSelf) && !CheckObjectVisibility(pPlayer, pGameObject))
+    if (CURFlags & UPDATE_OBJECT_VISUAL_TRANSFORM_FLAG && pGameObject->m_idSelf != pPlayer->GetGameObject()->m_idSelf && !CheckObjectVisibility(pPlayer, pGameObject))
     {
         CURFlags -= UPDATE_OBJECT_VISUAL_TRANSFORM_FLAG;
     }
