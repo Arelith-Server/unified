@@ -1,4 +1,6 @@
 #include "Source/ArelithEvents.hpp"
+#include "API/CExoString.hpp"
+#include "API/CVirtualMachine.hpp"
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
 #include "API/CNWSCreature.hpp"
@@ -90,33 +92,35 @@ unsigned char ArelithEvents::CanUnEquipWeaponHook( NWNXLib::API::CNWSCreature *p
 int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSObject *pObject, NWNXLib::API::CGameEffect *pEffect, int32_t bLoadingGame)
 {
 	NWNXLib::API::CNWSCreature *pCreature;
-	// NWNXLib::API::CNWSCreature *pDisarmingCreature;
-
-	// if ( pObject->AsNWSCreature() )
-	// {
+	//NWNXLib::API::CNWSCreature *pDisarmingCreature;
+    
+    NWNXLib::API::CExoString scriptExoStr = "arev_ondisarm";
+	if ( pObject->AsNWSCreature() )
+	{
 		pCreature = pObject->AsNWSCreature();
 
 
-		// if ( !pCreature->m_bDisarmable ||
-		        // pCreature->GetArea() == NULL )
-		// {
-			// return 1;
-		// }
+		if ( !pCreature->m_bDisarmable ||
+		        pCreature->GetArea() == NULL )
+		{
+			return 1;
+		}
 
-		// if ( pObject->GetDead() && !bLoadingGame )
-		// {
-			// return 1;
-		// }
+		if ( pObject->GetDead() && !bLoadingGame )
+		{
+			return 1;
+		}
         //do we need the disarmer?
-		// pDisarmingCreature = API::Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pEffect->m_oidCreator);
+		//pDisarmingCreature = API::Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pEffect->m_oidCreator);
 		
-        Arelith::PushEventData("TARGET_OBJECT_ID", Utils::ObjectIDToString(pCreature->m_idSelf)); //oidDisarmee
+        // Arelith::PushEventData("TARGET_OBJECT_ID", Utils::ObjectIDToString(pCreature->m_idSelf)); //oidDisarmee
         // Arelith::PushEventData("DISARMER_OBJECT_ID", Utils::ObjectIDToString((pDisarmingCreature) ? pDisarmingCreature->m_idSelf : API::Constants::OBJECT_INVALID)); //oidDisarmer
 
-        Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf, NULL);
+        // Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf, NULL);
+        API::Globals::VirtualMachine()->RunScript(&scriptExoStr, pCreature->m_idSelf, 1);
         
         
-	// }
+	 }
 
 	return 1;
 }
