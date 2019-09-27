@@ -54,7 +54,7 @@ int32_t ArelithEvents::CanUseItemHook( NWNXLib::API::CNWSCreature *pCreature, NW
 
 unsigned char ArelithEvents::CanEquipWeaponHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem, int32_t *nEquipToSlot, int32_t bEquipping, int32_t bDisplayFeedback, NWNXLib::API::CNWSPlayer *pFeedbackPlayer)
 {
-    unsigned char retVal = m_CanUnEquipWeaponHook->CallOriginal<int32_t>(pCreature, pItem, nEquipToSlot, bEquipping, bDisplayFeedback, pFeedbackPlayer);
+    unsigned char retVal = m_CanEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem, nEquipToSlot, bEquipping, bDisplayFeedback, pFeedbackPlayer);
 
     std::string sResult = "";
     if (pCreature->m_bPlayerCharacter)
@@ -70,7 +70,7 @@ unsigned char ArelithEvents::CanEquipWeaponHook( NWNXLib::API::CNWSCreature *pCr
 
 unsigned char ArelithEvents::CanUnEquipWeaponHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem)
 {
-    unsigned char retVal = m_CanUnEquipWeaponHook->CallOriginal<int32_t>(pCreature, pItem);
+    unsigned char retVal = m_CanUnEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem);
 
     std::string sResult = "";
     if (pCreature->m_bPlayerCharacter)
@@ -113,7 +113,7 @@ int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSObject *pObject, NWNX
         Arelith::PushEventData("TARGET_OBJECT_ID", Utils::ObjectIDToString(pCreature->m_idSelf)); //oidDisarmee
         Arelith::PushEventData("DISARMER_OBJECT_ID", Utils::ObjectIDToString((pDisarmingCreature) ? pDisarmingCreature->m_idSelf : API::Constants::OBJECT_INVALID)); //oidDisarmer
 
-        Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf);
+        Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf), NULL;
         
         
 	}
