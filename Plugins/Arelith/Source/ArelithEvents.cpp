@@ -98,7 +98,7 @@ int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSObject *pObject, NWNX
 	if ( pObject->AsNWSCreature() )
 	{
 		pCreature = pObject->AsNWSCreature();
-
+        API::Globals::VirtualMachine()->RunScript(&scriptExoStr, pCreature->m_idSelf, 1);
 
 		if ( !pCreature->m_bDisarmable ||
 		        pCreature->GetArea() == NULL )
@@ -117,7 +117,7 @@ int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSObject *pObject, NWNX
         // Arelith::PushEventData("DISARMER_OBJECT_ID", Utils::ObjectIDToString((pDisarmingCreature) ? pDisarmingCreature->m_idSelf : API::Constants::OBJECT_INVALID)); //oidDisarmer
 
         // Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf, NULL);
-        API::Globals::VirtualMachine()->RunScript(&scriptExoStr, pCreature->m_idSelf, 1);
+        //API::Globals::VirtualMachine()->RunScript(&scriptExoStr, pCreature->m_idSelf, 1);
         
         
 	 }
