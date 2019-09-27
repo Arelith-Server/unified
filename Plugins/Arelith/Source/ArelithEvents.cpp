@@ -1,5 +1,6 @@
 #include "Source/ArelithEvents.hpp"
 #include "API/CExoString.hpp"
+#include "API/CNWSMessage.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
@@ -94,6 +95,8 @@ int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSObject *pObject, NWNX
 	NWNXLib::API::CNWSCreature *pCreature;
 	//NWNXLib::API::CNWSCreature *pDisarmingCreature;
     
+    NWNXLib::API::CNWSMessage* messageDispatch = static_cast<NWNXLib::API::CNWSMessage*>(API::Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
+    messageDispatch->SendServerToPlayerChat_Talk(API::Constants::PLAYERID_ALL_CLIENTS, pObject->m_idSelf, "I'm supposed to be disarmed.");
     NWNXLib::API::CExoString scriptExoStr = "arev_ondisarm";
 	if ( pObject->AsNWSCreature() )
 	{
