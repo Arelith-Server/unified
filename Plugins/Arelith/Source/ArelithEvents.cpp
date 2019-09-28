@@ -34,7 +34,7 @@ ArelithEvents::ArelithEvents(ViewPtr<Services::HooksProxy> hooker)
         m_CanEquipWeaponHook =  hooker->FindHookByAddress(API::Functions::CNWSCreature__CanEquipWeapon);
         hooker->RequestExclusiveHook<API::Functions::CNWSCreature__CanUnEquipWeapon, unsigned char, API::CNWSCreature*, API::CNWSItem*>(&CanUnEquipWeaponHook);
         m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(API::Functions::CNWSCreature__CanUnEquipWeapon);
-        hooker->RequestExclusiveHook<API::Functions::CNWSEffectListHandler__OnApplyDisarm, int32_t, API::CNWSObject*, API::CGameEffect*, int32_t>(&OnApplyDisarmHook);
+        hooker->RequestExclusiveHook<API::Functions::CNWSEffectListHandler__OnApplyDisarm, int32_t,API::CNWSEffectListHandler*, API::CNWSObject*, API::CGameEffect*, int32_t>(&OnApplyDisarmHook);
         m_OnApplyDisarmHook =  hooker->FindHookByAddress(API::Functions::CNWSEffectListHandler__OnApplyDisarm);
     });
 }
@@ -90,18 +90,16 @@ unsigned char ArelithEvents::CanUnEquipWeaponHook( NWNXLib::API::CNWSCreature *p
 
 
 
-int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSObject *pObject, NWNXLib::API::CGameEffect *pEffect, int32_t bLoadingGame)
+int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSEffectListHandler*, NWNXLib::API::CNWSObject *pObject, NWNXLib::API::CGameEffect *pEffect, int32_t bLoadingGame)
 {
-	NWNXLib::API::CNWSCreature *pCreature;
-	//NWNXLib::API::CNWSCreature *pDisarmingCreature;
+	NWNXLib::API::CNWSCreature *pCreature = Utils::AsNWSCreature(pObject);
+	NWNXLib::API::CNWSCreature *pDisarmingCreature;
     
-    NWNXLib::API::CNWSMessage* messageDispatch = static_cast<NWNXLib::API::CNWSMessage*>(API::Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
-    messageDispatch->SendServerToPlayerChat_Talk(API::Constants::PLAYERID_ALL_CLIENTS, pObject->m_idSelf, "I'm supposed to be disarmed.");
-    NWNXLib::API::CExoString scriptExoStr = "arev_ondisarm";
-	if ( pObject->AsNWSCreature() )
+    
+    printf("Disarm hook getting called, at least.");
+    
+	if ( pCreature )
 	{
-		pCreature = pObject->AsNWSCreature();
-        API::Globals::VirtualMachine()->RunScript(&scriptExoStr, pCreature->m_idSelf, 1);
 
 		if ( !pCreature->m_bDisarmable ||
 		        pCreature->GetArea() == NULL )
@@ -114,15 +112,12 @@ int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSObject *pObject, NWNX
 			return 1;
 		}
         //do we need the disarmer?
-		//pDisarmingCreature = API::Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pEffect->m_oidCreator);
+		pDisarmingCreature = API::Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pEffect->m_oidCreator);
 		
-        // Arelith::PushEventData("TARGET_OBJECT_ID", Utils::ObjectIDToString(pCreature->m_idSelf)); //oidDisarmee
-        // Arelith::PushEventData("DISARMER_OBJECT_ID", Utils::ObjectIDToString((pDisarmingCreature) ? pDisarmingCreature->m_idSelf : API::Constants::OBJECT_INVALID)); //oidDisarmer
+        Arelith::PushEventData("TARGET_OBJECT_ID", Utils::ObjectIDToString(pCreature->m_idSelf)); //oidDisarmee
+        Arelith::PushEventData("DISARMER_OBJECT_ID", Utils::ObjectIDToString((pDisarmingCreature) ? pDisarmingCreature->m_idSelf : API::Constants::OBJECT_INVALID)); //oidDisarmer
 
-        // Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf, NULL);
-        //API::Globals::VirtualMachine()->RunScript(&scriptExoStr, pCreature->m_idSelf, 1);
-        
-        
+        Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf, NULL);
 	 }
 
 	return 1;
