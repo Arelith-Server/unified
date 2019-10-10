@@ -76,6 +76,9 @@ private:
     unordered_map<uint16_t, list<uint32_t>>                                           m_RaceSpellImmunities;
     unordered_map<uint16_t, pair<uint8_t, uint8_t>>                                   m_RaceSRCharGen;
     unordered_map<uint16_t, tuple<uint8_t, uint8_t, uint8_t>>                         m_RaceSR;
+    unordered_map<uint16_t, std::vector<uint16_t>>                                    m_ChildRaces;
+
+    NWNXLib::Hooking::FunctionHook* m_CheckRacialResHook;
 
     static void DoEffect(CNWSCreature*, uint16_t, int32_t, int32_t = 0, int32_t = 0, int32_t = 0, int32_t = 0, int32_t = 0);
     static void ApplyRaceEffects(CNWSCreature*);
@@ -84,18 +87,22 @@ private:
 
     static void ResolveInitiativeHook(CNWSCreature*);
 
-    static void PostProcessHook(Hooks::CallType, CNWSCreature*);
+    static void LoadCharacterFinishHook(Hooks::CallType, CServerExoAppInternal*, CNWSPlayer*, int32_t, int32_t);
     static void ResetFeatRemainingUsesHook(Hooks::CallType, CNWSCreatureStats*);
     static void CreateDefaultQuickButtonsHook(Hooks::CallType, CNWSCreature*);
+    static void HandleValidateCharacter(Types::ObjectID, bool);
     static void ValidateCharacterHook(Hooks::CallType, CNWSPlayer*, int32_t*);
+
     static void SendServerToPlayerLevelUp_ConfirmationHook(Hooks::CallType, CNWSMessage*, Types::PlayerID, int32_t);
     static void LevelUpAutomaticHook(Hooks::CallType, CNWSCreatureStats*, uint8_t, int32_t, uint8_t);
     static void GetFavoredEnemyBonusHook(Hooks::CallType, CNWSCreatureStats*, CNWSCreature*);
     static void GetMeetsPrestigeClassRequirementsHook(Hooks::CallType, CNWSCreatureStats*, CNWClass*);
     static void GetTotalEffectBonusHook(Hooks::CallType, CNWSCreature*, uint8_t, CNWSObject*, int32_t, int32_t, uint8_t, uint8_t, uint8_t, uint8_t, int32_t);
+    static void ApplyEffectHook(Hooks::CallType, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t);
     static void SavingThrowRollHook(Hooks::CallType, CNWSCreature*, uint8_t, uint16_t, uint8_t, uint32_t, int32_t, uint16_t, int32_t);
     static void GetWeaponPowerHook(Hooks::CallType, CNWSCreature*, CNWSObject*, int32_t);
     static void LoadRaceInfoHook(Hooks::CallType, CNWRules*);
+    static int32_t CheckItemRaceRestrictionsHook(CNWSCreature*, CNWSItem*);
 };
 
 }
