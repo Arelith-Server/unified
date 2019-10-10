@@ -57,7 +57,7 @@ int32_t ArelithEvents::CanUseItemHook( NWNXLib::API::CNWSCreature *pCreature, NW
 
 unsigned char ArelithEvents::CanEquipWeaponHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem, int32_t *nEquipToSlot, int32_t bEquipping, int32_t bDisplayFeedback, NWNXLib::API::CNWSPlayer *pFeedbackPlayer)
 {
-    unsigned char retVal = m_CanEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem, nEquipToSlot, bEquipping, bDisplayFeedback, pFeedbackPlayer);
+    unsigned char retVal = m_CanEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem, nEquipToSlot, bEquipping, 0, pFeedbackPlayer);
 
     std::string sResult = "";
     if (pCreature->m_bPlayerCharacter)
@@ -67,8 +67,9 @@ unsigned char ArelithEvents::CanEquipWeaponHook( NWNXLib::API::CNWSCreature *pCr
 
         Arelith::SignalEvent("NWNX_ARELITH_CANEQUIPWEAPON", pCreature->m_idSelf, &sResult);
     }
-
-    return (sResult == "") ? retVal : (unsigned char)atoi(sResult.c_str());
+    retVal = (sResult == "") ? retVal : (unsigned char)atoi(sResult.c_str());
+    if (retVal) m_CanEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem, nEquipToSlot, bEquipping, bDisplayFeedback, pFeedbackPlayer);
+    return retVal;
 }
 
 unsigned char ArelithEvents::CanUnEquipWeaponHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem)
@@ -94,9 +95,6 @@ int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSEffectListHandler*, N
 {
 	NWNXLib::API::CNWSCreature *pCreature = Utils::AsNWSCreature(pObject);
 	NWNXLib::API::CNWSCreature *pDisarmingCreature;
-    
-    
-    printf("Disarm hook getting called, at least.");
     
 	if ( pCreature )
 	{
