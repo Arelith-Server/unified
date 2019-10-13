@@ -1,14 +1,21 @@
 #include "Arelith.hpp"
+#include "API/CAppManager.hpp"
+#include "API/CServerExoApp.hpp"
 #include "API/CExoString.hpp"
 #include "API/CVirtualMachine.hpp"
+#include "API/CNWSCreature.hpp"
+#include "API/CNWSCreatureStats.hpp"
 #include "API/Globals.hpp"
 #include "API/Version.hpp"
 #include "Source/ArelithEvents.hpp"
 #include "Services/Config/Config.hpp"
 #include "Services/Messaging/Messaging.hpp"
+#include "API/Constants.hpp"
+#include "API/Globals.hpp"
 #include "ViewPtr.hpp"
 #include <algorithm>
 #include <regex>
+#include <cstring>
 
 using namespace NWNXLib;
 
@@ -48,6 +55,7 @@ Arelith::Arelith(const Plugin::CreateParams& params)
     GetServices()->m_events->RegisterEvent("SKIP_EVENT", std::bind(&Arelith::OnSkipEvent, this, std::placeholders::_1));
     GetServices()->m_events->RegisterEvent("EVENT_RESULT", std::bind(&Arelith::OnEventResult, this, std::placeholders::_1));
     GetServices()->m_events->RegisterEvent("GET_CURRENT_EVENT", std::bind(&Arelith::OnGetCurrentEvent, this, std::placeholders::_1));
+
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
         [](const std::vector<std::string> message)

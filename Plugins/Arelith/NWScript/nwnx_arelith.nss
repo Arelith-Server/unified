@@ -42,6 +42,7 @@ void NWNX_Arelith_SetEventResult(string data);
 string NWNX_Arelith_GetCurrentEvent();
 
 
+
 void NWNX_Arelith_SubscribeEvent(string evt, string script)
 {
     NWNX_PushArgumentString("NWNX_Arelith", "SUBSCRIBE_EVENT", script);
