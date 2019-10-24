@@ -55,7 +55,7 @@ int32_t ArelithEvents::CanUseItemHook( CNWSCreature *pCreature, CNWSItem *pItem,
         Arelith::PushEventData("ITEM_OBJECT_ID", Utils::ObjectIDToString(pItem->m_idSelf)); //oidItem
         Arelith::PushEventData("CANUSEITEM_RESULT", std::to_string(retVal)); //original result
 
-        Arelith::SignalEvent("NWNX_ARELITH_CAN_USE_ITEM", pCreature->m_idSelf, &sResult);
+        Arelith::SignalEvent("NWNX_ARELITH_CANUSEITEM", pCreature->m_idSelf, &sResult);
     }
 
     return (sResult == "") ? retVal : atoi(sResult.c_str());
@@ -71,7 +71,7 @@ unsigned char ArelithEvents::CanEquipWeaponHook( CNWSCreature *pCreature, CNWSIt
         Arelith::PushEventData("WEAPON_OBJECT_ID", Utils::ObjectIDToString(pItem->m_idSelf)); //oidWeapon
         Arelith::PushEventData("CANEQUIPWEAPON_RESULT", std::to_string((unsigned char)retVal)); //original result
 
-        Arelith::SignalEvent("NWNX_ARELITH_CAN_EQUIP_WEAPON", pCreature->m_idSelf, &sResult);
+        Arelith::SignalEvent("NWNX_ARELITH_CANEQUIPWEAPON", pCreature->m_idSelf, &sResult);
     }
     retVal = (sResult == "") ? retVal : (unsigned char)atoi(sResult.c_str());
     if (retVal) m_CanEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem, nEquipToSlot, bEquipping, bDisplayFeedback, pFeedbackPlayer);
@@ -88,7 +88,7 @@ unsigned char ArelithEvents::CanUnEquipWeaponHook( CNWSCreature *pCreature, CNWS
         Arelith::PushEventData("WEAPON_OBJECT_ID", Utils::ObjectIDToString(pItem->m_idSelf)); //oidWeapon
         Arelith::PushEventData("CANUNEQUIPWEAPON_RESULT", std::to_string((unsigned char)retVal)); //original result
  
-        Arelith::SignalEvent("NWNX_ARELITH_CAN_UNEQUIP_WEAPON", pCreature->m_idSelf, &sResult);
+        Arelith::SignalEvent("NWNX_ARELITH_CANUNEQUIPWEAPON", pCreature->m_idSelf, &sResult);
     }
 
     return (sResult == "") ? retVal : (unsigned char)atoi(sResult.c_str());
@@ -121,7 +121,7 @@ int32_t ArelithEvents::OnApplyDisarmHook(CNWSEffectListHandler*, CNWSObject *pOb
         Arelith::PushEventData("TARGET_OBJECT_ID", Utils::ObjectIDToString(pCreature->m_idSelf)); //oidDisarmee
         Arelith::PushEventData("DISARMER_OBJECT_ID", Utils::ObjectIDToString((pDisarmingCreature) ? pDisarmingCreature->m_idSelf : API::Constants::OBJECT_INVALID)); //oidDisarmer
 
-        Arelith::SignalEvent("NWNX_ARELITH_ON_DISARM", pCreature->m_idSelf, NULL);
+        Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf, NULL);
 	 }
 
 	return 1;
