@@ -1,23 +1,16 @@
-
-// Log currently generates warnings when no arguments are given to format string
-// TODO: Should really clean up the log so it doesn't warn in these cases
-#pragma GCC diagnostic ignored "-Wformat-security"
-
 #include "SpellChecker.hpp"
 
 #include "API/CAppManager.hpp"
-#include "API/CServerExoApp.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
-#include <sstream>
-#include <dlfcn.h>
 #include <hunspell/hunspell.hxx>
 #include <iostream>
 #include "Services/Config/Config.hpp"
 
+#include <dlfcn.h>
+
 using namespace NWNXLib;
 using namespace NWNXLib::API;
-using namespace NWNXLib::Platform::DynamicLibraries;
 using namespace NWNXLib::Services;
 
 static ViewPtr<SpellChecker::SpellChecker> g_plugin;
@@ -49,7 +42,8 @@ SpellChecker::SpellChecker(const Plugin::CreateParams& params)
 {
 
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, std::bind(&SpellChecker::func, this, std::placeholders::_1))
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(FindMisspell);
     REGISTER(GetSuggestSpell);
@@ -61,14 +55,14 @@ SpellChecker::SpellChecker(const Plugin::CreateParams& params)
 SpellChecker::~SpellChecker()
 {
     SpellChecker::dest_e(SpellChecker::created);
-    CloseDll(SpellChecker::handle);
+    dlclose(SpellChecker::handle);
 }
 
 uintptr_t SpellChecker::EstbSymFunction(const std::string& symbol)
 {
-    uintptr_t var = reinterpret_cast<uintptr_t>(GetFuncAddrInDll(symbol.c_str(), SpellChecker::handle));
+    uintptr_t var = reinterpret_cast<uintptr_t>(dlsym(SpellChecker::handle, symbol.c_str()));
 
-    if (!IsFuncAddrFromDllValid(var))
+    if (!var)
     {
         throw std::runtime_error("Dynamic link symbol error");
     }
@@ -76,9 +70,9 @@ uintptr_t SpellChecker::EstbSymFunction(const std::string& symbol)
 }
 void SpellChecker::Init(NWNXLib::ViewPtr<NWNXLib::Services::ConfigProxy> config)
 {
-    SpellChecker::handle = OpenDll("libhunspell.so");
+    SpellChecker::handle = dlopen("libhunspell.so", RTLD_NOW | RTLD_NODELETE);
 
-    if(!IsHandleValid(SpellChecker::handle))
+    if(!SpellChecker::handle)
     {
         throw std::runtime_error("Dynamic link handler error");
     }

@@ -53,7 +53,7 @@ void FastTimer::Calibrate(const size_t runs, ViewPtr<HooksProxy> hooks, ViewPtr<
     g_metricsForCalibration = metrics;
 
     // Set up a discard resampler for this one.
-    auto resampler = &Resamplers::template Discard<int64_t>;
+    auto resampler = &Resamplers::Discard;
     metrics->SetResampler("FAST_TIMER_OVERHEAD_CALIBRATION", resampler, std::chrono::seconds(10));
 
     const auto runTest = [](const size_t targetRuns) -> std::chrono::nanoseconds
@@ -74,14 +74,14 @@ void FastTimer::Calibrate(const size_t runs, ViewPtr<HooksProxy> hooks, ViewPtr<
     std::vector<std::chrono::nanoseconds> hookedResults;
     std::vector<std::chrono::nanoseconds> unhookedResults;
 
-    hooks->RequestSharedHook<Functions::CExoBase__CheckForCD, bool>(&ProfilerCalibrateHookFuncWithScope);
+    hooks->RequestSharedHook<Functions::_ZN16CExoBaseInternal10CheckForCDEj, int32_t>(&ProfilerCalibrateHookFuncWithScope);
 
     for (size_t i = 0; i < runs; ++i)
     {
         hookedResults.emplace_back(runTest(10));
     }
 
-    hooks->ClearHook(Functions::CExoBase__CheckForCD);
+    hooks->ClearHook(Functions::_ZN16CExoBaseInternal10CheckForCDEj);
 
     for (size_t i = 0; i < runs; ++i)
     {

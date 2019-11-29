@@ -5,7 +5,7 @@
 #include "API/CNWSObject.hpp"
 #include "API/CNWSScriptVar.hpp"
 #include "API/CNWSScriptVarTable.hpp"
-#include "API/CExoArrayListTemplatedCNWSScriptVar.hpp"
+#include "API/CExoArrayList.hpp"
 #include "API/CNWSCreature.hpp"
 #include "API/CNWSCreatureStats.hpp"
 #include "API/CNWSPlaceable.hpp"
@@ -20,6 +20,7 @@
 #include "API/CNWBaseItem.hpp"
 #include "API/CNWBaseItemArray.hpp"
 #include "API/CItemRepository.hpp"
+#include "API/CExoFile.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "API/CLoopingVisualEffect.hpp"
@@ -61,7 +62,8 @@ Object::Object(const Plugin::CreateParams& params)
     : Plugin(params)
 {
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, std::bind(&Object::func, this, std::placeholders::_1))
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(GetLocalVariableCount);
     REGISTER(GetLocalVariable);
@@ -85,6 +87,9 @@ Object::Object(const Plugin::CreateParams& params)
     REGISTER(SetAutoRemoveKey);
     REGISTER(GetTriggerGeometry);
     REGISTER(SetTriggerGeometry);
+    REGISTER(RemoveIconEffect);
+    REGISTER(AddIconEffect);
+    REGISTER(Export);
 
 #undef REGISTER
 }
@@ -578,7 +583,7 @@ ArgumentStack Object::SetTriggerGeometry(ArgumentStack&& args)
                     pTrigger->m_pnOutlineVertices[i] = i;
                 }
 
-                pTrigger->AddToArea(pArea, pTrigger->m_pvVertices[0].x, pTrigger->m_pvVertices[0].y, pTrigger->m_pvVertices[0].z, false);
+                Utils::AddToArea(pTrigger, pArea, pTrigger->m_pvVertices[0].x, pTrigger->m_pvVertices[0].y, pTrigger->m_pvVertices[0].z);
             }
             else
             {
@@ -588,6 +593,123 @@ ArgumentStack Object::SetTriggerGeometry(ArgumentStack&& args)
         else
         {
             LOG_WARNING("NWNX_Object_SetTriggerGeometry() called on non trigger object.");
+        }
+    }
+
+    return stack;
+}
+
+ArgumentStack Object::RemoveIconEffect(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+
+    if (auto *pObject = object(args))
+    {
+        const auto nIcon = Services::Events::ExtractArgument<int32_t>(args);
+
+        for (int i = 0; i < pObject->m_appliedEffects.num; i++)
+        {
+            auto *eff = pObject->m_appliedEffects.element[i];
+
+            if (eff->m_sCustomTag == "NWNX_Object_IconEffect" && eff->m_nParamInteger[0] == nIcon)
+            {
+                pObject->RemoveEffect(eff);
+                break;
+            }
+        }
+    }
+
+    return stack;
+}
+
+ArgumentStack Object::AddIconEffect(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+
+    if (auto *pObject = object(args))
+    {
+        const auto nIcon = Services::Events::ExtractArgument<int32_t>(args);
+        ASSERT_OR_THROW(nIcon > 0);
+        const auto fDuration = Services::Events::ExtractArgument<float>(args);
+
+        for (int i = 0; i < pObject->m_appliedEffects.num; i++)
+        {
+            auto *eff = pObject->m_appliedEffects.element[i];
+
+            if (eff->m_sCustomTag == "NWNX_Object_IconEffect" && eff->m_nParamInteger[0] == nIcon)
+            {
+                pObject->RemoveEffect(eff);
+                break;
+            }
+        }
+
+        auto *effIcon = new CGameEffect(true);
+        effIcon->m_oidCreator = 0;
+        effIcon->m_nType      = Constants::EffectTrueType::Icon;
+        effIcon->m_nSubType   = Constants::EffectSubType::Supernatural;
+        effIcon->m_bShowIcon  = true;
+        effIcon->m_bExpose    = true;
+        effIcon->m_sCustomTag = "NWNX_Object_IconEffect";
+
+        effIcon->SetNumIntegers(1);
+        effIcon->m_nParamInteger[0] = nIcon;
+
+        if (fDuration > 0.0)
+        {
+            effIcon->m_nSubType |= Constants::EffectDurationType::Temporary;
+            effIcon->m_fDuration = fDuration;
+        }
+        else
+        {
+            effIcon->m_nSubType |= Constants::EffectDurationType::Permanent;
+        }
+
+        pObject->ApplyEffect(effIcon, false, true);
+    }
+
+    return stack;
+}
+
+ArgumentStack Object::Export(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+
+    const auto fileName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!fileName.empty());
+      ASSERT_OR_THROW(fileName.size() <= 16);
+    const auto oidObject = Services::Events::ExtractArgument<Types::ObjectID >(args);
+      ASSERT_OR_THROW(oidObject != Constants::OBJECT_INVALID);
+
+    if (auto *pGameObject = Utils::GetGameObject(oidObject))
+    {
+        auto ExportObject = [&](RESTYPE resType) -> void
+        {
+            std::vector<uint8_t> serialized = SerializeGameObject(pGameObject, true);
+
+            if (!serialized.empty())
+            {
+                auto file = CExoFile(("NWNX:" + fileName).c_str(), resType, "wb");
+
+                if (file.FileOpened())
+                {
+                    file.Write(serialized.data(), serialized.size(), 1);
+                    file.Flush();
+                }
+            }
+        };
+
+        switch (pGameObject->m_nObjectType)
+        {
+            case Constants::ObjectType::Creature:   ExportObject(Constants::ResRefType::UTC); break;
+            case Constants::ObjectType::Item:       ExportObject(Constants::ResRefType::UTI); break;
+            case Constants::ObjectType::Placeable:  ExportObject(Constants::ResRefType::UTP); break;
+            case Constants::ObjectType::Waypoint:   ExportObject(Constants::ResRefType::UTW); break;
+            case Constants::ObjectType::Store:      ExportObject(Constants::ResRefType::UTS); break;
+            case Constants::ObjectType::Door:       ExportObject(Constants::ResRefType::UTD); break;
+            case Constants::ObjectType::Trigger:    ExportObject(Constants::ResRefType::UTT); break;
+            default:
+                LOG_ERROR("Invalid object type for ExportObject");
+                break;
         }
     }
 

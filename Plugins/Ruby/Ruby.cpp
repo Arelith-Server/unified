@@ -49,7 +49,7 @@ Ruby::Ruby(const Plugin::CreateParams& params)
     SafeRequire("enc/trans/transdb");
     SafeRequire("rubygems");
 
-    Maybe<std::string> preloadScript = GetServices()->m_config->Get<std::string>("PRELOAD_SCRIPT");
+    auto preloadScript = GetServices()->m_config->Get<std::string>("PRELOAD_SCRIPT");
     if (preloadScript)
     {
         SafeRequire(*preloadScript);
@@ -122,7 +122,7 @@ NWNXLib::Services::Events::ArgumentStack Ruby::OnEvaluate(NWNXLib::Services::Eve
     Events::ArgumentStack stack;
     Events::InsertArgument(stack, std::string(retString));
 
-    LOG_INFO("Evaluated Ruby. Ruby ID: '%i', code: '%s', got return value '%s'.", evaluationId, code.c_str(), retString);
+    LOG_INFO("Evaluated Ruby. Ruby ID: '%i', code: '%s', got return value '%s'.", evaluationId, code, retString);
 
     return stack;
 }
@@ -147,7 +147,7 @@ void Ruby::HandleError(const int errCode)
     const std::string errClassAsStr = StringValueCStr(errClass);
     const std::string errMsgAsStr = StringValueCStr(errMsg);
 
-    LOG_ERROR("Encountered error code: '%i', class: '%s', msg: '%s'.", errCode, errClassAsStr.c_str(), errMsgAsStr.c_str());
+    LOG_ERROR("Encountered error code: '%i', class: '%s', msg: '%s'.", errCode, errClassAsStr, errMsgAsStr);
 }
 
 }

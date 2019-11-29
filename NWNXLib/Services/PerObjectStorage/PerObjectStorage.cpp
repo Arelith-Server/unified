@@ -15,7 +15,7 @@ namespace NWNXLib {
 
 namespace Services {
 
-PerObjectStorage::ObjectStorage* PerObjectStorage::GetObjectStorage(API::CGameObject *pGameObject)
+PerObjectStorage::ObjectStorage* PerObjectStorage::GetObjectStorage(CGameObject *pGameObject)
 {
     if (!pGameObject)
         return nullptr;
@@ -33,28 +33,28 @@ PerObjectStorage::ObjectStorage* PerObjectStorage::GetObjectStorage(API::Types::
 }
 
 
-void PerObjectStorage::Set(API::CGameObject *pGameObject, std::string key, int value)
+void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, int value)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
         pOS->GetIntMap()[key] = value;
     }
 }
-void PerObjectStorage::Set(API::CGameObject *pGameObject, std::string key, float value)
+void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, float value)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
         pOS->GetFloatMap()[key] = value;
     }
 }
-void PerObjectStorage::Set(API::CGameObject *pGameObject, std::string key, std::string value)
+void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, std::string value)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
-        pOS->GetStringMap()[key] = value;
+        pOS->GetStringMap().emplace(key, std::move(value));
     }
 }
-void PerObjectStorage::Set(API::CGameObject *pGameObject, std::string key, void *value, CleanupFunc cleanup)
+void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, void *value, CleanupFunc cleanup)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
@@ -64,7 +64,7 @@ void PerObjectStorage::Set(API::CGameObject *pGameObject, std::string key, void 
 
 
 
-void PerObjectStorage::Remove(API::CGameObject *pGameObject, std::string key)
+void PerObjectStorage::Remove(CGameObject *pGameObject, const std::string& key)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
@@ -117,10 +117,11 @@ PerObjectStorage::ObjectStorage::PointerMap& PerObjectStorage::ObjectStorage::Ge
 PerObjectStorage::ObjectStorage::ObjectStorage(API::Types::ObjectID owner)
 {
     m_oidOwner = owner;
+    m_bCloned = false;
 }
 PerObjectStorage::ObjectStorage::~ObjectStorage()
 {
-    if (m_PointerMap)
+    if (m_PointerMap && !m_bCloned)
     {
         for (auto it: *m_PointerMap)
         {
@@ -135,6 +136,8 @@ void PerObjectStorage::ObjectStorage::CloneFrom(PerObjectStorage::ObjectStorage 
 {
     if (!other)
         return;
+
+    other->m_bCloned = true;
 
     if (other->m_IntMap)
         m_IntMap = std::make_unique<IntMap>(*other->m_IntMap);
@@ -174,85 +177,87 @@ std::string PerObjectStorage::ObjectStorage::DumpToString()
 }
 
 PerObjectStorageProxy::PerObjectStorageProxy(PerObjectStorage& perObjectStorage, std::string pluginName)
-    : ServiceProxy<PerObjectStorage>(perObjectStorage)
+    : ServiceProxy<PerObjectStorage>(perObjectStorage), m_pluginName(std::move(pluginName))
 {
-    m_pluginName = pluginName;
 }
+
 PerObjectStorageProxy::~PerObjectStorageProxy()
 {
     // TODO cleanup all storage from this plugin
 }
 
-void PerObjectStorageProxy::Set(API::CGameObject *pGameObject, std::string key, int value)
+void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, int value)
 {
     m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, value);
 }
-void PerObjectStorageProxy::Set(API::CGameObject *pGameObject, std::string key, float value)
+void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, float value)
 {
     m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, value);
 }
-void PerObjectStorageProxy::Set(API::CGameObject *pGameObject, std::string key, std::string value)
+void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, std::string value)
 {
-    m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, value);
+    m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, std::move(value));
 }
-void PerObjectStorageProxy::Set(API::CGameObject *pGameObject, std::string key, void *value, PerObjectStorage::CleanupFunc cleanup)
+void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, void *value, PerObjectStorage::CleanupFunc cleanup)
 {
     m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, value, cleanup);
 }
 
-void PerObjectStorageProxy::Remove(API::CGameObject *pGameObject, std::string key)
+void PerObjectStorageProxy::Remove(CGameObject *pGameObject, const std::string& key)
 {
     m_proxyBase.Remove(pGameObject, m_pluginName + "!" + key);
 }
 
 
-template <> Maybe<int> PerObjectStorage::Get<int>(API::CGameObject *pGameObject, std::string key)
+template <> std::optional<int> PerObjectStorage::Get<int>(CGameObject *pGameObject, const std::string& key)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
         auto map = pOS->GetIntMap();
         auto it = map.find(key);
         if (it != map.end())
-            return Maybe<int>(it->second);
+            return std::make_optional<int>(it->second);
     }
-    return Maybe<int>();
+    return std::optional<int>();
 }
-template <> Maybe<float> PerObjectStorage::Get<float>(API::CGameObject *pGameObject, std::string key)
+
+template <> std::optional<float> PerObjectStorage::Get<float>(CGameObject *pGameObject, const std::string& key)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
         auto map = pOS->GetFloatMap();
         auto it = map.find(key);
         if (it != map.end())
-            return Maybe<float>(it->second);
+            return std::make_optional<float>(it->second);
     }
-    return Maybe<float>();
+    return std::optional<float>();
 }
-template <> Maybe<std::string> PerObjectStorage::Get<std::string>(API::CGameObject *pGameObject, std::string key)
+
+template <> std::optional<std::string> PerObjectStorage::Get<std::string>(CGameObject *pGameObject, const std::string& key)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
         auto map = pOS->GetStringMap();
         auto it = map.find(key);
         if (it != map.end())
-            return Maybe<std::string>(it->second);
+            return std::make_optional<std::string>(it->second);
     }
-    return Maybe<std::string>();
+    return std::optional<std::string>();
 }
 
-template <> Maybe<void*> PerObjectStorage::Get<void*>(API::CGameObject *pGameObject, std::string key)
+template <> std::optional<void*> PerObjectStorage::Get<void*>(CGameObject *pGameObject, const std::string& key)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
         auto map = pOS->GetPointerMap();
         auto it = map.find(key);
         if (it != map.end())
-            return Maybe<void*>(it->second.first);
+            return std::make_optional<void*>(it->second.first);
     }
-    return Maybe<void*>();
+    return std::optional<void*>();
 }
 
-void PerObjectStorage::DestroyObjectStorage(API::CGameObject *pGameObject)
+void PerObjectStorage::DestroyObjectStorage(CGameObject *pGameObject)
 {
     if (pGameObject->m_pNwnxData)
     {
@@ -261,24 +266,24 @@ void PerObjectStorage::DestroyObjectStorage(API::CGameObject *pGameObject)
     }
 }
 
-void PerObjectStorage::CNWSObject__CNWSObjectDtor__0_hook(Services::Hooks::CallType type, API::CNWSObject* pThis)
+void PerObjectStorage::CNWSObject__CNWSObjectDtor__0_hook(Services::Hooks::CallType type, CNWSObject* pThis)
 {
     if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
-        DestroyObjectStorage(static_cast<API::CGameObject*>(pThis));
+        DestroyObjectStorage(static_cast<CGameObject*>(pThis));
 }
-void PerObjectStorage::CNWSArea__CNWSAreaDtor__0_hook(Services::Hooks::CallType type, API::CNWSArea* pThis)
+void PerObjectStorage::CNWSArea__CNWSAreaDtor__0_hook(Services::Hooks::CallType type, CNWSArea* pThis)
 {
     if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
-        DestroyObjectStorage(static_cast<API::CGameObject*>(pThis));
+        DestroyObjectStorage(static_cast<CGameObject*>(pThis));
 }
-void PerObjectStorage::CNWSPlayer__EatTURD_hook(Services::Hooks::CallType type, API::CNWSPlayer* thisPtr, API::CNWSPlayerTURD* pTURD)
+void PerObjectStorage::CNWSPlayer__EatTURD_hook(Services::Hooks::CallType type, CNWSPlayer* thisPtr, CNWSPlayerTURD* pTURD)
 {
     if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
     {
         GetObjectStorage(thisPtr->m_oidNWSObject)->CloneFrom(GetObjectStorage(pTURD));
     }
 }
-void PerObjectStorage::CNWSPlayer__DropTURD_hook(Services::Hooks::CallType type, API::CNWSPlayer* thisPtr)
+void PerObjectStorage::CNWSPlayer__DropTURD_hook(Services::Hooks::CallType type, CNWSPlayer* thisPtr)
 {
     if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
     {
@@ -289,7 +294,7 @@ void PerObjectStorage::CNWSPlayer__DropTURD_hook(Services::Hooks::CallType type,
         {
             if (auto *pHead = turdlist->pHead)
             {
-                if (auto *pTURD = static_cast<API::CNWSPlayerTURD*>(pHead->pObject))
+                if (auto *pTURD = static_cast<CNWSPlayerTURD*>(pHead->pObject))
                 {
                     GetObjectStorage(pTURD)->CloneFrom(GetObjectStorage(thisPtr->m_oidNWSObject));
                 }

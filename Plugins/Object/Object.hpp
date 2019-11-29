@@ -38,8 +38,11 @@ private:
     ArgumentStack SetAutoRemoveKey      (ArgumentStack&& args);
     ArgumentStack GetTriggerGeometry    (ArgumentStack&& args);
     ArgumentStack SetTriggerGeometry    (ArgumentStack&& args);
+    ArgumentStack RemoveIconEffect      (ArgumentStack&& args);
+    ArgumentStack AddIconEffect         (ArgumentStack&& args);
+    ArgumentStack Export                (ArgumentStack&& args);
 
-    NWNXLib::API::CNWSObject *object(ArgumentStack& args);
+    CNWSObject *object(ArgumentStack& args);
 
 };
 
