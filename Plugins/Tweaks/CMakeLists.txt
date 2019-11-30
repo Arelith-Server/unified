@@ -11,6 +11,7 @@ add_plugin(Tweaks
     "Tweaks/HideDMsOnCharList.cpp"
     "Tweaks/DisableMonkAbilitiesWhenPolymorphed.cpp"
     "Tweaks/StringToIntBaseToAuto.cpp"
+    "Tweaks/StripOVTFromNotVisibleObject.cpp"
     "Tweaks/DeadCreatureFiresOnAreaExit.cpp"
     "Tweaks/PreserveActionsOnDMPossess.cpp"
     "Tweaks/FixGreaterSanctuaryBug.cpp"
