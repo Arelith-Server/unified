@@ -14,6 +14,7 @@
 #include "Plugin.hpp"
 #include "Arelith.hpp"
 #include "Utils.hpp"
+#include "API/Functions.hpp"
 
 namespace Arelith {
 
