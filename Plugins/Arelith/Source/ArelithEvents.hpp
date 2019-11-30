@@ -14,11 +14,11 @@ public:
     ArelithEvents(NWNXLib::ViewPtr<NWNXLib::Services::HooksProxy> hooker);
 
 private:
-    static int32_t CanUseItemHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem, int32_t bIgnoreIdentifiedFlag);
-    static unsigned char CanEquipWeaponHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem, int32_t *nEquipToSlot, int32_t bEquipping, int32_t, NWNXLib::API::CNWSPlayer *pFeedbackPlayer);
-    static unsigned char CanUnEquipWeaponHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem);
-    static int32_t OnApplyDisarmHook(NWNXLib::API::CNWSEffectListHandler*, NWNXLib::API::CNWSObject *pObject, NWNXLib::API::CGameEffect *pEffect, int32_t bLoadingGame);
-    static int32_t OnEffectAppliedHook(NWNXLib::API::CNWSEffectListHandler *pEffectListHandler, NWNXLib::API::CNWSObject *pObject, NWNXLib::API::CGameEffect *pEffect, int32_t bLoadingGame);
+    static int32_t CanUseItemHook(CNWSCreature *pCreature, CNWSItem *pItem, int32_t bIgnoreIdentifiedFlag);
+    static unsigned char CanEquipWeaponHook( CNWSCreature *pCreature, CNWSItem *pItem, int32_t *nEquipToSlot, int32_t bEquipping, int32_t, CNWSPlayer *pFeedbackPlayer);
+    static unsigned char CanUnEquipWeaponHook( CNWSCreature *pCreature, CNWSItem *pItem);
+    static int32_t OnApplyDisarmHook(NCNWSEffectListHandler*, CNWSObject *pObject, CGameEffect *pEffect, int32_t bLoadingGame);
+    static int32_t OnEffectAppliedHook(CNWSEffectListHandler *pEffectListHandler, CNWSObject *pObject, CGameEffect *pEffect, int32_t bLoadingGame);
 };
 
 }
