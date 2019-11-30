@@ -24,10 +24,10 @@ static NWNXLib::Hooking::FunctionHook* pHookComputeUpdateRequired = nullptr;
 
 StripOVTFromNotVisibleObject::StripOVTFromNotVisibleObject(ViewPtr<Services::HooksProxy> hooker)
 {
-    hooker->RequestExclusiveHook<Functions::CNWSMessage__ComputeUpdateRequired>
+    hooker->RequestExclusiveHook<Functions::_ZN11CNWSMessage21ComputeUpdateRequiredEP10CNWSPlayerP10CNWSObjectP17CLastUpdateObjecti>
                                     (&HookComputeUpdateRequired);
 
-    pHookComputeUpdateRequired = hooker->FindHookByAddress(Functions::CNWSMessage__ComputeUpdateRequired);
+    pHookComputeUpdateRequired = hooker->FindHookByAddress(Functions::_ZN11CNWSMessage21ComputeUpdateRequiredEP10CNWSPlayerP10CNWSObjectP17CLastUpdateObjecti);
 }
 
 uint32_t StripOVTFromNotVisibleObject::HookComputeUpdateRequired(CNWSMessage* thisMessage, CNWSPlayer* pPlayer, CNWSObject* pGameObject, CLastUpdateObject* pLastUpdateObject, int32_t bPlayerObject)
