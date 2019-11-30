@@ -32,16 +32,16 @@ static NWNXLib::Hooking::FunctionHook* m_OnEffectAppliedHook=nullptr;
 ArelithEvents::ArelithEvents(ViewPtr<Services::HooksProxy> hooker)
 {
     Arelith::InitOnFirstSubscribe("NWNX_ARELITH_*", [hooker]() {
-        hooker->RequestExclusiveHook<Functions::CNWSCreature__CanUseItem, int32_t, CNWSCreature*, CNWSItem*, int32_t>(&CanUseItemHook);
-        m_CanUseItemHook =  hooker->FindHookByAddress(CanUseItem);
-        hooker->RequestExclusiveHook<CNWSCreature__CanEquipWeapon, unsigned char, CNWSCreature*, CNWSItem*, int32_t*, int32_t, int32_t, CNWSPlayer*>(&CanEquipWeaponHook);
-        m_CanEquipWeaponHook =  hooker->FindHookByAddress(CanEquipWeapon);
-        hooker->RequestExclusiveHook<CNWSCreature__CanUnEquipWeapon, unsigned char, CNWSCreature*, CNWSItem*>(&CanUnEquipWeaponHook);
-        m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(CanUnEquipWeapon);
-        hooker->RequestExclusiveHook<OnApplyDisarm, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnApplyDisarmHook);
-        m_OnApplyDisarmHook =  hooker->FindHookByAddress(OnApplyDisarm);
-        hooker->RequestExclusiveHook<COnEffectApplied, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnEffectAppliedHook);
-        m_OnEffectAppliedHook =  hooker->FindHookByAddress(OnEffectApplied);
+        hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature10CanUseItemEP8CNWSItemi, int32_t, CNWSCreature*, CNWSItem*, int32_t>(&CanUseItemHook);
+        m_CanUseItemHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature10CanUseItemEP8CNWSItemi);
+        hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer, unsigned char, CNWSCreature*, CNWSItem*, int32_t*, int32_t, int32_t, CNWSPlayer*>(&CanEquipWeaponHook);
+        m_CanEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlaye);
+        hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem, unsigned char, CNWSCreature*, CNWSItem*>(&CanUnEquipWeaponHook);
+        m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem);
+        hooker->RequestExclusiveHook<Functions::_ZN21CNWSEffectListHandler13OnApplyDisarmEP10CNWSObjectP11CGameEffecti, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnApplyDisarmHook);
+        m_OnApplyDisarmHook =  hooker->FindHookByAddress(Functions::_ZN21CNWSEffectListHandler13OnApplyDisarmEP10CNWSObjectP11CGameEffecti);
+        hooker->RequestExclusiveHook<Functions::_ZN21CNWSEffectListHandler15OnEffectAppliedEP10CNWSObjectP11CGameEffecti, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnEffectAppliedHook);
+        m_OnEffectAppliedHook =  hooker->FindHookByAddress(Functions::_ZN21CNWSEffectListHandler15OnEffectAppliedEP10CNWSObjectP11CGameEffecti);
     });
 }
 
