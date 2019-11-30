@@ -120,7 +120,7 @@ bool Arelith::SignalEvent(const std::string& eventName, const API::Types::Object
     for (const auto& script : g_plugin->m_eventMap[eventName])
     {
         LOG_DEBUG("Dispatching notification for event '%s' to script '%s'.", eventName.c_str(), script.c_str());
-        API::API::CExoString scriptExoStr = script.c_str();
+        CExoString scriptExoStr = script.c_str();
 
         ++g_plugin->m_eventDepth;
         API::Globals::VirtualMachine()->RunScript(&scriptExoStr, target, 1);
