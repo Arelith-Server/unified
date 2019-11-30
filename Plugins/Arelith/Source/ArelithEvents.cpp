@@ -30,16 +30,16 @@ static NWNXLib::Hooking::FunctionHook* m_OnEffectAppliedHook=nullptr;
 ArelithEvents::ArelithEvents(ViewPtr<Services::HooksProxy> hooker)
 {
     Arelith::InitOnFirstSubscribe("NWNX_ARELITH_*", [hooker]() {
-        hooker->RequestExclusiveHook<CNWSCreature__CanUseItem, int32_t, CNWSCreature*, API::CNWSItem*, int32_t>(&CanUseItemHook);
-        m_CanUseItemHook =  hooker->FindHookByAddress(CNWSCreature__CanUseItem);
+        hooker->RequestExclusiveHook<CanUseItem, int32_t, CNWSCreature*, CNWSItem*, int32_t>(&CanUseItemHook);
+        m_CanUseItemHook =  hooker->FindHookByAddress(CanUseItem);
         hooker->RequestExclusiveHook<CNWSCreature__CanEquipWeapon, unsigned char, CNWSCreature*, CNWSItem*, int32_t*, int32_t, int32_t, CNWSPlayer*>(&CanEquipWeaponHook);
-        m_CanEquipWeaponHook =  hooker->FindHookByAddress(CNWSCreature__CanEquipWeapon);
+        m_CanEquipWeaponHook =  hooker->FindHookByAddress(CanEquipWeapon);
         hooker->RequestExclusiveHook<CNWSCreature__CanUnEquipWeapon, unsigned char, CNWSCreature*, CNWSItem*>(&CanUnEquipWeaponHook);
-        m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(CNWSCreature__CanUnEquipWeapon);
-        hooker->RequestExclusiveHook<CNWSEffectListHandler__OnApplyDisarm, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnApplyDisarmHook);
-        m_OnApplyDisarmHook =  hooker->FindHookByAddress(CNWSEffectListHandler__OnApplyDisarm);
-        hooker->RequestExclusiveHook<CNWSEffectListHandler__OnEffectApplied, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnEffectAppliedHook);
-        m_OnEffectAppliedHook =  hooker->FindHookByAddress(CNWSEffectListHandler__OnEffectApplied);
+        m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(CanUnEquipWeapon);
+        hooker->RequestExclusiveHook<OnApplyDisarm, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnApplyDisarmHook);
+        m_OnApplyDisarmHook =  hooker->FindHookByAddress(OnApplyDisarm);
+        hooker->RequestExclusiveHook<COnEffectApplied, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnEffectAppliedHook);
+        m_OnEffectAppliedHook =  hooker->FindHookByAddress(OnEffectApplied);
     });
 }
 
