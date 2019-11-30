@@ -98,8 +98,10 @@ private:
     ArgumentStack SetFamiliarCreatureType       (ArgumentStack&& args);
     ArgumentStack SetAnimalCompanionName        (ArgumentStack&& args);
     ArgumentStack SetFamiliarName               (ArgumentStack&& args);
+    ArgumentStack GetDisarmable                 (ArgumentStack&& args);
+    ArgumentStack SetDisarmable                 (ArgumentStack&& args);
 
-    NWNXLib::API::CNWSCreature *creature(ArgumentStack& args);
+    CNWSCreature *creature(ArgumentStack& args);
 
 };
 

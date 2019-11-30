@@ -5,7 +5,7 @@
 #include "API/CNWSObject.hpp"
 #include "API/CNWSScriptVar.hpp"
 #include "API/CNWSScriptVarTable.hpp"
-#include "API/CExoArrayListTemplatedCNWSScriptVar.hpp"
+#include "API/CExoArrayList.hpp"
 #include "API/CNWSCreature.hpp"
 #include "API/CNWSCreatureStats.hpp"
 #include "API/CNWSPlaceable.hpp"
@@ -20,6 +20,7 @@
 #include "API/CNWBaseItem.hpp"
 #include "API/CNWBaseItemArray.hpp"
 #include "API/CItemRepository.hpp"
+#include "API/CExoFile.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "API/CLoopingVisualEffect.hpp"
@@ -61,7 +62,8 @@ Object::Object(const Plugin::CreateParams& params)
     : Plugin(params)
 {
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, std::bind(&Object::func, this, std::placeholders::_1))
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(GetLocalVariableCount);
     REGISTER(GetLocalVariable);
@@ -87,6 +89,7 @@ Object::Object(const Plugin::CreateParams& params)
     REGISTER(SetTriggerGeometry);
     REGISTER(RemoveIconEffect);
     REGISTER(AddIconEffect);
+    REGISTER(Export);
 
 #undef REGISTER
 }
@@ -580,7 +583,7 @@ ArgumentStack Object::SetTriggerGeometry(ArgumentStack&& args)
                     pTrigger->m_pnOutlineVertices[i] = i;
                 }
 
-                pTrigger->AddToArea(pArea, pTrigger->m_pvVertices[0].x, pTrigger->m_pvVertices[0].y, pTrigger->m_pvVertices[0].z, false);
+                Utils::AddToArea(pTrigger, pArea, pTrigger->m_pvVertices[0].x, pTrigger->m_pvVertices[0].y, pTrigger->m_pvVertices[0].z);
             }
             else
             {
@@ -640,7 +643,7 @@ ArgumentStack Object::AddIconEffect(ArgumentStack&& args)
             }
         }
 
-        auto *effIcon = new API::CGameEffect(true);
+        auto *effIcon = new CGameEffect(true);
         effIcon->m_oidCreator = 0;
         effIcon->m_nType      = Constants::EffectTrueType::Icon;
         effIcon->m_nSubType   = Constants::EffectSubType::Supernatural;
@@ -662,6 +665,52 @@ ArgumentStack Object::AddIconEffect(ArgumentStack&& args)
         }
 
         pObject->ApplyEffect(effIcon, false, true);
+    }
+
+    return stack;
+}
+
+ArgumentStack Object::Export(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+
+    const auto fileName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!fileName.empty());
+      ASSERT_OR_THROW(fileName.size() <= 16);
+    const auto oidObject = Services::Events::ExtractArgument<Types::ObjectID >(args);
+      ASSERT_OR_THROW(oidObject != Constants::OBJECT_INVALID);
+
+    if (auto *pGameObject = Utils::GetGameObject(oidObject))
+    {
+        auto ExportObject = [&](RESTYPE resType) -> void
+        {
+            std::vector<uint8_t> serialized = SerializeGameObject(pGameObject, true);
+
+            if (!serialized.empty())
+            {
+                auto file = CExoFile(("NWNX:" + fileName).c_str(), resType, "wb");
+
+                if (file.FileOpened())
+                {
+                    file.Write(serialized.data(), serialized.size(), 1);
+                    file.Flush();
+                }
+            }
+        };
+
+        switch (pGameObject->m_nObjectType)
+        {
+            case Constants::ObjectType::Creature:   ExportObject(Constants::ResRefType::UTC); break;
+            case Constants::ObjectType::Item:       ExportObject(Constants::ResRefType::UTI); break;
+            case Constants::ObjectType::Placeable:  ExportObject(Constants::ResRefType::UTP); break;
+            case Constants::ObjectType::Waypoint:   ExportObject(Constants::ResRefType::UTW); break;
+            case Constants::ObjectType::Store:      ExportObject(Constants::ResRefType::UTS); break;
+            case Constants::ObjectType::Door:       ExportObject(Constants::ResRefType::UTD); break;
+            case Constants::ObjectType::Trigger:    ExportObject(Constants::ResRefType::UTT); break;
+            default:
+                LOG_ERROR("Invalid object type for ExportObject");
+                break;
+        }
     }
 
     return stack;

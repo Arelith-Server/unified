@@ -39,39 +39,15 @@ ServerLogRedirector::ServerLogRedirector(const Plugin::CreateParams& params)
     : Plugin(params)
 {
     // Hook logging so it always emits to stdout/stderr.
-    GetServices()->m_hooks->RequestSharedHook<Functions::CExoDebugInternal__WriteToLogFile,
+    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
         void, CExoDebugInternal*, CExoString*>(&WriteToLogFileHook);
 
-    GetServices()->m_hooks->RequestSharedHook<Functions::CExoDebugInternal__WriteToErrorFile,
+    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN17CExoDebugInternal16WriteToErrorFileERK10CExoString,
         void, CExoDebugInternal*, CExoString*>(&WriteToErrorFileHook);
 }
 
 ServerLogRedirector::~ServerLogRedirector()
 {
-}
-
-// trim from start
-inline std::string& ltrim(std::string& s)
-{
-    s.erase(s.begin(), std::find_if(
-                s.begin(),
-                s.end(),
-                std::not1(std::ptr_fun<int, int>(std::isspace))));
-    return s;
-}
-
-// trim from end
-inline std::string& rtrim(std::string& s)
-{
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-    return s;
-}
-
-// trim from both ends
-inline std::string& trim(std::string& s)
-{
-    return ltrim(rtrim(s));
 }
 
 inline std::string TrimMessage(CExoString* message)
@@ -83,7 +59,7 @@ inline std::string TrimMessage(CExoString* message)
     if (idxOfBracket != std::string::npos)
         s.erase(0, idxOfBracket + 1);
 
-    return trim(s);
+    return Utils::trim(s);
 }
 
 void ServerLogRedirector::WriteToLogFileHook(Hooks::CallType type,
@@ -92,7 +68,7 @@ void ServerLogRedirector::WriteToLogFileHook(Hooks::CallType type,
     if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
     {
         std::string str = TrimMessage(message);
-        LOG_INFO("(Server) %s", str.c_str());
+        LOG_INFO("(Server) %s", str);
     }
 }
 
@@ -102,7 +78,7 @@ void ServerLogRedirector::WriteToErrorFileHook(Hooks::CallType type,
     if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
     {
         std::string str = TrimMessage(message);
-        LOG_INFO("(Error) %s", str.c_str());
+        LOG_INFO("(Error) %s", str);
     }
 }
 

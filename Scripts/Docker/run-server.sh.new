@@ -27,6 +27,16 @@ if [ -f $ROHOMEPATH/nwnplayer.ini ]; then
   <$ROHOMEPATH/nwnplayer.ini awk -f /nwn/prep-nwnplayer-ini.awk >$HOMEPATH/nwnplayer.ini
 fi
 
+if [ -f $ROHOMEPATH/nwnplayer.ini ]; then
+  echo "[*] .. nwnplayer.ini"
+  <$ROHOMEPATH/nwnplayer.ini awk -f /nwn/prep-nwnplayer-ini.awk >$HOMEPATH/nwnplayer.ini
+fi
+
+if [ -f $ROHOMEPATH/cryptographic_secret ]; then
+  echo "[*] .. cryptographic_secret"
+  cp -a $ROHOMEPATH/cryptographic_secret $HOMEPATH/
+fi
+
 LOGPID=0
 if [ "$NWN_TAIL_LOGS" = "y" ]; then
   echo "[*] Server logs mirrored to stdout"
@@ -35,11 +45,24 @@ if [ "$NWN_TAIL_LOGS" = "y" ]; then
     /nwn/run/logs.0/nwserverError1.txt) &
 fi
 
+function backup_cryptographic_secret {
+  # If we generated a cryptographic_secret, put it back into the public dir
+  if [ -f $HOMEPATH/cryptographic_secret ] && [ ! -f $ROHOMEPATH/cryptographic_secret ]; then
+    echo "Backing up cryptographic_secret to your user home"
+    cp -va $HOMEPATH/cryptographic_secret $ROHOMEPATH/cryptographic_secret
+  fi
+}
+(sleep 10; backup_cryptographic_secret) &
+
 echo "[*] Port: ${NWN_PORT:-5121}/udp"
 
 copycrashlog() {
   inotifywait -mq -e moved_to -e create "$1" --format "%f" | while read f
   do
+    # copy the cryptographic_secret just to make sure
+    if [[ $f = cryptographic_secret ]]; then
+      backup_cryptographic_secret
+    fi
     # check if the file is a crash log file
     if [[ $f = nwserver-crash*.log ]]; then
       echo "The server crashed, trying to save crash data ($f) into your mounted server home."

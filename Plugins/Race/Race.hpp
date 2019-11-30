@@ -20,12 +20,10 @@ class Race : public NWNXLib::Plugin
 public:
     Race(const Plugin::CreateParams& params);
     virtual ~Race();
-	
-	
 
 private:
     bool m_ShowEffectIcon;
-    
+
     ArgumentStack SetRacialModifier(ArgumentStack&& args);
     ArgumentStack GetParentRace(ArgumentStack&& args);
 
@@ -88,11 +86,13 @@ private:
     static void SetRaceModifier(int32_t, RaceModifier, int32_t, int32_t, int32_t);
 
     static void ResolveInitiativeHook(CNWSCreature*);
-	
-    static void PostProcessHook(Hooks::CallType, CNWSCreature*);
+
+    static void LoadCharacterFinishHook(Hooks::CallType, CServerExoAppInternal*, CNWSPlayer*, int32_t, int32_t);
     static void ResetFeatRemainingUsesHook(Hooks::CallType, CNWSCreatureStats*);
     static void CreateDefaultQuickButtonsHook(Hooks::CallType, CNWSCreature*);
+    static void HandleValidateCharacter(Types::ObjectID, bool);
     static void ValidateCharacterHook(Hooks::CallType, CNWSPlayer*, int32_t*);
+
     static void SendServerToPlayerLevelUp_ConfirmationHook(Hooks::CallType, CNWSMessage*, Types::PlayerID, int32_t);
     static void LevelUpAutomaticHook(Hooks::CallType, CNWSCreatureStats*, uint8_t, int32_t, uint8_t);
     static void GetFavoredEnemyBonusHook(Hooks::CallType, CNWSCreatureStats*, CNWSCreature*);
