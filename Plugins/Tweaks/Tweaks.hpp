@@ -40,13 +40,10 @@ private:
     std::unique_ptr<HideDMsOnCharList> m_HideDMsOnCharList;
     std::unique_ptr<DisableMonkAbilitiesWhenPolymorphed> m_DisableMonkAbilitiesWhenPolymorphed;
     std::unique_ptr<StringToIntBaseToAuto> m_StringToIntBaseToAuto;
-<<<<<<< HEAD
     std::unique_ptr<StripOVTFromNotVisibleObject> m_StripOVTFromNotVisibleObject;
-=======
     std::unique_ptr<DeadCreatureFiresOnAreaExit> m_DeadCreatureFiresOnAreaExit;
     std::unique_ptr<PreserveActionsOnDMPossess> m_PreserveActionsOnDMPossess;
     std::unique_ptr<FixGreaterSanctuaryBug> m_FixGreaterSanctuaryBug;
->>>>>>> 413c830f2b7041a870eb7d4d4803e81620a9979f
 };
 
 }
