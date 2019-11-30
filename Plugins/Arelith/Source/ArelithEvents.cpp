@@ -19,6 +19,7 @@
 namespace Arelith {
 
 using namespace NWNXLib;
+using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
 static NWNXLib::Hooking::FunctionHook* m_CanUseItemHook=nullptr;
