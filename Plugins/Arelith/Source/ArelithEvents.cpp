@@ -31,7 +31,7 @@ static NWNXLib::Hooking::FunctionHook* m_OnEffectAppliedHook=nullptr;
 
 ArelithEvents::ArelithEvents(ViewPtr<Services::HooksProxy> hooker)
 {
-    Arelith::InitOnFirstSubscribe("NWNX_ARELITH_*", [hooker]() {
+    Arelith::InitOnFirstSubscribe("NWNX_ARELITH_.*", [hooker]() {
         hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature10CanUseItemEP8CNWSItemi, int32_t, CNWSCreature*, CNWSItem*, int32_t>(&CanUseItemHook);
         m_CanUseItemHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature10CanUseItemEP8CNWSItemi);
         hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer, unsigned char, CNWSCreature*, CNWSItem*, int32_t*, int32_t, int32_t, CNWSPlayer*>(&CanEquipWeaponHook);
