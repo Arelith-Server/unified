@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+using ArgumentStack = NWNXLib::Services::Events::ArgumentStack;
 namespace Arelith {
 
 class ArelithEvents;
