@@ -18,7 +18,6 @@ private:
     static unsigned char CanEquipWeaponHook( CNWSCreature *pCreature, CNWSItem *pItem, int32_t *nEquipToSlot, int32_t bEquipping, int32_t, CNWSPlayer *pFeedbackPlayer);
     static unsigned char CanUnEquipWeaponHook( CNWSCreature *pCreature, CNWSItem *pItem);
     static int32_t OnApplyDisarmHook(CNWSEffectListHandler*, CNWSObject *pObject, CGameEffect *pEffect, int32_t bLoadingGame);
-    static int32_t OnEffectAppliedHook(CNWSEffectListHandler *pEffectListHandler, CNWSObject *pObject, CGameEffect *pEffect, int32_t bLoadingGame);
 };
 
 }

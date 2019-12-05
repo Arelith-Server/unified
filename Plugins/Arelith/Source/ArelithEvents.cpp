@@ -26,7 +26,6 @@ static NWNXLib::Hooking::FunctionHook* m_CanUseItemHook=nullptr;
 static NWNXLib::Hooking::FunctionHook* m_CanEquipWeaponHook=nullptr;
 static NWNXLib::Hooking::FunctionHook* m_CanUnEquipWeaponHook=nullptr;
 static NWNXLib::Hooking::FunctionHook* m_OnApplyDisarmHook=nullptr;
-static NWNXLib::Hooking::FunctionHook* m_OnEffectAppliedHook=nullptr;
 
 
 ArelithEvents::ArelithEvents(ViewPtr<Services::HooksProxy> hooker)
@@ -40,8 +39,6 @@ ArelithEvents::ArelithEvents(ViewPtr<Services::HooksProxy> hooker)
         m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem);
         hooker->RequestExclusiveHook<Functions::_ZN21CNWSEffectListHandler13OnApplyDisarmEP10CNWSObjectP11CGameEffecti, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnApplyDisarmHook);
         m_OnApplyDisarmHook =  hooker->FindHookByAddress(Functions::_ZN21CNWSEffectListHandler13OnApplyDisarmEP10CNWSObjectP11CGameEffecti);
-        hooker->RequestExclusiveHook<Functions::_ZN21CNWSEffectListHandler15OnEffectAppliedEP10CNWSObjectP11CGameEffecti, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnEffectAppliedHook);
-        m_OnEffectAppliedHook =  hooker->FindHookByAddress(Functions::_ZN21CNWSEffectListHandler15OnEffectAppliedEP10CNWSObjectP11CGameEffecti);
     });
 }
 
@@ -127,51 +124,5 @@ int32_t ArelithEvents::OnApplyDisarmHook(CNWSEffectListHandler*, CNWSObject *pOb
 	return 1;
 }
 
-
-
-int32_t ArelithEvents::OnEffectAppliedHook(CNWSEffectListHandler *pEffectListHandler, CNWSObject *pObject, CGameEffect *pEffect, int32_t bLoadingGame)
-{
-	if (pEffect->m_nType == EffectTrueType::ItemProperty || !Utils::AsNWSCreature(pObject)) 
-    {
-        return m_OnEffectAppliedHook->CallOriginal<int32_t>(pEffectListHandler, pObject, pEffect, bLoadingGame);
-    }
-
-    Arelith::PushEventData("UNIQUE_ID", std::to_string(pEffect->m_nID));
-    Arelith::PushEventData("CREATOR", Utils::ObjectIDToString(pEffect->m_oidCreator));
-    Arelith::PushEventData("TYPE", std::to_string(pEffect->m_nType));
-    Arelith::PushEventData("SUB_TYPE", std::to_string(pEffect->m_nSubType & EffectSubType::MASK));
-    Arelith::PushEventData("DURATION_TYPE", std::to_string(pEffect->m_nSubType & EffectDurationType::MASK));
-    Arelith::PushEventData("DURATION", std::to_string(pEffect->m_fDuration));
-    Arelith::PushEventData("SPELL_ID", std::to_string(pEffect->m_nSpellId));
-    Arelith::PushEventData("CASTER_LEVEL", std::to_string(pEffect->m_nCasterLevel));
-    Arelith::PushEventData("CUSTOM_TAG", pEffect->m_sCustomTag.CStr());
-
-    for (int i = 0; i < pEffect->m_nNumIntegers; i++)
-    {// Int Params
-        Arelith::PushEventData("INT_PARAM_" + std::to_string(i + 1), std::to_string(pEffect->m_nParamInteger[i]));
-    }
-
-    for(int i = 0; i < 4; i++)
-    {// Float Params
-        Arelith::PushEventData("FLOAT_PARAM_" + std::to_string(i + 1), std::to_string(pEffect->m_nParamFloat[i]));
-    }
-
-    for(int i = 0; i < 6; i++)
-    {// String Params
-        Arelith::PushEventData("STRING_PARAM_" + std::to_string(i + 1), pEffect->m_sParamString[i].CStr());
-    }
-
-    for(int i = 0; i < 4; i++)
-    {// Object Params
-        Arelith::PushEventData("OBJECT_PARAM_" + std::to_string(i + 1), Utils::ObjectIDToString(pEffect->m_oidParamObjectID[i]));
-    }
-
-    if (Arelith::SignalEvent("NWNX_ARELITH_ON_EFFECT_APPLIED", pObject->m_idSelf))
-    {
-        return m_OnEffectAppliedHook->CallOriginal<int32_t>(pEffectListHandler, pObject, pEffect, bLoadingGame);
-    }
-
-	return 0;
-}
 
 }
