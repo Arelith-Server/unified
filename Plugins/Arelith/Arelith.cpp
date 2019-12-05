@@ -124,39 +124,22 @@ bool Arelith::SignalEvent(const std::string& eventName, const API::Types::Object
 
     for (const auto& script : g_plugin->m_eventMap[eventName])
     {
-        LOG_DEBUG("Dispatching notification for event '%s' to script '%s'.", eventName.c_str(), script.c_str());
-        CExoString scriptExoStr = script.c_str();
-		auto DispatchEvent = [&]() -> void {
-+            LOG_DEBUG("Dispatching notification for event '%s' to script '%s'.", eventName, script);
-+            CExoString scriptExoStr = script.c_str();
+       LOG_DEBUG("Dispatching notification for event '%s' to script '%s'.", eventName, script);
+       CExoString scriptExoStr = script.c_str();
 
-             ++g_plugin->m_eventDepth;
-             API::Globals::VirtualMachine()->RunScript(&scriptExoStr, target, 1);
+        ++g_plugin->m_eventDepth;
+        API::Globals::VirtualMachine()->RunScript(&scriptExoStr, target, 1);
 
-             skipped |= g_plugin->m_eventData.top().m_Skipped;
+        skipped |= g_plugin->m_eventData.top().m_Skipped;
 
-             if (result)
-             {
-                  *result = g_plugin->m_eventData.top().m_Result;
-             }
-
-              --g_plugin->m_eventDepth;
-    };
-	
-	
-        auto eventDispatchList = g_plugin->m_dispatchList.find(eventName + script);
-        if (eventDispatchList != g_plugin->m_dispatchList.end())
+        if (result)
         {
-            if(eventDispatchList->second.find(target) != eventDispatchList->second.end())
-            {
-                DispatchEvent();
-            }
+			*result = g_plugin->m_eventData.top().m_Result;
         }
-        else
-        {
-            DispatchEvent();
-        }
-    
+
+        --g_plugin->m_eventDepth;
+    }
+	
 
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_RESULT",  { eventName, result ? *result : ""});
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_SKIPPED", { eventName, skipped ? "1" : "0"});
