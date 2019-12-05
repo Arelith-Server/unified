@@ -48,14 +48,17 @@ Arelith::Arelith(const Plugin::CreateParams& params)
     if (g_plugin == nullptr) // :(
         g_plugin = this;
 
-    GetServices()->m_events->RegisterEvent("SUBSCRIBE_EVENT", std::bind(&Arelith::OnSubscribeEvent, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("PUSH_EVENT_DATA", std::bind(&Arelith::OnPushEventData, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("SIGNAL_EVENT", std::bind(&Arelith::OnSignalEvent, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("GET_EVENT_DATA", std::bind(&Arelith::OnGetEventData, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("SKIP_EVENT", std::bind(&Arelith::OnSkipEvent, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("EVENT_RESULT", std::bind(&Arelith::OnEventResult, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("GET_CURRENT_EVENT", std::bind(&Arelith::OnGetCurrentEvent, this, std::placeholders::_1));
-
+#define REGISTER(func) \
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
+    REGISTER(OnSubscribeEvent);
+    REGISTER(OnPushEventData);
+    REGISTER(OnSignalEvent);
+    REGISTER(OnGetEventData);
+    REGISTER(OnSkipEvent);
+    REGISTER(OnEventResult);
+    REGISTER(OnGetCurrentEvent);
+#undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
         [](const std::vector<std::string> message)
@@ -80,7 +83,7 @@ Arelith::~Arelith()
 
 void Arelith::PushEventData(const std::string tag, const std::string data)
 {
-    LOG_DEBUG("Pushing event data: '%s' -> '%s'.", tag.c_str(), data.c_str());
+    LOG_DEBUG("Pushing event data: '%s' -> '%s'.", tag, data);
     g_plugin->CreateNewEventDataIfNeeded();
     g_plugin->m_eventData.top().m_EventDataMap[tag] = std::move(data);
 }
@@ -105,7 +108,7 @@ std::string Arelith::GetEventData(const std::string tag)
     }
 
     retVal=data->second;
-    LOG_DEBUG("Getting event data: '%s' -> '%s'.", tag.c_str(), retVal.c_str());
+    LOG_DEBUG("Getting event data: '%s' -> '%s'.", tag, retVal);
     return retVal;
 }
 
@@ -121,25 +124,41 @@ bool Arelith::SignalEvent(const std::string& eventName, const API::Types::Object
     {
         LOG_DEBUG("Dispatching notification for event '%s' to script '%s'.", eventName.c_str(), script.c_str());
         CExoString scriptExoStr = script.c_str();
+		auto DispatchEvent = [&]() -> void {
++            LOG_DEBUG("Dispatching notification for event '%s' to script '%s'.", eventName, script);
++            CExoString scriptExoStr = script.c_str();
 
-        ++g_plugin->m_eventDepth;
-        API::Globals::VirtualMachine()->RunScript(&scriptExoStr, target, 1);
+             ++g_plugin->m_eventDepth;
+             API::Globals::VirtualMachine()->RunScript(&scriptExoStr, target, 1);
 
-        skipped |= g_plugin->m_eventData.top().m_Skipped;
+             skipped |= g_plugin->m_eventData.top().m_Skipped;
 
-        if (result)
+             if (result)
+             {
+                  *result = g_plugin->m_eventData.top().m_Result;
+             }
+
+              --g_plugin->m_eventDepth;
+    };
+	
+	
+        auto eventDispatchList = g_plugin->m_dispatchList.find(eventName + script);
+        if (eventDispatchList != g_plugin->m_dispatchList.end())
         {
-            *result = g_plugin->m_eventData.top().m_Result;
+            if(eventDispatchList->second.find(target) != eventDispatchList->second.end())
+            {
+                DispatchEvent();
+            }
         }
-
-        --g_plugin->m_eventDepth;
-    }
-
-    g_plugin->m_eventData.pop();
+        else
+        {
+            DispatchEvent();
+        }
+    
 
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_RESULT",  { eventName, result ? *result : ""});
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_SKIPPED", { eventName, skipped ? "1" : "0"});
-
+    g_plugin->m_eventData.pop();
     return !skipped;
 }
 
@@ -156,7 +175,7 @@ void Arelith::RunEventInit(const std::string& eventName)
         if (std::regex_search(eventName, std::regex(it.first)))
         {
             LOG_DEBUG("Running init function for events '%s' (requested by event '%s')",
-                        it.first.c_str(), eventName.c_str());
+                        it.first, eventName);
             it.second();
             erase.push_back(it.first);
         }
@@ -181,7 +200,7 @@ Services::Events::ArgumentStack Arelith::OnSubscribeEvent(Services::Events::Argu
         throw std::runtime_error("Attempted to subscribe to an event with a script that already subscribed!");
     }
 
-    LOG_INFO("Script '%s' subscribed to event '%s'.", script.c_str(), event.c_str());
+    LOG_INFO("Script '%s' subscribed to event '%s'.", script, event);
     eventVector.emplace_back(std::move(script));
 
     return Services::Events::ArgumentStack();
@@ -198,7 +217,7 @@ Services::Events::ArgumentStack Arelith::OnPushEventData(Services::Events::Argum
 Services::Events::ArgumentStack Arelith::OnSignalEvent(Services::Events::ArgumentStack&& args)
 {
     const auto event = Services::Events::ExtractArgument<std::string>(args);
-    const auto object = Services::Events::ExtractArgument<API::Types::ObjectID>(args);
+    const auto object = Services::Events::ExtractArgument<Types::ObjectID>(args);
     bool signalled = SignalEvent(event, object);
     Services::Events::ArgumentStack stack;
     Services::Events::InsertArgument(stack, signalled ? 1 : 0);
@@ -236,7 +255,7 @@ Services::Events::ArgumentStack Arelith::OnEventResult(Services::Events::Argumen
 
     m_eventData.top().m_Result = data;
 
-    LOG_DEBUG("Received event result '%s'.", data.c_str());
+    LOG_DEBUG("Received event result '%s'.", data);
 
     return Services::Events::ArgumentStack();
 }
@@ -245,10 +264,13 @@ Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::Arg
 {
     if (m_eventDepth == 0 || m_eventData.empty())
     {
-        throw std::runtime_error("Attempted to get the current event in an invalid context.");
+        //throw std::runtime_error("Attempted to get the current event in an invalid context.");
+		retVal="";
     }
-
-    std::string eventName = g_plugin->m_eventData.top().m_EventName;
+    else
+    {
+        retVal = g_plugin->m_eventData.top().m_EventName;
+    }
 
     Services::Events::ArgumentStack stack;
     Services::Events::InsertArgument(stack, eventName);
