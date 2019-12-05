@@ -18,6 +18,8 @@
 #include <cstring>
 
 using namespace NWNXLib;
+using namespace NWNXLib::API;
+using namespace NWNXLib::API::Constants;
 
 static ViewPtr<Arelith::Arelith> g_plugin;
 
