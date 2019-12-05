@@ -250,11 +250,9 @@ Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::Arg
     if (m_eventDepth == 0 || m_eventData.empty())
     {
         throw std::runtime_error("Attempted to get the current event in an invalid context.");
-		
     }
     
     
-    retVal = g_plugin->m_eventData.top().m_EventName;
   
     std::string eventName = g_plugin->m_eventData.top().m_EventName;
     Services::Events::ArgumentStack stack;
