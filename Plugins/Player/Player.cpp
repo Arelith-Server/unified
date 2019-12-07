@@ -102,6 +102,7 @@ Player::Player(const Plugin::CreateParams& params)
     REGISTER(SetPersistentLocation);
     REGISTER(UpdateItemName);
     REGISTER(PossessCreature);
+    REGISTER(GetPlatformId);
 
 #undef REGISTER
 
@@ -276,7 +277,7 @@ ArgumentStack Player::SetAlwaysWalk(ArgumentStack&& args)
         if (bSetCap)
         {
             pCreature->m_bForcedWalk = true;
-            g_plugin->GetServices()->m_perObjectStorage->Set(pPlayer->m_oidNWSObject, "ALWAYS_WALK", 1);
+            g_plugin->GetServices()->m_perObjectStorage->Set(pPlayer->m_oidNWSObject, "ALWAYS_WALK", 1, true);
         }
         else // remove the override
         {
@@ -574,7 +575,7 @@ ArgumentStack Player::SetRestDuration(ArgumentStack&& args)
         }
         else
         {
-            g_plugin->GetServices()->m_perObjectStorage->Set(pPlayer->m_oidNWSObject, "REST_DURATION", duration < 10 ? 10 : duration);
+            g_plugin->GetServices()->m_perObjectStorage->Set(pPlayer->m_oidNWSObject, "REST_DURATION", duration < 10 ? 10 : duration, true);
         }
     }
 
@@ -761,7 +762,7 @@ ArgumentStack Player::SetRestAnimation(ArgumentStack&& args)
         }
         else
         {
-            g_plugin->GetServices()->m_perObjectStorage->Set(pPlayer->m_oidNWSObject, "REST_ANIMATION", animation);
+            g_plugin->GetServices()->m_perObjectStorage->Set(pPlayer->m_oidNWSObject, "REST_ANIMATION", animation, true);
         }
     }
 
@@ -1327,6 +1328,20 @@ ArgumentStack Player::PossessCreature(ArgumentStack&& args)
         }
     }
     Services::Events::InsertArgument(stack, 1);
+    return stack;
+}
+
+ArgumentStack Player::GetPlatformId(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    int32_t id = 0;
+    if (auto *pPlayer = player(args))
+    {
+        auto *pNetLayer = Globals::AppManager()->m_pServerExoApp->GetNetLayer();
+        if (auto *pPlayerInfo = pNetLayer->GetPlayerInfo(pPlayer->m_nPlayerID))
+            id = pPlayerInfo->m_nPlatformId;
+    }
+    Services::Events::InsertArgument(stack, id);
     return stack;
 }
 

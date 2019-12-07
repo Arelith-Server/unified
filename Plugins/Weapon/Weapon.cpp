@@ -131,18 +131,15 @@ ArgumentStack Weapon::SetWeaponFocusFeat(ArgumentStack&& args)
     const auto feat     = Services::Events::ExtractArgument<int32_t>(args);
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
-    
-    auto w = m_WeaponFocusMap.find(w_bitem);
-    if ( w != m_WeaponFocusMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_WeaponFocusMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_WeaponFocusMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Weapon Focus Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -159,17 +156,14 @@ ArgumentStack Weapon::SetGreaterWeaponFocusFeat(ArgumentStack&& args)
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
 
-    auto w = m_GreaterWeaponFocusMap.find(w_bitem);
-    if ( w != m_WeaponFocusMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_GreaterWeaponFocusMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_GreaterWeaponFocusMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Greater Weapon Focus Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -185,19 +179,15 @@ ArgumentStack Weapon::SetEpicWeaponFocusFeat(ArgumentStack&& args)
     const auto feat     = Services::Events::ExtractArgument<int32_t>(args);
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
-    
-    auto w = m_EpicWeaponFocusMap.find(w_bitem);
-    if ( w != m_EpicWeaponFocusMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_EpicWeaponFocusMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    //m_EpicWeaponFocusMap.insert({w_bitem, feat});
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_EpicWeaponFocusMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Epic Weapon Focus Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -214,8 +204,11 @@ ArgumentStack Weapon::SetWeaponFinesseSize(ArgumentStack&& args)
       ASSERT_OR_THROW(size > 0);
       ASSERT_OR_THROW(size <= 255);
 
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
     m_WeaponFinesseSizeMap.insert({w_bitem, size});
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Weapon Finesse Size %d added for Base Item Type %d [%s]", size, w_bitem, baseItemName);
 
     return stack;
@@ -247,8 +240,11 @@ ArgumentStack Weapon::SetWeaponUnarmed(ArgumentStack&& args)
       ASSERT_OR_THROW(w_bitem >= Constants::BaseItem::MIN);
       ASSERT_OR_THROW(w_bitem <= Constants::BaseItem::MAX);
 
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
     m_WeaponUnarmedSet.insert(w_bitem);
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Base Item Type %d [%s] set as unarmed weapon", w_bitem, baseItemName);
 
    return stack;
@@ -263,8 +259,11 @@ ArgumentStack Weapon::SetWeaponIsMonkWeapon(ArgumentStack&& args)
       ASSERT_OR_THROW(w_bitem >= Constants::BaseItem::MIN);
       ASSERT_OR_THROW(w_bitem <= Constants::BaseItem::MAX);
 
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
     m_MonkWeaponSet.insert(w_bitem);
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Base Item Type %d [%s] set as monk weapon", w_bitem, baseItemName);
 
     if (bFirstTime)
@@ -291,17 +290,14 @@ ArgumentStack Weapon::SetWeaponImprovedCriticalFeat(ArgumentStack&& args)
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
 
-    auto w = m_WeaponImprovedCriticalMap.find(w_bitem);
-    if ( w != m_WeaponImprovedCriticalMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_WeaponImprovedCriticalMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_WeaponImprovedCriticalMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Improved Critical Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -318,17 +314,14 @@ ArgumentStack Weapon::SetWeaponSpecializationFeat(ArgumentStack&& args)
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
 
-    auto w = m_WeaponSpecializationMap.find(w_bitem);
-    if ( w != m_WeaponSpecializationMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_WeaponSpecializationMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_WeaponSpecializationMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Weapon Specialization Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -345,17 +338,14 @@ ArgumentStack Weapon::SetGreaterWeaponSpecializationFeat(ArgumentStack&& args)
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
 
-    auto w = m_GreaterWeaponSpecializationMap.find(w_bitem);
-    if ( w != m_GreaterWeaponSpecializationMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_GreaterWeaponSpecializationMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_GreaterWeaponSpecializationMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Greater Weapon Specialization Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -372,17 +362,14 @@ ArgumentStack Weapon::SetEpicWeaponSpecializationFeat(ArgumentStack&& args)
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
 
-    auto w = m_EpicWeaponSpecializationMap.find(w_bitem);
-    if ( w != m_EpicWeaponSpecializationMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_EpicWeaponSpecializationMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_EpicWeaponSpecializationMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Epic Weapon Specialization Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -399,17 +386,14 @@ ArgumentStack Weapon::SetEpicWeaponOverwhelmingCriticalFeat(ArgumentStack&& args
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
 
-    auto w = m_EpicWeaponOverwhelmingCriticalMap.find(w_bitem);
-    if ( w != m_EpicWeaponOverwhelmingCriticalMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_EpicWeaponOverwhelmingCriticalMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_EpicWeaponOverwhelmingCriticalMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Overwhelming Critical Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -426,17 +410,14 @@ ArgumentStack Weapon::SetEpicWeaponDevastatingCriticalFeat(ArgumentStack&& args)
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
 
-    auto w = m_EpicWeaponDevastatingCriticalMap.find(w_bitem);
-    if ( w != m_EpicWeaponDevastatingCriticalMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_EpicWeaponDevastatingCriticalMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_EpicWeaponDevastatingCriticalMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Devastating Critical Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -453,17 +434,14 @@ ArgumentStack Weapon::SetWeaponOfChoiceFeat(ArgumentStack&& args)
       ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
       ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
 
-    auto w = m_WeaponOfChoiceMap.find(w_bitem);
-    if ( w != m_WeaponOfChoiceMap.end())
-    {
-        w->second.emplace((uint32_t)feat);
-    }
-    else
-    {
-        m_WeaponOfChoiceMap.insert({w_bitem, {(uint32_t)feat}});
-    }
-    auto featName = Globals::Rules()->GetFeat(feat)->GetNameText();
-    auto baseItemName = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem)->GetNameText();
+    CNWFeat *pFeat = Globals::Rules()->GetFeat(feat);
+      ASSERT_OR_THROW(pFeat);
+    CNWBaseItem *pBaseItem = Globals::Rules()->m_pBaseItemArray->GetBaseItem(w_bitem);
+      ASSERT_OR_THROW(pBaseItem);
+
+    m_WeaponOfChoiceMap.insert({w_bitem, feat});
+    auto featName = pFeat->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Weapon of Choice Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return stack;
@@ -536,50 +514,50 @@ ArgumentStack Weapon::SetEventData(ArgumentStack&& args)
 
 int32_t Weapon::GetWeaponFocus(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
 
-
-    auto w = plugin.m_WeaponFocusMap.find(pWeapon == nullptr ? (uint32_t)Constants::BaseItem::Gloves : pWeapon->m_nBaseItem);
-
-    bApplicableFeatExists = w != plugin.m_WeaponFocusMap.end();
-    
-    if (bApplicableFeatExists)
+    if (pWeapon == nullptr)
     {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat) || (feat == Constants::Feat::WeaponFocus_Creature &&
-            pStats->HasFeat(Constants::Feat::WeaponFocus_UnarmedStrike)));
-            
-            if (bHasApplicableFeat) break;
-        }
+        auto w = plugin.m_WeaponFocusMap.find(Constants::BaseItem::Gloves);
+        feat = (w == plugin.m_WeaponFocusMap.end()) ? -1 : w->second;
     }
-    
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetWeaponFocusHook->CallOriginal<int32_t>(pStats, pWeapon));
+    else
+    {
+        auto w = plugin.m_WeaponFocusMap.find(pWeapon->m_nBaseItem);
+        feat = (w == plugin.m_WeaponFocusMap.end()) ? -1 : w->second;
+    }
+
+    if (feat == Constants::Feat::WeaponFocus_Creature &&
+       pStats->HasFeat(Constants::Feat::WeaponFocus_UnarmedStrike))
+    {
+        return 1;
+    }
+    return (feat > -1 ? pStats->HasFeat(feat) : plugin.m_GetWeaponFocusHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetEpicWeaponFocus(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
 
-    auto w = plugin.m_EpicWeaponFocusMap.find(pWeapon == nullptr ? (uint32_t)Constants::BaseItem::Gloves : pWeapon->m_nBaseItem);
-    
-    bApplicableFeatExists = w != plugin.m_EpicWeaponFocusMap.end();
-    
-    if (bApplicableFeatExists)
+    if (pWeapon == nullptr)
     {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat) || (feat == Constants::Feat::EpicWeaponFocus_Creature &&
-            pStats->HasFeat(Constants::Feat::EpicWeaponFocus_Unarmed)));
-            
-            if (bHasApplicableFeat) break;
-        }
+        auto w = plugin.m_EpicWeaponFocusMap.find(Constants::BaseItem::Gloves);
+        feat = (w == plugin.m_EpicWeaponFocusMap.end()) ? -1 : w->second;
     }
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetEpicWeaponFocusHook->CallOriginal<int32_t>(pStats, pWeapon));
+    else
+    {
+        auto w = plugin.m_EpicWeaponFocusMap.find(pWeapon->m_nBaseItem);
+        feat = (w == plugin.m_EpicWeaponFocusMap.end()) ? -1 : w->second;
+    }
+
+    if (feat == Constants::Feat::EpicWeaponFocus_Creature &&
+       pStats->HasFeat(Constants::Feat::EpicWeaponFocus_Unarmed))
+    {
+        return 1;
+    }
+    return (feat > -1 ? pStats->HasFeat(feat) : plugin.m_GetEpicWeaponFocusHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetWeaponFinesse(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
@@ -594,122 +572,97 @@ int32_t Weapon::GetWeaponFinesse(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
 
 int32_t Weapon::GetWeaponImprovedCritical(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
 
-
-    auto w = plugin.m_WeaponImprovedCriticalMap.find(pWeapon == nullptr ? (uint32_t)Constants::BaseItem::Gloves : pWeapon->m_nBaseItem);
-
-    bApplicableFeatExists = w != plugin.m_WeaponImprovedCriticalMap.end();
-    
-    if (bApplicableFeatExists)
+    if (pWeapon == nullptr)
     {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
+        auto w = plugin.m_WeaponImprovedCriticalMap.find(Constants::BaseItem::Gloves);
+        feat = (w == plugin.m_WeaponImprovedCriticalMap.end()) ? -1 : w->second;
+    }
+    else
+    {
+        auto w = plugin.m_WeaponImprovedCriticalMap.find(pWeapon->m_nBaseItem);
+        feat = (w == plugin.m_WeaponImprovedCriticalMap.end()) ? -1 : w->second;
     }
 
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetWeaponImprovedCriticalHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (feat > -1 ? pStats->HasFeat(feat) : plugin.m_GetWeaponImprovedCriticalHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetWeaponSpecialization(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
 
-
-    auto w = plugin.m_WeaponSpecializationMap.find(pWeapon == nullptr ? (uint32_t)Constants::BaseItem::Gloves : pWeapon->m_nBaseItem);
-
-    bApplicableFeatExists = w != plugin.m_WeaponSpecializationMap.end();
-    
-    if (bApplicableFeatExists)
+    if (pWeapon == nullptr)
     {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
+        auto w = plugin.m_WeaponSpecializationMap.find(Constants::BaseItem::Gloves);
+        feat = (w == plugin.m_WeaponSpecializationMap.end()) ? -1 : w->second;
+    }
+    else
+    {
+        auto w = plugin.m_WeaponSpecializationMap.find(pWeapon->m_nBaseItem);
+        feat = (w == plugin.m_WeaponSpecializationMap.end()) ? -1 : w->second;
     }
 
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetWeaponSpecializationHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (feat > -1 ? pStats->HasFeat(feat) : plugin.m_GetWeaponSpecializationHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetEpicWeaponSpecialization(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
 
-
-    auto w = plugin.m_EpicWeaponSpecializationMap.find(pWeapon == nullptr ? (uint32_t)Constants::BaseItem::Gloves : pWeapon->m_nBaseItem);
-
-    bApplicableFeatExists = w != plugin.m_EpicWeaponSpecializationMap.end();
-    
-    if (bApplicableFeatExists)
+    if (pWeapon == nullptr)
     {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
+        auto w = plugin.m_EpicWeaponSpecializationMap.find(Constants::BaseItem::Gloves);
+        feat = (w == plugin.m_EpicWeaponSpecializationMap.end()) ? -1 : w->second;
+    }
+    else
+    {
+        auto w = plugin.m_EpicWeaponSpecializationMap.find(pWeapon->m_nBaseItem);
+        feat = (w == plugin.m_EpicWeaponSpecializationMap.end()) ? -1 : w->second;
     }
 
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetEpicWeaponSpecializationHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (feat > -1 ? pStats->HasFeat(feat) : plugin.m_GetEpicWeaponSpecializationHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetEpicWeaponOverwhelmingCritical(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
 
-
-    auto w = plugin.m_EpicWeaponOverwhelmingCriticalMap.find(pWeapon == nullptr ? (uint32_t)Constants::BaseItem::Gloves : pWeapon->m_nBaseItem);
-
-    bApplicableFeatExists = w != plugin.m_EpicWeaponOverwhelmingCriticalMap.end();
-    
-    if (bApplicableFeatExists)
+    if (pWeapon == nullptr)
     {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
+        auto w = plugin.m_EpicWeaponOverwhelmingCriticalMap.find(Constants::BaseItem::Gloves);
+        feat = (w == plugin.m_EpicWeaponOverwhelmingCriticalMap.end()) ? -1 : w->second;
+    }
+    else
+    {
+        auto w = plugin.m_EpicWeaponOverwhelmingCriticalMap.find(pWeapon->m_nBaseItem);
+        feat = (w == plugin.m_EpicWeaponOverwhelmingCriticalMap.end()) ? -1 : w->second;
     }
 
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetEpicWeaponOverwhelmingCriticalHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (feat > -1 ? pStats->HasFeat(feat) : plugin.m_GetEpicWeaponOverwhelmingCriticalHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetEpicWeaponDevastatingCritical(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
+    bool bFlag = false;
 
-
-    auto w = plugin.m_EpicWeaponDevastatingCriticalMap.find(pWeapon == nullptr ? (uint32_t)Constants::BaseItem::Gloves : pWeapon->m_nBaseItem);
-
-    bApplicableFeatExists = w != plugin.m_EpicWeaponDevastatingCriticalMap.end();
-    
-    if (bApplicableFeatExists)
+    if (pWeapon == nullptr)
     {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
+        auto w = plugin.m_EpicWeaponDevastatingCriticalMap.find(Constants::BaseItem::Gloves);
+        feat = (w == plugin.m_EpicWeaponDevastatingCriticalMap.end()) ? -1 : w->second;
     }
-
-    bool bFlag = bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetEpicWeaponDevastatingCriticalHook->CallOriginal<int32_t>(pStats, pWeapon);
+    else
+    {
+        auto w = plugin.m_EpicWeaponDevastatingCriticalMap.find(pWeapon->m_nBaseItem);
+        feat = (w == plugin.m_EpicWeaponDevastatingCriticalMap.end()) ? -1 : w->second;
+    }
+    bFlag = feat > -1 ? pStats->HasFeat(feat) : plugin.m_GetEpicWeaponDevastatingCriticalHook->CallOriginal<int32_t>(pStats, pWeapon);
 
     if (bFlag && !plugin.m_DCScript.empty())
     {
@@ -736,33 +689,19 @@ int32_t Weapon::GetEpicWeaponDevastatingCritical(CNWSCreatureStats* pStats, CNWS
 
 int32_t Weapon::GetIsWeaponOfChoice(CNWSCreatureStats* pStats, uint32_t nBaseItem)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
 
-
     auto w = plugin.m_WeaponOfChoiceMap.find(nBaseItem);
+    feat = (w == plugin.m_WeaponOfChoiceMap.end()) ? -1 : w->second;
 
-    bApplicableFeatExists = w != plugin.m_WeaponOfChoiceMap.end();
-    
-    if (bApplicableFeatExists)
-    {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
-    }
-
-    return bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetIsWeaponOfChoiceHook->CallOriginal<int32_t>(pStats, nBaseItem);
+    return (feat > -1) ? pStats->HasFeat(feat) : plugin.m_GetIsWeaponOfChoiceHook->CallOriginal<int32_t>(pStats, nBaseItem);
 }
 
 //This one is required for correctly update PC sheet
 int32_t Weapon::GetMeleeDamageBonus(CNWSCreatureStats* pStats, int32_t bOffHand, uint8_t nCreatureWeaponIndex)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
     CNWSItem* pWeapon = nullptr;
     uint32_t nBaseItem;
@@ -791,20 +730,9 @@ int32_t Weapon::GetMeleeDamageBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
     }
 
     auto w = plugin.m_GreaterWeaponSpecializationMap.find(nBaseItem);
+    feat = (w == plugin.m_GreaterWeaponSpecializationMap.end()) ? -1 : w->second;
 
-    bApplicableFeatExists = w != plugin.m_GreaterWeaponSpecializationMap.end();
-    
-    if (bApplicableFeatExists)
-    {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
-    }
-
-    if (bApplicableFeatExists && bHasApplicableFeat)
+    if (feat > -1 && pStats->HasFeat(feat))
     {
         return nBonus + plugin.m_GreaterWeaponSpecializationDamageBonus;
     }
@@ -814,8 +742,7 @@ int32_t Weapon::GetMeleeDamageBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
 
 int32_t Weapon::GetDamageBonus(CNWSCreatureStats* pStats, CNWSCreature *pCreature, int32_t bOffHand)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
     CNWSItem* pWeapon = nullptr;
     uint32_t nBaseItem;
@@ -841,20 +768,9 @@ int32_t Weapon::GetDamageBonus(CNWSCreatureStats* pStats, CNWSCreature *pCreatur
     }
 
     auto w = plugin.m_GreaterWeaponSpecializationMap.find(nBaseItem);
+    feat = (w == plugin.m_GreaterWeaponSpecializationMap.end()) ? -1 : w->second;
 
-    bApplicableFeatExists = w != plugin.m_GreaterWeaponSpecializationMap.end();
-    
-    if (bApplicableFeatExists)
-    {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
-    }
-
-    if (bApplicableFeatExists && bHasApplicableFeat)
+    if (feat > -1 && pStats->HasFeat(feat))
     {
         return nBonus+=plugin.m_GreaterWeaponSpecializationDamageBonus;
     }
@@ -865,8 +781,7 @@ int32_t Weapon::GetDamageBonus(CNWSCreatureStats* pStats, CNWSCreature *pCreatur
 //This one is required for correctly update PC sheet
 int32_t Weapon::GetRangedDamageBonus(CNWSCreatureStats* pStats)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
     CNWSItem* pWeapon = nullptr;
     uint32_t nBaseItem;
@@ -885,20 +800,9 @@ int32_t Weapon::GetRangedDamageBonus(CNWSCreatureStats* pStats)
     }
 
     auto w = plugin.m_GreaterWeaponSpecializationMap.find(nBaseItem);
+    feat = (w == plugin.m_GreaterWeaponSpecializationMap.end()) ? -1 : w->second;
 
-    bApplicableFeatExists = w != plugin.m_GreaterWeaponSpecializationMap.end();
-    
-    if (bApplicableFeatExists)
-    {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
-    }
-
-    if (bApplicableFeatExists && bHasApplicableFeat)
+    if (feat > -1 && pStats->HasFeat(feat))
     {
         return nBonus+=plugin.m_GreaterWeaponSpecializationDamageBonus;
     }
@@ -912,8 +816,7 @@ int32_t Weapon::GetAttackModifierVersus(CNWSCreatureStats* pStats, CNWSCreature*
     CNWSCombatRound* pCombatRound;
     CNWSItem* pWeapon = nullptr;
     uint32_t nBaseItem;
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
 
     int nMod = plugin.m_GetAttackModifierVersusHook->CallOriginal<int32_t>(pStats, pCreature);
 
@@ -934,20 +837,9 @@ int32_t Weapon::GetAttackModifierVersus(CNWSCreatureStats* pStats, CNWSCreature*
     }
 
     auto w = plugin.m_GreaterWeaponFocusMap.find(nBaseItem);
+    feat = (w == plugin.m_GreaterWeaponFocusMap.end()) ? -1 : w->second;
 
-    bApplicableFeatExists = w != plugin.m_GreaterWeaponFocusMap.end();
-    
-    if (bApplicableFeatExists)
-    {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
-    }
-
-    if (bApplicableFeatExists && bHasApplicableFeat)
+    if (feat > -1 && pStats->HasFeat(feat))
     {
         return nMod+=plugin.m_GreaterFocusAttackBonus;
     }
@@ -958,8 +850,7 @@ int32_t Weapon::GetAttackModifierVersus(CNWSCreatureStats* pStats, CNWSCreature*
 //This one is required for correctly update PC sheet
 int32_t Weapon::GetMeleeAttackBonus(CNWSCreatureStats* pStats, int32_t bOffHand, int32_t bIncludeBase, int32_t bTouchAttack)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
     CNWSItem* pWeapon = nullptr;
     uint32_t nBaseItem;
@@ -990,20 +881,9 @@ int32_t Weapon::GetMeleeAttackBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
     }
 
     auto w = plugin.m_GreaterWeaponFocusMap.find(nBaseItem);
+    feat = (w == plugin.m_GreaterWeaponFocusMap.end()) ? -1 : w->second;
 
-    bApplicableFeatExists = w != plugin.m_GreaterWeaponFocusMap.end();
-    
-    if (bApplicableFeatExists)
-    {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
-    }
-
-    if (bApplicableFeatExists && bHasApplicableFeat)
+    if (feat > -1 && pStats->HasFeat(feat))
     {
         return nBonus + plugin.m_GreaterFocusAttackBonus;
     }
@@ -1014,8 +894,7 @@ int32_t Weapon::GetMeleeAttackBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
 //This one is required for correctly update PC sheet
 int32_t Weapon::GetRangedAttackBonus(CNWSCreatureStats* pStats, int32_t bIncludeBase, int32_t bTouchAttack)
 {
-    int32_t bApplicableFeatExists = 0;
-    int32_t bHasApplicableFeat = 0;
+    int32_t feat = -1;
     Weapon& plugin = *g_plugin;
     CNWSItem* pWeapon = nullptr;
     uint32_t nBaseItem;
@@ -1037,20 +916,9 @@ int32_t Weapon::GetRangedAttackBonus(CNWSCreatureStats* pStats, int32_t bInclude
     nBaseItem = pWeapon->m_nBaseItem;
 
     auto w = plugin.m_GreaterWeaponFocusMap.find(nBaseItem);
+    feat = (w == plugin.m_GreaterWeaponFocusMap.end()) ? -1 : w->second;
 
-    bApplicableFeatExists = w != plugin.m_GreaterWeaponFocusMap.end();
-    
-    if (bApplicableFeatExists)
-    {
-        for (auto feat : w->second)
-        {
-            bHasApplicableFeat = (pStats->HasFeat(feat));
-            
-            if (bHasApplicableFeat) break;
-        }
-    }
-
-    if (bApplicableFeatExists && bHasApplicableFeat)
+    if (feat > -1 && pStats->HasFeat(feat))
     {
         return nBonus + plugin.m_GreaterFocusAttackBonus;
     }
