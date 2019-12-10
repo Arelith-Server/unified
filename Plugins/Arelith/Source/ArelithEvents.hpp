@@ -11,7 +11,7 @@ namespace Arelith {
 class ArelithEvents
 {
 public:
-    ArelithEvents(NWNXLib::ViewPtr<NWNXLib::Services::HooksProxy> hooker);
+    ArelithEvents(NWNXLib::Services::HooksProxy* hooker);
 
 private:
     static int32_t CanUseItemHook(CNWSCreature *pCreature, CNWSItem *pItem, int32_t bIgnoreIdentifiedFlag);
