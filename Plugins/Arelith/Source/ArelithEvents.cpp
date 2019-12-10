@@ -28,7 +28,7 @@ static NWNXLib::Hooking::FunctionHook* m_CanUnEquipWeaponHook=nullptr;
 static NWNXLib::Hooking::FunctionHook* m_OnApplyDisarmHook=nullptr;
 
 
-ArelithEvents::ArelithEvents(ViewPtr<Services::HooksProxy> hooker)
+ArelithEvents::ArelithEvents(Services::HooksProxy* hooker)
 {
     Arelith::InitOnFirstSubscribe("NWNX_ARELITH_.*", [hooker]() {
         hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature10CanUseItemEP8CNWSItemi, int32_t, CNWSCreature*, CNWSItem*, int32_t>(&CanUseItemHook);
