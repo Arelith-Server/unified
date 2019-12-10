@@ -4,11 +4,10 @@
 #include "API/CExoString.hpp"
 #include "Services/Config/Config.hpp"
 #include "Services/Hooks/Hooks.hpp"
-#include "ViewPtr.hpp"
 
 using namespace NWNXLib;
 
-static ViewPtr<ServerLogRedirector::ServerLogRedirector> g_plugin;
+static ServerLogRedirector::ServerLogRedirector* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -62,20 +61,18 @@ inline std::string TrimMessage(CExoString* message)
     return Utils::trim(s);
 }
 
-void ServerLogRedirector::WriteToLogFileHook(Hooks::CallType type,
-    CExoDebugInternal*, CExoString* message)
+void ServerLogRedirector::WriteToLogFileHook(bool before, CExoDebugInternal*, CExoString* message)
 {
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
     {
         std::string str = TrimMessage(message);
         LOG_INFO("(Server) %s", str);
     }
 }
 
-void ServerLogRedirector::WriteToErrorFileHook(Hooks::CallType type,
-    CExoDebugInternal*, CExoString* message)
+void ServerLogRedirector::WriteToErrorFileHook(bool before, CExoDebugInternal*, CExoString* message)
 {
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
     {
         std::string str = TrimMessage(message);
         LOG_INFO("(Error) %s", str);

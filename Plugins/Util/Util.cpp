@@ -18,7 +18,6 @@
 #include "API/CScriptCompiler.hpp"
 #include "API/Functions.hpp"
 #include "Utils.hpp"
-#include "ViewPtr.hpp"
 #include "Services/Config/Config.hpp"
 
 #include <string>
@@ -29,7 +28,7 @@
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Util::Util> g_plugin;
+static Util::Util* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -83,12 +82,12 @@ Util::Util(const Plugin::CreateParams& params)
 #undef REGISTER
 
     GetServices()->m_hooks->RequestSharedHook<API::Functions::_ZN21CServerExoAppInternal8MainLoopEv, int32_t>(
-            +[](Services::Hooks::CallType type, CServerExoAppInternal*)
+            +[](bool before, CServerExoAppInternal*)
             {
                 static int ticks;
                 static time_t previous;
 
-                if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
+                if (!before)
                 {
                     time_t current = time(nullptr);
 
@@ -106,9 +105,9 @@ Util::Util(const Plugin::CreateParams& params)
             });
 
     GetServices()->m_hooks->RequestSharedHook<API::Functions::_ZN10CNWSModule16LoadModuleFinishEv, uint32_t>(
-            +[](Services::Hooks::CallType type, CNWSModule*)
+            +[](bool before, CNWSModule*)
             {
-                if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+                if (before)
                 {
                     if (auto startScript = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT"))
                     {

@@ -13,7 +13,6 @@
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
 #include "Services/Events/Events.hpp"
 #include "Services/Messaging/Messaging.hpp"
-#include "ViewPtr.hpp"
 #include <cmath>
 #include <list>
 #include <numeric>
@@ -21,7 +20,7 @@
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<SkillRanks::SkillRanks> g_plugin;
+static SkillRanks::SkillRanks* g_plugin;
 
 const auto strMask = (1u << 0u);
 const auto dexMask = (1u << 1u);
@@ -85,10 +84,9 @@ SkillRanks::~SkillRanks()
 {
 }
 
-void SkillRanks::LoadSkillInfoHook(Services::Hooks::CallType type, CNWRules* pRules)
+void SkillRanks::LoadSkillInfoHook(bool before, CNWRules* pRules)
 {
     // We only want to do this in the AFTER
-    const bool before = type == Services::Hooks::CallType::BEFORE_ORIGINAL;
     if (before || !pRules)
         return;
 

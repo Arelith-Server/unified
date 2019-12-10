@@ -17,7 +17,7 @@
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Damage::Damage> g_plugin;
+static Damage::Damage* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -186,10 +186,10 @@ ArgumentStack Damage::SetAttackEventData(ArgumentStack&& args)
     return stack;
 }
 
-void Damage::OnSignalDamage(Services::Hooks::CallType type, CNWSCreature *pThis, CNWSObject *pTarget, uint32_t nAttacks)
+void Damage::OnSignalDamage(bool before, CNWSCreature *pThis, CNWSObject *pTarget, uint32_t nAttacks)
 {
     // only call once, either before or after original
-    if ( type == Services::Hooks::CallType::BEFORE_ORIGINAL )
+    if (before)
     {
         std::string script = GetEventScript(pThis, "ATTACK");
         if ( !script.empty() )

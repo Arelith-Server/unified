@@ -5,7 +5,6 @@
 #include "API/CNWVirtualMachineCommands.hpp"
 #include "Common.hpp"
 #include "Plugin.hpp"
-#include "Platform/Hooking.hpp"
 #include "Services/Services.hpp"
 #include "Services/Hooks/Hooks.hpp"
 #include "Services/Plugins/Plugins.hpp"
@@ -64,7 +63,7 @@ private:
 
     static void CreateServerHandler(CAppManager*);
     static void DestroyServerHandler(CAppManager*);
-    static void MainLoopInternalHandler(NWNXLib::Services::Hooks::CallType type, CServerExoAppInternal*);
+    static void MainLoopInternalHandler(bool, CServerExoAppInternal*);
 
     int m_ScriptChunkRecursion;
 };

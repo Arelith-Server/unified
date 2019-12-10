@@ -25,7 +25,7 @@ static NWNXLib::Hooking::FunctionHook* m_AddItemHook = nullptr;
 static NWNXLib::Hooking::FunctionHook* m_AddGoldHook = nullptr;
 static NWNXLib::Hooking::FunctionHook* m_RemoveGoldHook = nullptr;
 
-InventoryEvents::InventoryEvents(ViewPtr<Services::HooksProxy> hooker)
+InventoryEvents::InventoryEvents(Services::HooksProxy* hooker)
 {
     Events::InitOnFirstSubscribe("NWNX_ON_INVENTORY_(SELECT|OPEN)_.*", [hooker]()
     {
@@ -187,7 +187,7 @@ int32_t InventoryEvents::AddItemHook(CItemRepository* thisPtr, CNWSItem** ppItem
     return retVal;
 }
 
-void InventoryEvents::RemoveItemHook(Services::Hooks::CallType type, CItemRepository* thisPtr, CNWSItem* pItem)
+void InventoryEvents::RemoveItemHook(bool before, CItemRepository* thisPtr, CNWSItem* pItem)
 {
 
     auto *pContainer = Globals::AppManager()->m_pServerExoApp->GetGameObject(thisPtr->m_oidParent);
@@ -199,7 +199,6 @@ void InventoryEvents::RemoveItemHook(Services::Hooks::CallType type, CItemReposi
     }
 
     // Only a shared hook for RemoveItem because skipping it also makes Bad Things(tm) happen
-    const bool before = type == Services::Hooks::CallType::BEFORE_ORIGINAL;
     Events::PushEventData("ITEM", Utils::ObjectIDToString(pItem ? pItem->m_idSelf : OBJECT_INVALID));
     Events::SignalEvent(before ? "NWNX_ON_INVENTORY_REMOVE_ITEM_BEFORE" : "NWNX_ON_INVENTORY_REMOVE_ITEM_AFTER", thisPtr->m_oidParent);
 }

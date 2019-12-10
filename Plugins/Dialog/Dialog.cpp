@@ -16,13 +16,12 @@
 #include "API/Functions.hpp"
 #include "Services/Events/Events.hpp"
 #include "Services/Hooks/Hooks.hpp"
-#include "ViewPtr.hpp"
 #include "Utils.hpp"
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Dialog::Dialog> g_plugin;
+static Dialog::Dialog* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -68,37 +67,37 @@ uint32_t Dialog::idxReply;
 int32_t  Dialog::scriptType;
 int32_t  Dialog::loopCount;
 
-void Dialog::Hooks::GetStartEntry(Services::Hooks::CallType type, CNWSDialog *pThis,
+void Dialog::Hooks::GetStartEntry(bool before, CNWSDialog *pThis,
     CNWSObject* pNWSObjectOwner)
 {
     pDialog = pThis;
     pOwner = pNWSObjectOwner;
     loopCount = 0;
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
         statestack[++ssp] = DIALOG_STATE_START;
     else ssp--;
 }
 
-void Dialog::Hooks::GetStartEntryOneLiner(Services::Hooks::CallType type, CNWSDialog *pThis,
+void Dialog::Hooks::GetStartEntryOneLiner(bool before, CNWSDialog *pThis,
     CNWSObject* pNWSObjectOwner, CExoLocString* sOneLiner, CResRef* sSound, CResRef* sScript)
 {
     pDialog = pThis;
     pOwner = pNWSObjectOwner;
     loopCount = 0;
     (void)sOneLiner; (void)sSound; (void)sScript;
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
         statestack[++ssp] = DIALOG_STATE_START;
     else ssp--;
 }
 
-void Dialog::Hooks::SendDialogEntry(Services::Hooks::CallType type, CNWSDialog *pThis,
+void Dialog::Hooks::SendDialogEntry(bool before, CNWSDialog *pThis,
     CNWSObject* pNWSObjectOwner, uint32_t nPlayerIdGUIOnly, uint32_t iEntry, int32_t bPlayHelloSound)
 {
     pDialog = pThis;
     pOwner = pNWSObjectOwner;
     loopCount = 0;
     (void)nPlayerIdGUIOnly; (void)bPlayHelloSound;
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
     {
         statestack[++ssp] = DIALOG_STATE_SEND_ENTRY;
         idxEntry = iEntry;
@@ -106,26 +105,26 @@ void Dialog::Hooks::SendDialogEntry(Services::Hooks::CallType type, CNWSDialog *
     else ssp--;
 }
 
-void Dialog::Hooks::SendDialogReplies(Services::Hooks::CallType type, CNWSDialog *pThis,
+void Dialog::Hooks::SendDialogReplies(bool before, CNWSDialog *pThis,
     CNWSObject* pNWSObjectOwner, uint32_t nPlayerIdGUIOnly)
 {
     pDialog = pThis;
     pOwner = pNWSObjectOwner;
     loopCount = 0;
     (void)nPlayerIdGUIOnly;
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
         statestack[++ssp] = DIALOG_STATE_SEND_REPLIES;
     else ssp--;
 }
 
-void Dialog::Hooks::HandleReply(Services::Hooks::CallType type, CNWSDialog *pThis,
+void Dialog::Hooks::HandleReply(bool before, CNWSDialog *pThis,
     uint32_t nPlayerID, CNWSObject* pNWSObjectOwner, uint32_t nReplyIndex, int32_t bEscapeDialog, uint32_t currentEntryIndex)
 {
     pDialog = pThis;
     pOwner = pNWSObjectOwner;
     loopCount = 0;
     (void)bEscapeDialog; (void)nPlayerID;
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
     {
         statestack[++ssp] = DIALOG_STATE_HANDLE_REPLY;
         idxEntry = currentEntryIndex;
@@ -134,13 +133,13 @@ void Dialog::Hooks::HandleReply(Services::Hooks::CallType type, CNWSDialog *pThi
     else ssp--;
 }
 
-void Dialog::Hooks::CheckScript(Services::Hooks::CallType type, CNWSDialog *pThis,
+void Dialog::Hooks::CheckScript(bool before, CNWSDialog *pThis,
     CNWSObject* pNWSObjectOwner, const CResRef* sActive)
 {
     pDialog = pThis;
     pOwner = pNWSObjectOwner;
     (void)sActive;
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
     {
         if (statestack[ssp] == DIALOG_STATE_HANDLE_REPLY)
         {
@@ -157,13 +156,13 @@ void Dialog::Hooks::CheckScript(Services::Hooks::CallType type, CNWSDialog *pThi
     }
 }
 
-void Dialog::Hooks::RunScript(Services::Hooks::CallType type, CNWSDialog *pThis,
+void Dialog::Hooks::RunScript(bool before, CNWSDialog *pThis,
     CNWSObject* pNWSObjectOwner, const CResRef* sScript)
 {
     pDialog = pThis;
     pOwner = pNWSObjectOwner;
     (void)sScript;
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
         scriptType = SCRIPT_TYPE_ACTION_TAKEN;
     else
         scriptType = SCRIPT_TYPE_OTHER;
