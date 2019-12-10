@@ -12,7 +12,7 @@
 #include "Services/Messaging/Messaging.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
-#include "ViewPtr.hpp"
+//#include "ViewPtr.hpp"
 #include <algorithm>
 #include <regex>
 #include <cstring>
