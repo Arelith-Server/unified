@@ -4,7 +4,7 @@
 #include "API/Vector.hpp"
 #include "Common.hpp"
 #include "Services/Hooks/Hooks.hpp"
-#include "ViewPtr.hpp"
+//#include "ViewPtr.hpp"
 
 namespace Arelith {
 
