@@ -22,7 +22,7 @@ using namespace NWNXLib::API;
 
 static NWNXLib::Hooking::FunctionHook* pHookComputeUpdateRequired = nullptr;
 
-StripOVTFromNotVisibleObject::StripOVTFromNotVisibleObject(ViewPtr<Services::HooksProxy> hooker)
+StripOVTFromNotVisibleObject::StripOVTFromNotVisibleObject(Services::HooksProxy* hooker)
 {
     hooker->RequestExclusiveHook<Functions::_ZN11CNWSMessage21ComputeUpdateRequiredEP10CNWSPlayerP10CNWSObjectP17CLastUpdateObjecti>
                                     (&HookComputeUpdateRequired);
