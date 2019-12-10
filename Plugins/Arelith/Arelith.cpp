@@ -75,8 +75,9 @@ Arelith::Arelith(const Plugin::CreateParams& params)
             ASSERT(message.size() == 2);
             PushEventData(message[0], message[1]);
         });
+    auto hooker = GetServices()->m_hooks.get();
 
-    m_arelithEvents   = std::make_unique<ArelithEvents>(GetServices()->m_hooks);
+    m_arelithEvents   = std::make_unique<ArelithEvents>(hooker);
 }
 
 Arelith::~Arelith()
