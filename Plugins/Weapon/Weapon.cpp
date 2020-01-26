@@ -565,7 +565,7 @@ int32_t Weapon::GetWeaponFocus(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
         }
     }
     
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetWeaponFocusHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (bApplicableFeatExists && bHasApplicableFeat ? 1 : plugin.m_GetWeaponFocusHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetEpicWeaponFocus(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
@@ -588,7 +588,7 @@ int32_t Weapon::GetEpicWeaponFocus(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
             if (bHasApplicableFeat) break;
         }
     }
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetEpicWeaponFocusHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (bApplicableFeatExists && bHasApplicableFeat ? 1 : plugin.m_GetEpicWeaponFocusHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetWeaponFinesse(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
@@ -622,7 +622,7 @@ int32_t Weapon::GetWeaponImprovedCritical(CNWSCreatureStats* pStats, CNWSItem* p
         }
     }
 
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetWeaponImprovedCriticalHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (bApplicableFeatExists && bHasApplicableFeat ? 1 : plugin.m_GetWeaponImprovedCriticalHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetWeaponSpecialization(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
@@ -646,7 +646,7 @@ int32_t Weapon::GetWeaponSpecialization(CNWSCreatureStats* pStats, CNWSItem* pWe
         }
     }
 
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetWeaponSpecializationHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (bApplicableFeatExists && bHasApplicableFeat ? 1 : plugin.m_GetWeaponSpecializationHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetEpicWeaponSpecialization(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
@@ -670,7 +670,7 @@ int32_t Weapon::GetEpicWeaponSpecialization(CNWSCreatureStats* pStats, CNWSItem*
         }
     }
 
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetEpicWeaponSpecializationHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (bApplicableFeatExists && bHasApplicableFeat ? 1 : plugin.m_GetEpicWeaponSpecializationHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetEpicWeaponOverwhelmingCritical(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
@@ -694,7 +694,7 @@ int32_t Weapon::GetEpicWeaponOverwhelmingCritical(CNWSCreatureStats* pStats, CNW
         }
     }
 
-    return (bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetEpicWeaponOverwhelmingCriticalHook->CallOriginal<int32_t>(pStats, pWeapon));
+    return (bApplicableFeatExists && bHasApplicableFeat ? 1 : plugin.m_GetEpicWeaponOverwhelmingCriticalHook->CallOriginal<int32_t>(pStats, pWeapon));
 }
 
 int32_t Weapon::GetEpicWeaponDevastatingCritical(CNWSCreatureStats* pStats, CNWSItem* pWeapon)
@@ -718,7 +718,7 @@ int32_t Weapon::GetEpicWeaponDevastatingCritical(CNWSCreatureStats* pStats, CNWS
         }
     }
 
-    bool bFlag = bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetEpicWeaponDevastatingCriticalHook->CallOriginal<int32_t>(pStats, pWeapon);
+    bool bFlag = bApplicableFeatExists && bHasApplicableFeat ? 1 : plugin.m_GetEpicWeaponDevastatingCriticalHook->CallOriginal<int32_t>(pStats, pWeapon);
 
     if (bFlag && !plugin.m_DCScript.empty())
     {
@@ -764,7 +764,7 @@ int32_t Weapon::GetIsWeaponOfChoice(CNWSCreatureStats* pStats, uint32_t nBaseIte
         }
     }
 
-    return bApplicableFeatExists ? bHasApplicableFeat : plugin.m_GetIsWeaponOfChoiceHook->CallOriginal<int32_t>(pStats, nBaseItem);
+    return bApplicableFeatExists && bHasApplicableFeat ? 1 : plugin.m_GetIsWeaponOfChoiceHook->CallOriginal<int32_t>(pStats, nBaseItem);
 }
 
 //This one is required for correctly update PC sheet
