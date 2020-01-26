@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
-https://github.com/nwnxee/unified/compare/build8193.5...HEAD
+https://github.com/nwnxee/unified/compare/build8193.6...HEAD
 
 ### Added
 N/A
@@ -14,13 +14,15 @@ N/A
 N/A
 
 ##### New NWScript Functions
-N/A
+- Player: SetResManOverride()
+- Creature: {Get|Set}{Domain|Specialization}()
 
 ### Changed
-N/A
+- ELC: Updated for custom spellcaster changes
+- Events: exposed TARGET and TYPE event data for DMActionEvent DumpLocals
 
 ### Deprecated
-N/A
+- Creature: {Get|Set}{ClericDomain|WizardSpecialization}()
 
 ### Removed
 N/A
@@ -29,6 +31,21 @@ N/A
 N/A
 
 
+## 8193.6
+https://github.com/nwnxee/unified/compare/build8193.5...build8193.6
+
+##### New NWScript Functions
+- Object: {Get|Set|Delete}{Int|String|Float}()
+- Object: DeleteVarRegex()
+- Util: AddNSSFile()
+- Util: RemoveNWNXResourceFile()
+
+### Changed
+- Object: Renamed {Get|Set|Delete}Persistent{Int|String|Float}() to {Get|Set|Delete}{Int|String|Float}() and added a parameter to the latter to allow persisting of variables on a case-by-case basis 
+- Util: `NWNX_UTIL_PRE_MODULE_START_SCRIPT_CHUNK` will now provide an error message if it fails to run a script chunk
+
+### Deprecated
+- Object: {Get|Set|Delete}Persistent{Int|String|Float}()
 
 ## 8193.5
 https://github.com/nwnxee/unified/compare/build8193.4...build8193.5
