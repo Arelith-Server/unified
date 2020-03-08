@@ -13,6 +13,7 @@
 #include "API/CExoAliasList.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CExoStringList.hpp"
+#include "API/CScriptCompiler.hpp"
 #include "Platform/ASLR.hpp"
 #include "Platform/Debug.hpp"
 #include "Services/Config/Config.hpp"
@@ -85,6 +86,7 @@ namespace Core {
 
 static NWNXCore s_core;
 NWNXCore* g_core = nullptr; // Used to access the core class in hook or event handlers.
+bool g_CoreShuttingDown = false;
 
 NWNXCore::NWNXCore()
     : m_pluginProxyServiceMap([](const auto& first, const auto& second) { return first.m_id < second.m_id; }),
@@ -325,14 +327,15 @@ void NWNXCore::InitialSetupPlugins()
 
 void NWNXCore::InitialSetupResourceDirectory()
 {
+    auto path = m_coreServices->m_config->Get<std::string>("NWNX_RESOURCE_DIRECTORY_PATH", Globals::ExoBase()->m_sUserDirectory.CStr() + std::string("/nwnx"));
     auto cleanDirectory = m_coreServices->m_config->Get<bool>("CLEAN_UP_NWNX_RESOURCE_DIRECTORY", false);
     auto priority = m_coreServices->m_config->Get<int32_t>("NWNX_RESOURCE_DIRECTORY_PRIORITY", 70000000);
 
     m_services->m_tasks->QueueOnMainThread(
-        [cleanDirectory, priority]
+        [path, cleanDirectory, priority]
         {
             CExoString sAlias = CExoString("NWNX:");
-            CExoString sPath = CExoString(Globals::ExoBase()->m_sUserDirectory.CStr() + std::string("/nwnx"));
+            CExoString sPath = CExoString(path);
 
             LOG_INFO("Setting up '%s' resource directory with path: %s", sAlias, sPath);
 
@@ -353,7 +356,7 @@ void NWNXCore::InitialSetupResourceDirectory()
 
 void NWNXCore::InitialSetupCommands()
 {
-    m_services->m_commands->RegisterCommand("runscript", [](std::string& args)
+    m_services->m_commands->RegisterCommand("runscript", [](std::string&, std::string& args)
     {
         if (Globals::AppManager()->m_pServerExoApp->GetServerMode() != 2)
             return;
@@ -365,7 +368,7 @@ void NWNXCore::InitialSetupCommands()
         }
     });
 
-    m_services->m_commands->RegisterCommand("eval", [](std::string& args)
+    m_services->m_commands->RegisterCommand("eval", [](std::string&, std::string& args)
     {
         if (Globals::AppManager()->m_pServerExoApp->GetServerMode() != 2)
             return;
@@ -374,11 +377,14 @@ void NWNXCore::InitialSetupCommands()
         {
             LOG_INFO("Executing console command: 'eval' with args: %s", args);
             bool bWrapIntoMain = args.find("void main()") == std::string::npos;
-            Globals::VirtualMachine()->RunScriptChunk(args, 0, true, bWrapIntoMain);
+            if (Globals::VirtualMachine()->RunScriptChunk(args, 0, true, bWrapIntoMain))
+            {
+                LOG_ERROR("Failed to run console command 'eval' with error: %s", Globals::VirtualMachine()->m_pJitCompiler->m_sCapturedError.CStr());
+            }
         }
     });
 
-    m_services->m_commands->RegisterCommand("evalx", [](std::string& args)
+    m_services->m_commands->RegisterCommand("evalx", [](std::string&, std::string& args)
     {
         if (Globals::AppManager()->m_pServerExoApp->GetServerMode() != 2)
             return;
@@ -401,11 +407,14 @@ void NWNXCore::InitialSetupCommands()
         {
             LOG_INFO("Executing console command: 'evalx' with args: %s", args);
             std::string script = nwnxHeaders + (args.find("void main()") == std::string::npos ? "void main() { " + args + " }" : args);
-            Globals::VirtualMachine()->RunScriptChunk(script, 0, true, false);
+            if (Globals::VirtualMachine()->RunScriptChunk(script, 0, true, false))
+            {
+                LOG_ERROR("Failed to run console command 'evalx' with error: %s", Globals::VirtualMachine()->m_pJitCompiler->m_sCapturedError.CStr());
+            }
         }
     });
 
-    m_services->m_commands->RegisterCommand("loglevel", [](std::string& args)
+    m_services->m_commands->RegisterCommand("loglevel", [](std::string&, std::string& args)
     {
         if (!args.empty())
         {
@@ -438,10 +447,12 @@ void NWNXCore::InitialSetupCommands()
         }
     });
 
-    m_services->m_commands->RegisterCommand("logformat", [](std::string& args)
+    m_services->m_commands->RegisterCommand("logformat", [](std::string&, std::string& args)
     {
         if (args.find("timestamp") != std::string::npos)
             Log::SetPrintTimestamp(args.find("notimestamp") == std::string::npos);
+        if (args.find("date") != std::string::npos)
+            Log::SetPrintDate(args.find("nodate") == std::string::npos);
         if (args.find("plugin") != std::string::npos)
             Log::SetPrintPlugin(args.find("noplugin") == std::string::npos);
         if (args.find("source") != std::string::npos)
@@ -450,11 +461,10 @@ void NWNXCore::InitialSetupCommands()
             Log::SetColorOutput(args.find("nocolor") == std::string::npos);
         if (args.find("force") != std::string::npos)
             Log::SetForceColor(args.find("noforce") == std::string::npos);
-        LOG_INFO("Log format updated: Timestamp:%s Plugin:%s Source:%s Color:%s Force:%s.",
-                 Log::GetPrintTimestamp(), Log::GetPrintPlugin(),
+        LOG_INFO("Log format updated: Timestamp:%s Date:%s Plugin:%s Source:%s Color:%s Force:%s.",
+                 Log::GetPrintTimestamp(), Log::GetPrintDate(), Log::GetPrintPlugin(),
                  Log::GetPrintSource(), Log::GetColorOutput(), Log::GetForceColor());
     });
-
 }
 
 void NWNXCore::UnloadPlugins()
@@ -518,10 +528,13 @@ void NWNXCore::CreateServerHandler(CAppManager* app)
     // We need to set the NWNXLib log level (separate from Core now) to match the core log level.
     Log::SetLogLevel("NWNXLib", Log::GetLogLevel(NWNX_CORE_PLUGIN_NAME));
     Log::SetPrintTimestamp(g_core->m_coreServices->m_config->Get<bool>("LOG_TIMESTAMP", true));
+    Log::SetPrintDate(g_core->m_coreServices->m_config->Get<bool>("LOG_DATE", false));
     Log::SetPrintPlugin(g_core->m_coreServices->m_config->Get<bool>("LOG_PLUGIN", true));
     Log::SetPrintSource(g_core->m_coreServices->m_config->Get<bool>("LOG_SOURCE", true));
     Log::SetColorOutput(g_core->m_coreServices->m_config->Get<bool>("LOG_COLOR", true));
     Log::SetForceColor(g_core->m_coreServices->m_config->Get<bool>("LOG_FORCE_COLOR", false));
+    if (g_core->m_coreServices->m_config->Get<bool>("LOG_ASYNC", false))
+        Log::SetAsync(g_core->m_services->m_tasks.get());
 
     if (auto locale = g_core->m_coreServices->m_config->Get<std::string>("LOCALE"))
     {
@@ -561,6 +574,8 @@ void NWNXCore::CreateServerHandler(CAppManager* app)
 
 void NWNXCore::DestroyServerHandler(CAppManager* app)
 {
+    g_CoreShuttingDown = true;
+
     if (auto shutdownScript = g_core->m_coreServices->m_config->Get<std::string>("SHUTDOWN_SCRIPT"))
     {
         if (Globals::AppManager()->m_pServerExoApp->GetServerMode() == 2)
@@ -570,11 +585,12 @@ void NWNXCore::DestroyServerHandler(CAppManager* app)
         }
     }
 
+    auto hook = g_core->m_services->m_hooks->FindHookByAddress(Functions::_ZN11CAppManager13DestroyServerEv);
+    hook->CallOriginal<void>(app);
+
     LOG_NOTICE("Shutting down NWNX.");
     g_core->Shutdown();
 
-    // At this point, the hook has been reset. We should call the original again to let NWN carry on.
-    app->DestroyServer();
     RestoreCrashHandlers();
 }
 

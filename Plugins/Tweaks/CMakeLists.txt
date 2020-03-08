@@ -15,4 +15,5 @@ add_plugin(Tweaks
     "Tweaks/DeadCreatureFiresOnAreaExit.cpp"
     "Tweaks/PreserveActionsOnDMPossess.cpp"
     "Tweaks/FixGreaterSanctuaryBug.cpp"
+    "Tweaks/ItemChargesCost.cpp"
 )

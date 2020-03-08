@@ -23,8 +23,8 @@ NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 
 NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Plugin::CreateParams params)
 {
-g_plugin = new Experimental::Experimental(params);
-return g_plugin;
+    g_plugin = new Experimental::Experimental(params);
+    return g_plugin;
 }
 
 namespace Experimental {

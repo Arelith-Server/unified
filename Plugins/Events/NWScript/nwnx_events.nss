@@ -894,6 +894,20 @@ _______________________________________
     ACTIVE_PROPERTY_INDEX | int    |
 
 _______________________________________
+    ## UUID Collision Events
+    - NWNX_ON_UUID_COLLISION_BEFORE
+    - NWNX_ON_UUID_COLLISION_AFTER
+
+    `OBJECT_SELF` = The object that caused the UUID collision
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    UUID                  | string | The UUID
+
+    Note: To get the existing object with `UUID` you can use GetObjectByUUID(), be aware that this event runs before the
+          object is added to the world which means many functions (for example `GetArea(OBJECT_SELF)`) will not work.
+
+_______________________________________
 */
 /*
 const int NWNX_EVENTS_OBJECT_TYPE_CREATURE          = 5;
@@ -924,6 +938,11 @@ const int NWNX_EVENTS_TIMING_BAR_CUSTOM        = 10;
 /// @param evt The event name.
 /// @param script The script to call when the event fires.
 void NWNX_Events_SubscribeEvent(string evt, string script);
+
+/// @brief Unsubscribe a script from an event
+/// @param evt The event name.
+/// @param script The script.
+void NWNX_Events_UnsubscribeEvent(string evt, string script);
 
 /// Pushes event data at the provided tag, which subscribers can access with GetEventData.
 /// This should be called BEFORE SignalEvent.
@@ -1001,6 +1020,15 @@ void NWNX_Events_RemoveObjectFromDispatchList(string sEvent, string sScript, obj
 void NWNX_Events_SubscribeEvent(string evt, string script)
 {
     string sFunc = "SubscribeEvent";
+
+    NWNX_PushArgumentString(NWNX_Events, sFunc, script);
+    NWNX_PushArgumentString(NWNX_Events, sFunc, evt);
+    NWNX_CallFunction(NWNX_Events, sFunc);
+}
+
+void NWNX_Events_UnsubscribeEvent(string evt, string script)
+{
+    string sFunc = "UnsubscribeEvent";
 
     NWNX_PushArgumentString(NWNX_Events, sFunc, script);
     NWNX_PushArgumentString(NWNX_Events, sFunc, evt);

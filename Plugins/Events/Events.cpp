@@ -28,6 +28,7 @@
 #include "Events/InputEvents.hpp"
 #include "Events/MaterialChangeEvents.hpp"
 #include "Events/ObjectEvents.hpp"
+#include "Events/UUIDEvents.hpp"
 #include "Services/Config/Config.hpp"
 #include "Services/Messaging/Messaging.hpp"
 
@@ -73,6 +74,7 @@ Events::Events(const Plugin::CreateParams& params)
         [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(SubscribeEvent);
+    REGISTER(UnsubscribeEvent);
     REGISTER(PushEventData);
     REGISTER(SignalEvent);
     REGISTER(GetEventData);
@@ -125,6 +127,7 @@ Events::Events(const Plugin::CreateParams& params)
     m_inputEvents       = std::make_unique<InputEvents>(hooker);
     m_matChangeEvents   = std::make_unique<MaterialChangeEvents>(hooker);
     m_objectEvents      = std::make_unique<ObjectEvents>(hooker);
+    m_uuidEvents        = std::make_unique<UUIDEvents>(hooker);
 }
 
 Events::~Events()
@@ -245,13 +248,38 @@ ArgumentStack Events::SubscribeEvent(ArgumentStack&& args)
 
     if (std::find(std::begin(eventVector), std::end(eventVector), script) != std::end(eventVector))
     {
-        throw std::runtime_error("Attempted to subscribe to an event with a script that already subscribed!");
+        LOG_NOTICE("Script '%s' attempted to subscribe to event '%s' but is already subscribed!", script, event);
+    }
+    else
+    {
+        LOG_INFO("Script '%s' subscribed to event '%s'.", script, event);
+        eventVector.emplace_back(std::move(script));
     }
 
-    LOG_INFO("Script '%s' subscribed to event '%s'.", script, event);
-    eventVector.emplace_back(std::move(script));
+    return Services::Events::Arguments();
+}
 
-    return ArgumentStack();
+ArgumentStack Events::UnsubscribeEvent(ArgumentStack&& args)
+{
+    const auto event = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!event.empty());
+    const auto script = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!script.empty());
+
+    auto& eventVector = m_eventMap[event];
+    auto it = std::find(std::begin(eventVector), std::end(eventVector), script);
+
+    if (it == std::end(eventVector))
+    {
+        LOG_NOTICE("Script '%s' attempted to unsubscribe from event '%s' but is not subscribed!", script, event);
+    }
+    else
+    {
+        LOG_INFO("Script '%s' unsubscribed from event '%s'.", script, event);
+        eventVector.erase(it);
+    }
+
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Events::PushEventData(ArgumentStack&& args)
@@ -259,7 +287,7 @@ ArgumentStack Events::PushEventData(ArgumentStack&& args)
     const auto tag = Services::Events::ExtractArgument<std::string>(args);
     const auto data = Services::Events::ExtractArgument<std::string>(args);
     PushEventData(tag, data);
-    return ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Events::SignalEvent(ArgumentStack&& args)
@@ -267,17 +295,15 @@ ArgumentStack Events::SignalEvent(ArgumentStack&& args)
     const auto event = Services::Events::ExtractArgument<std::string>(args);
     const auto object = Services::Events::ExtractArgument<Types::ObjectID>(args);
     bool signalled = SignalEvent(event, object);
-    ArgumentStack stack;
-    Services::Events::InsertArgument(stack, signalled ? 1 : 0);
-    return stack;
+
+    return Services::Events::Arguments(signalled ? 1 : 0);
 }
 
 ArgumentStack Events::GetEventData(ArgumentStack&& args)
 {
     std::string data = GetEventData(Services::Events::ExtractArgument<std::string>(args));
-    ArgumentStack stack;
-    Services::Events::InsertArgument(stack, data);
-    return stack;
+
+    return Services::Events::Arguments(data);
 }
 
 ArgumentStack Events::SkipEvent(ArgumentStack&&)
@@ -290,7 +316,7 @@ ArgumentStack Events::SkipEvent(ArgumentStack&&)
 
     LOG_DEBUG("Skipping last event.");
 
-    return ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Events::SetEventResult(ArgumentStack&& args)
@@ -305,7 +331,7 @@ ArgumentStack Events::SetEventResult(ArgumentStack&& args)
 
     LOG_DEBUG("Received event result '%s'.", data);
 
-    return ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Events::GetCurrentEvent(ArgumentStack&&)
@@ -321,15 +347,11 @@ ArgumentStack Events::GetCurrentEvent(ArgumentStack&&)
         retVal = g_plugin->m_eventData.top().m_EventName;
     }
 
-    ArgumentStack stack;
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Events::ToggleDispatchListMode(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
     const auto eventName = Services::Events::ExtractArgument<std::string>(args);
       ASSERT_OR_THROW(!eventName.empty());
     const auto scriptName = Services::Events::ExtractArgument<std::string>(args);
@@ -341,13 +363,11 @@ ArgumentStack Events::ToggleDispatchListMode(ArgumentStack&& args)
     else
         g_plugin->m_dispatchList.erase(eventName+scriptName);
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Events::AddObjectToDispatchList(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
     const auto eventName = Services::Events::ExtractArgument<std::string>(args);
       ASSERT_OR_THROW(!eventName.empty());
     const auto scriptName = Services::Events::ExtractArgument<std::string>(args);
@@ -361,13 +381,11 @@ ArgumentStack Events::AddObjectToDispatchList(ArgumentStack&& args)
         eventDispatchList->second.insert(oidObject);
     }
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Events::RemoveObjectFromDispatchList(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
     const auto eventName = Services::Events::ExtractArgument<std::string>(args);
       ASSERT_OR_THROW(!eventName.empty());
     const auto scriptName = Services::Events::ExtractArgument<std::string>(args);
@@ -381,7 +399,7 @@ ArgumentStack Events::RemoveObjectFromDispatchList(ArgumentStack&& args)
         eventDispatchList->second.erase(oidObject);
     }
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 void Events::CreateNewEventDataIfNeeded()
