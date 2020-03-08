@@ -73,7 +73,7 @@ string NWNX_Arelith_GetEventData(string tag)
     string sFunc = "OnGetEventData";
     NWNX_PushArgumentString("NWNX_Arelith", sFunc, tag);
     NWNX_CallFunction("NWNX_Arelith", sFunc);
-    return NWNX_GetReturnValueString("NWNX_Arelith", Func);
+    return NWNX_GetReturnValueString("NWNX_Arelith", sFunc);
 }
 
 void NWNX_Arelith_SkipEvent()
