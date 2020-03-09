@@ -189,7 +189,7 @@ Services::Events::ArgumentStack Arelith::OnSubscribeEvent(Services::Events::Argu
     LOG_INFO("Script '%s' subscribed to event '%s'.", script, event);
     eventVector.emplace_back(std::move(script));
 
-    return Services::Events::ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 Services::Events::ArgumentStack Arelith::OnPushEventData(Services::Events::ArgumentStack&& args)
@@ -197,7 +197,7 @@ Services::Events::ArgumentStack Arelith::OnPushEventData(Services::Events::Argum
     const auto tag = Services::Events::ExtractArgument<std::string>(args);
     const auto data = Services::Events::ExtractArgument<std::string>(args);
     PushEventData(tag, data);
-    return Services::Events::ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 Services::Events::ArgumentStack Arelith::OnSignalEvent(Services::Events::ArgumentStack&& args)
@@ -205,17 +205,13 @@ Services::Events::ArgumentStack Arelith::OnSignalEvent(Services::Events::Argumen
     const auto event = Services::Events::ExtractArgument<std::string>(args);
     const auto object = Services::Events::ExtractArgument<Types::ObjectID>(args);
     bool signalled = SignalEvent(event, object);
-    Services::Events::ArgumentStack stack;
-    Services::Events::InsertArgument(stack, signalled ? 1 : 0);
-    return stack;
+    return Services::Events:Arguments(signalled ? 1 : 0);
 }
 
 Services::Events::ArgumentStack Arelith::OnGetEventData(Services::Events::ArgumentStack&& args)
 {
     std::string data = GetEventData(Services::Events::ExtractArgument<std::string>(args));
-    Services::Events::ArgumentStack stack;
-    Services::Events::InsertArgument(stack, data);
-    return stack;
+    return Services::Events::Arguments(data);
 }
 
 Services::Events::ArgumentStack Arelith::OnSkipEvent(Services::Events::ArgumentStack&&)
@@ -228,7 +224,7 @@ Services::Events::ArgumentStack Arelith::OnSkipEvent(Services::Events::ArgumentS
 
     LOG_DEBUG("Skipping last event.");
 
-    return Services::Events::ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 Services::Events::ArgumentStack Arelith::OnEventResult(Services::Events::ArgumentStack&& args)
@@ -243,7 +239,7 @@ Services::Events::ArgumentStack Arelith::OnEventResult(Services::Events::Argumen
 
     LOG_DEBUG("Received event result '%s'.", data);
 
-    return Services::Events::ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::ArgumentStack&&)
@@ -256,9 +252,7 @@ Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::Arg
     
   
     std::string eventName = g_plugin->m_eventData.top().m_EventName;
-    Services::Events::ArgumentStack stack;
-    Services::Events::InsertArgument(stack, eventName);
-    return stack;
+    return Services::Events::Arguments(eventName);
 }
 
 void Arelith::CreateNewEventDataIfNeeded()
