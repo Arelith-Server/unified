@@ -12,6 +12,8 @@
 #include "Services/Messaging/Messaging.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
+#include "API/CNWRules.hpp"
+#include "API/CNWCCMessageData.hpp"
 //#include "ViewPtr.hpp"
 #include <algorithm>
 #include <regex>
@@ -269,10 +271,10 @@ void Arelith::CreateNewEventDataIfNeeded()
 ArgumentStack Arelith::BaseTouchAttack(ArgumentStack&& args)
 {
 
-    auto *pCreature = Services::Events::ExtractArgument<Types::ObjectID>(args);
-    auto *pTarget = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    auto pCreature = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    auto pTarget = Services::Events::ExtractArgument<Types::ObjectID>(args);
     if (pCreature == Constants::OBJECT_INVALID || pTarget == Constants::OBJECT_INVALID)
-        return 0;
+        return Services::Events::Arguments(0);
 
     auto bOffhand = Services::Events::ExtractArgument<int32_t>(args);
     auto bFeedback = Services::Events::ExtractArgument<int32_t>(args);
@@ -296,7 +298,7 @@ ArgumentStack Arelith::BaseTouchAttack(ArgumentStack&& args)
     {
         if (nRoll == 20)
         {
-           retVal = (20 + nAttackBonus >= nAC) 2 : 1;
+           retVal = (20 + nAttackBonus >= nAC) ? 2 : 1;
         }
         else if (nRoll > 1 && nRoll + nAttackBonus >= nAC)
         {
