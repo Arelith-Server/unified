@@ -60,6 +60,7 @@ Arelith::Arelith(const Plugin::CreateParams& params)
     REGISTER(OnSkipEvent);
     REGISTER(OnEventResult);
     REGISTER(OnGetCurrentEvent);
+    REGISTER(BaseTouchAttack);
 #undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
@@ -135,12 +136,12 @@ bool Arelith::SignalEvent(const std::string& eventName, const API::Types::Object
 
         if (result)
         {
-			*result = g_plugin->m_eventData.top().m_Result;
+            *result = g_plugin->m_eventData.top().m_Result;
         }
 
         --g_plugin->m_eventDepth;
     }
-	
+
 
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_RESULT",  { eventName, result ? *result : ""});
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_SKIPPED", { eventName, skipped ? "1" : "0"});
@@ -248,9 +249,9 @@ Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::Arg
     {
         throw std::runtime_error("Attempted to get the current event in an invalid context.");
     }
-    
-    
-  
+
+
+
     std::string eventName = g_plugin->m_eventData.top().m_EventName;
     return Services::Events::Arguments(eventName);
 }
@@ -263,6 +264,90 @@ void Arelith::CreateNewEventDataIfNeeded()
         params.m_Skipped = false;
         m_eventData.emplace(std::move(params));
     }
+}
+
+ArgumentStack Arelith::BaseTouchAttack(ArgumentStack&& args)
+{
+
+    auto *pCreature = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    auto *pTarget = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    if (pCreature == Constants::OBJECT_INVALID || pTarget == Constants::OBJECT_INVALID)
+        return 0;
+
+    auto bOffhand = Services::Events::ExtractArgument<int32_t>(args);
+    auto bFeedback = Services::Events::ExtractArgument<int32_t>(args);
+    auto bRanged = Services::Events::ExtractArgument<int32_t>(args);
+    int32_t retVal = 0;
+    int32_t nAttackBonus = 0;
+    int16_t nAC = 0;
+    uint16_t nRoll = 0, nThreatRoll = 0;
+    uint8_t nConcealment = 0, nAttackResult = 0;
+
+    if (bRanged)
+        nAttackBonus = pCreature->m_pStats->GetRangedAttackBonus(1, 1);
+    else
+        nAttackBonus = pCreature->m_pStats->GetMeleeAttackBonus(bOffhand, 1, 1);
+
+    nAC = pTarget->m_pStats->GetArmorClassVersus(pCreature, 1);
+    nRoll = Globals::Rules()->RollDice(1, 20);
+    if( pTarget->m_nObjectType == Constants::ObjectType::Placeable || pTarget->m_nObjectType == Constants::ObjectType::Door)
+        retVal = 1;
+    else if (!pCreature->ResolveDefensiveEffects(pTarget, 1))
+    {
+        if (nRoll == 20)
+        {
+           retVal = (20 + nAttackBonus >= nAC) 2 : 1;
+        }
+        else if (nRoll > 1 && nRoll + nAttackBonus >= nAC)
+        {
+            retVal = 1;
+        }
+    }
+    else
+    {
+        auto* pAttack = pCreature->m_pcCombatRound->GetAttack(pCreature->m_pcCombatRound->m_nCurrentAttack);
+        nConcealment = pAttack->m_nConcealment;
+        nAttackResult = pAttack->m_nAttackResult;
+    }
+
+    if (bFeedback)
+    {
+        CNWCCMessageData* pMessage = new CNWCCMessageData();
+        pMessage->SetObjectID(0, pCreature->m_idSelf);
+        pMessage->SetInteger(0, nAttackBonus);
+        pMessage->SetInteger(1, nRoll);
+
+        if (retVal > 0)
+        {
+            if (retVal == 2)
+                pMessage->SetInteger(2, 3);
+            else
+                pMessage->SetInteger(2, 1);
+        }
+        else
+        {
+            if (!nAttackResult)
+                pMessage->SetInteger(2, 4);
+            else
+            {
+                pMessage->SetInteger(2, nAttackResult);
+                pMessage->SetInteger(4, nConcealment);
+            }
+        }
+
+        if (bRanged)
+            pMessage->SetInteger(3, 1);
+
+        CNWSMessage* pNWSMessage = static_cast<CNWSMessage*>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
+        if (auto* pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(pCreature->m_idSelf))
+            pNWSMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID, 0xd, pMessage, nullptr);
+
+        if (auto* pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(pTarget->m_idSelf))
+            pNWSMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID, 0xd, pMessage, nullptr);
+
+        delete pMessage;
+    }
+    return Services::Events::Arguments(retVal);
 }
 
 }
