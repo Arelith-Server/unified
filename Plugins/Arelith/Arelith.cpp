@@ -205,7 +205,7 @@ Services::Events::ArgumentStack Arelith::OnSignalEvent(Services::Events::Argumen
     const auto event = Services::Events::ExtractArgument<std::string>(args);
     const auto object = Services::Events::ExtractArgument<Types::ObjectID>(args);
     bool signalled = SignalEvent(event, object);
-    return Services::Events:Arguments(signalled ? 1 : 0);
+    return Services::Events::Arguments(signalled ? 1 : 0);
 }
 
 Services::Events::ArgumentStack Arelith::OnGetEventData(Services::Events::ArgumentStack&& args)
