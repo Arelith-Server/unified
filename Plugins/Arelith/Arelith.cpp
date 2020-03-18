@@ -271,11 +271,14 @@ void Arelith::CreateNewEventDataIfNeeded()
 ArgumentStack Arelith::BaseTouchAttack(ArgumentStack&& args)
 {
 
-    auto pCreature = Services::Events::ExtractArgument<Types::ObjectID>(args);
-    auto pTarget = Services::Events::ExtractArgument<Types::ObjectID>(args);
-    if (pCreature == Constants::OBJECT_INVALID || pTarget == Constants::OBJECT_INVALID)
-        return Services::Events::Arguments(0);
+    auto creatureID = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    auto targetID = Services::Events::ExtractArgument<Types::ObjectID>(args);
 
+    if (creatureID == Constants::OBJECT_INVALID || targetID == Constants::OBJECT_INVALID)
+      return Services::Events::Arguments(0);
+
+    CNWSCreature *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(creatureID);
+    CNWSCreature *pTarget = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(targetID);
     auto bOffhand = Services::Events::ExtractArgument<int32_t>(args);
     auto bFeedback = Services::Events::ExtractArgument<int32_t>(args);
     auto bRanged = Services::Events::ExtractArgument<int32_t>(args);
