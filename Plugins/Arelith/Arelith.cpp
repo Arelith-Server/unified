@@ -14,6 +14,8 @@
 #include "API/Globals.hpp"
 #include "API/CNWRules.hpp"
 #include "API/CNWCCMessageData.hpp"
+#include "API/CNWSCombatRound.hpp"
+#include "API/CNWSPlayer.hpp"
 //#include "ViewPtr.hpp"
 #include <algorithm>
 #include <regex>
