@@ -1,11 +1,14 @@
 #pragma once
 
-#include "Platform/Time.hpp"
+#include "External/tinyformat/tinyformat.hpp"
 #include <cstdio>
+#include <cstring>
+#include <sstream>
+#include <ctime>
 
-namespace NWNXLib {
+namespace NWNXLib::Services { class Tasks; }
 
-namespace Log {
+namespace NWNXLib::Log {
 
 #define LOG_DEBUG(format, ...) \
     ::NWNXLib::Log::Trace(::NWNXLib::Log::Channel::SEV_DEBUG, PLUGIN_NAME, __FILE__, __LINE__, (format), ##__VA_ARGS__)
@@ -62,16 +65,32 @@ struct Channel
     };
 };
 
-void Trace(Channel::Enum channel, const char* plugin, const char* file, int line, const char* message);
-
 template <typename ... Args>
-void Trace(Channel::Enum channel, const char* plugin, const char* file, int line, const char* format, Args ... args);
+void Trace(Channel::Enum channel, const char* plugin, const char* file, int line, const char* format, Args&& ... args);
 
 Channel::Enum GetLogLevel(const char* plugin);
 void SetLogLevel(const char* plugin, Channel::Enum logLevel);
+void SetPrintTimestamp(bool value);
+bool GetPrintTimestamp();
+void SetPrintDate(bool value);
+bool GetPrintDate();
+void SetPrintPlugin(bool value);
+bool GetPrintPlugin();
+void SetPrintSource(bool value);
+bool GetPrintSource();
+void SetColorOutput(bool value);
+bool GetColorOutput();
+void SetForceColor(bool value);
+bool GetForceColor();
+
+void SetAsync(NWNXLib::Services::Tasks* tasks);
 
 #include "Log.inl"
 
 }
 
-}
+class CExoString;
+class CResRef;
+
+std::ostream& operator<<(std::ostream& out, const CExoString& str);
+std::ostream& operator<<(std::ostream& out, const CResRef& str);

@@ -1,22 +1,15 @@
-
-// Log currently generates warnings when no arguments are given to format string
-// TODO: Should really clean up the log so it doesn't warn in these cases
-#pragma GCC diagnostic ignored "-Wformat-security"
-
 #include "Time.hpp"
 
 #include "API/CAppManager.hpp"
-#include "API/CServerExoApp.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include <chrono>
-#include <sstream>
 #include <iomanip>
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Time::Time> g_plugin;
+static Time::Time* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -44,7 +37,8 @@ Time::Time(const Plugin::CreateParams& params)
     : Plugin(params)
 {
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, std::bind(&Time::func, this, std::placeholders::_1))
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(GetSystemDate);
     REGISTER(GetSystemTime);
@@ -61,58 +55,44 @@ Time::~Time()
 
 ArgumentStack Time::GetTimeStamp(ArgumentStack&&)
 {
-    ArgumentStack stack;
-
     auto now = std::chrono::system_clock::now();
     auto dur = now.time_since_epoch();
 
     auto seconds = std::chrono::duration_cast<std::chrono::seconds>(dur).count();
 
-
-    Services::Events::InsertArgument(stack, (int)seconds);
-    return stack;
+    return Services::Events::Arguments((int)seconds);
 }
 
 ArgumentStack Time::GetHighResTimeStamp(ArgumentStack&&)
 {
-    ArgumentStack stack;
-
     auto now = std::chrono::system_clock::now();
     auto dur = now.time_since_epoch();
 
     auto count = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
 
-    Services::Events::InsertArgument(stack, (int32_t)(count / 1000000));
-    Services::Events::InsertArgument(stack, (int32_t)(count % 1000000));
-    return stack;
+    return Services::Events::Arguments((int32_t)(count / 1000000), (int32_t)(count % 1000000));
 }
 
 ArgumentStack Time::GetSystemDate(ArgumentStack&&)
 {
-    ArgumentStack stack;
-
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
 
     std::stringstream ss;
     ss << std::put_time(std::localtime(&in_time_t), "%m/%d/%Y");
 
-    Services::Events::InsertArgument(stack, ss.str());
-    return stack;
+    return Services::Events::Arguments(ss.str());
 }
 
 ArgumentStack Time::GetSystemTime(ArgumentStack&&)
 {
-    ArgumentStack stack;
-
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
 
     std::stringstream ss;
     ss << std::put_time(std::localtime(&in_time_t), "%H:%M:%S");
 
-    Services::Events::InsertArgument(stack, ss.str());
-    return stack;
+    return Services::Events::Arguments(ss.str());
 }
 
 }

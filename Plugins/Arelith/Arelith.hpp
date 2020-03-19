@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+using ArgumentStack = NWNXLib::Services::Events::ArgumentStack;
 namespace Arelith {
 
 class ArelithEvents;
@@ -56,6 +57,7 @@ private:
     NWNXLib::Services::Events::ArgumentStack OnSkipEvent(NWNXLib::Services::Events::ArgumentStack&& args);
     NWNXLib::Services::Events::ArgumentStack OnEventResult(NWNXLib::Services::Events::ArgumentStack&& args);
     NWNXLib::Services::Events::ArgumentStack OnGetCurrentEvent(NWNXLib::Services::Events::ArgumentStack&& args);
+    ArgumentStack BaseTouchAttack(ArgumentStack&& args);
 
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.
     // Only does it if needed though, based on the current event depth!

@@ -5,13 +5,13 @@
 #include "API/CNWSCombatRound.hpp"
 #include "API/CNWVisibilityNode.hpp"
 #include "API/CNWCCMessageData.hpp"
+#include "API/CNWRules.hpp"
 #include "API/Functions.hpp"
 #include "API/Globals.hpp"
 #include "API/Constants.hpp"
-#include "API/Version.hpp"
-
 #include "Services/Hooks/Hooks.hpp"
-#include "Utils.hpp"
+
+#include <cmath>
 
 
 namespace Tweaks {
@@ -19,27 +19,20 @@ namespace Tweaks {
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-NWNXLib::Hooking::FunctionHook* SneakAttackCritImmunity::pResolveSneakAttack_hook;
-NWNXLib::Hooking::FunctionHook* SneakAttackCritImmunity::pResolveDeathAttack_hook;
-SneakAttackCritImmunity::SneakAttackCritImmunity(ViewPtr<Services::HooksProxy> hooker)
+SneakAttackCritImmunity::SneakAttackCritImmunity(Services::HooksProxy* hooker)
 {
-    hooker->RequestExclusiveHook<Functions::CNWSCreature__ResolveSneakAttack>
-                                    (&CNWSCreature__ResolveSneakAttack_hook);
-    hooker->RequestExclusiveHook<Functions::CNWSCreature__ResolveDeathAttack>
-                                    (&CNWSCreature__ResolveDeathAttack_hook);
-
-    pResolveSneakAttack_hook = hooker->FindHookByAddress(Functions::CNWSCreature__ResolveSneakAttack);
-    pResolveDeathAttack_hook = hooker->FindHookByAddress(Functions::CNWSCreature__ResolveDeathAttack);
+    hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature18ResolveSneakAttackEPS_>(&CNWSCreature__ResolveSneakAttack_hook);
+    hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature18ResolveDeathAttackEPS_>(&CNWSCreature__ResolveDeathAttack_hook);
 }
-
 
 void SneakAttackCritImmunity::CNWSCreature__ResolveSneakAttack_hook(CNWSCreature *pThis, CNWSCreature *pTarget)
 {
-    static const float SNEAK_ATTACK_DISTANCE = 100.0f;
+    static const float SNEAK_ATTACK_DISTANCE = std::pow(
+        Globals::Rules()->GetRulesetFloatEntry("MAX_RANGED_SNEAK_ATTACK_DISTANCE", 10.0f), 2);
     if (!pTarget)
         return;
 
-    CNWSCombatAttackData *pAttackData = pThis->m_pcCombatRound->GetAttack(pThis->m_pcCombatRound->m_nCurrentAttack);
+    CNWSCombatAttackData* pAttackData = pThis->m_pcCombatRound->GetAttack(pThis->m_pcCombatRound->m_nCurrentAttack);
 
     if (pAttackData->m_nAttackType == Constants::Feat::WhirlwindAttack ||
         pAttackData->m_nAttackType == Constants::Feat::ImprovedWhirlwind)
@@ -96,7 +89,7 @@ void SneakAttackCritImmunity::CNWSCreature__ResolveSneakAttack_hook(CNWSCreature
         Constants::Feat::EpicImprovedSneakAttack10
     };
     bool hasSneakAttack = false;
-    for (size_t i = 0; i < sizeof(sneakAttackFeats)/sizeof(sneakAttackFeats[0]); i++)
+    for (size_t i = 0; i < sizeof(sneakAttackFeats) / sizeof(sneakAttackFeats[0]); i++)
     {
         if (pThis->m_pStats->HasFeat(sneakAttackFeats[i]))
         {
@@ -112,44 +105,48 @@ void SneakAttackCritImmunity::CNWSCreature__ResolveSneakAttack_hook(CNWSCreature
     if (pAttackData->m_bRangedAttack)
     {
         Vector v = pThis->m_vPosition;
-        v -= pTarget->m_vPosition;
-        fDistance = v.x*v.x + v.y*v.y + v.z*v.z;
+        v.x -= pTarget->m_vPosition.x;
+        v.y -= pTarget->m_vPosition.y;
+        v.z -= pTarget->m_vPosition.z;
+        fDistance = v.x * v.x + v.y * v.y + v.z * v.z;
+        if (fDistance >= SNEAK_ATTACK_DISTANCE)
+            return;
     }
 
     bool isSneakAttack = false;
 
-    auto *pVisNode = pTarget->GetVisibleListElement(pThis->m_idSelf);
+    auto* pVisNode = pTarget->GetVisibleListElement(pThis->m_idSelf);
     if (!pVisNode || !pVisNode->m_bSeen || pTarget->GetFlatFooted())
     {
-        isSneakAttack = (!pAttackData->m_bRangedAttack || fDistance < SNEAK_ATTACK_DISTANCE);
+        isSneakAttack = true;
     }
-    else if (pTarget->m_pStats->HasFeat(Constants::Feat::UncannyDodge2))
+    else if (pThis->GetFlanked(pTarget))
     {
-        const uint8_t uncannyClasses[] =
-        {
-            Constants::ClassType::Barbarian,
-            Constants::ClassType::Rogue,
-            Constants::ClassType::Assassin,
-            Constants::ClassType::Shadowdancer
-        };
-        int attackerLevels = 0, defenderLevels = 0;
+        isSneakAttack = true;
 
-        for (uint8_t i = 0; i < 3; i++)
+        if (pTarget->m_pStats->HasFeat(Constants::Feat::UncannyDodge2))
         {
-            uint8_t attackerClass = pThis->m_pStats->GetClass(i);
-            uint8_t defenderClass = pTarget->m_pStats->GetClass(i);
-            for (size_t j = 0; j < sizeof(uncannyClasses)/sizeof(uncannyClasses[0]); j++)
+            const uint8_t uncannyClasses[] =
             {
-                attackerLevels += (attackerClass == uncannyClasses[j]) ? pThis->m_pStats->GetClassLevel(i, false) : 0;
-                defenderLevels += (defenderClass == uncannyClasses[j]) ? pTarget->m_pStats->GetClassLevel(i, false) : 0;
-            }
-        }
-        if (attackerLevels - defenderLevels >= 4)
-        {
-            if (pThis->GetFlanked(pTarget)) // Bad function name, but this does the correct check
+                Constants::ClassType::Barbarian,
+                Constants::ClassType::Rogue,
+                Constants::ClassType::Assassin,
+                Constants::ClassType::Shadowdancer
+            };
+            int attackerLevels = 0, defenderLevels = 0;
+
+            for (uint8_t i = 0; i < 3; i++)
             {
-                isSneakAttack = (!pAttackData->m_bRangedAttack || fDistance < SNEAK_ATTACK_DISTANCE);
+                uint8_t attackerClass = pThis->m_pStats->GetClass(i);
+                uint8_t defenderClass = pTarget->m_pStats->GetClass(i);
+                for (size_t j = 0; j < sizeof(uncannyClasses) / sizeof(uncannyClasses[0]); j++)
+                {
+                    attackerLevels += (attackerClass == uncannyClasses[j]) ? pThis->m_pStats->GetClassLevel(i, false) : 0;
+                    defenderLevels += (defenderClass == uncannyClasses[j]) ? pTarget->m_pStats->GetClassLevel(i, false) : 0;
+                }
             }
+
+            isSneakAttack = attackerLevels - defenderLevels >= Globals::Rules()->GetRulesetIntEntry("FLANK_LEVEL_RANGE", 4);
         }
     }
 
@@ -157,7 +154,7 @@ void SneakAttackCritImmunity::CNWSCreature__ResolveSneakAttack_hook(CNWSCreature
     {
         if (pTarget->m_pStats->GetEffectImmunity(Constants::ImmunityType::SneakAttack, pThis, true))
         {
-            CNWCCMessageData *pData = new CNWCCMessageData;
+            CNWCCMessageData* pData = new CNWCCMessageData;
             pData->SetObjectID(0, pTarget->m_idSelf);
             pData->SetInteger(0, 134);
             pAttackData->m_alstPendingFeedback.Add(pData);
@@ -169,11 +166,11 @@ void SneakAttackCritImmunity::CNWSCreature__ResolveSneakAttack_hook(CNWSCreature
     }
 }
 
-
 // I refuse to take responsibility for the duplicated code, as NWN does it too!
 void SneakAttackCritImmunity::CNWSCreature__ResolveDeathAttack_hook(CNWSCreature *pThis, CNWSCreature *pTarget)
 {
-    static const float SNEAK_ATTACK_DISTANCE = 100.0f;
+    static const float SNEAK_ATTACK_DISTANCE = std::pow(
+            Globals::Rules()->GetRulesetFloatEntry("MAX_RANGED_SNEAK_ATTACK_DISTANCE", 10.0f), 2);
     if (!pTarget)
         return;
 
@@ -225,44 +222,48 @@ void SneakAttackCritImmunity::CNWSCreature__ResolveDeathAttack_hook(CNWSCreature
     if (pAttackData->m_bRangedAttack)
     {
         Vector v = pThis->m_vPosition;
-        v -= pTarget->m_vPosition;
-        fDistance = v.x*v.x + v.y*v.y + v.z*v.z;
+        v.x -= pTarget->m_vPosition.x;
+        v.y -= pTarget->m_vPosition.y;
+        v.z -= pTarget->m_vPosition.z;
+        fDistance = v.x * v.x + v.y * v.y + v.z * v.z;
+        if (fDistance >= SNEAK_ATTACK_DISTANCE)
+            return;
     }
 
     bool isDeathAttack = false;
 
-    auto *pVisNode = pTarget->GetVisibleListElement(pThis->m_idSelf);
+    auto* pVisNode = pTarget->GetVisibleListElement(pThis->m_idSelf);
     if (!pVisNode || !pVisNode->m_bSeen || pTarget->GetFlatFooted())
     {
-        isDeathAttack = (!pAttackData->m_bRangedAttack || fDistance < SNEAK_ATTACK_DISTANCE);
+        isDeathAttack = true;
     }
-    else if (pTarget->m_pStats->HasFeat(Constants::Feat::UncannyDodge2))
+    else if (pThis->GetFlanked(pTarget))
     {
-        const uint8_t uncannyClasses[] =
-        {
-            Constants::ClassType::Barbarian,
-            Constants::ClassType::Rogue,
-            Constants::ClassType::Assassin,
-            Constants::ClassType::Shadowdancer
-        };
-        int attackerLevels = 0, defenderLevels = 0;
+        isDeathAttack = true;
 
-        for (uint8_t i = 0; i < 3; i++)
+        if (pTarget->m_pStats->HasFeat(Constants::Feat::UncannyDodge2))
         {
-            uint8_t attackerClass = pThis->m_pStats->GetClass(i);
-            uint8_t defenderClass = pTarget->m_pStats->GetClass(i);
-            for (size_t j = 0; j < sizeof(uncannyClasses)/sizeof(uncannyClasses[0]); j++)
+            const uint8_t uncannyClasses[] =
             {
-                attackerLevels += (attackerClass == uncannyClasses[j]) ? pThis->m_pStats->GetClassLevel(i, false) : 0;
-                defenderLevels += (defenderClass == uncannyClasses[j]) ? pTarget->m_pStats->GetClassLevel(i, false) : 0;
-            }
-        }
-        if (attackerLevels - defenderLevels >= 4)
-        {
-            if (pThis->GetFlanked(pTarget)) // Bad function name, but this does the correct check
+                Constants::ClassType::Barbarian,
+                Constants::ClassType::Rogue,
+                Constants::ClassType::Assassin,
+                Constants::ClassType::Shadowdancer
+            };
+            int attackerLevels = 0, defenderLevels = 0;
+
+            for (uint8_t i = 0; i < 3; i++)
             {
-                isDeathAttack = (!pAttackData->m_bRangedAttack || fDistance < SNEAK_ATTACK_DISTANCE);
+                uint8_t attackerClass = pThis->m_pStats->GetClass(i);
+                uint8_t defenderClass = pTarget->m_pStats->GetClass(i);
+                for (size_t j = 0; j < sizeof(uncannyClasses) / sizeof(uncannyClasses[0]); j++)
+                {
+                    attackerLevels += (attackerClass == uncannyClasses[j]) ? pThis->m_pStats->GetClassLevel(i, false) : 0;
+                    defenderLevels += (defenderClass == uncannyClasses[j]) ? pTarget->m_pStats->GetClassLevel(i, false) : 0;
+                }
             }
+
+            isDeathAttack = attackerLevels - defenderLevels >= Globals::Rules()->GetRulesetIntEntry("FLANK_LEVEL_RANGE", 4);
         }
     }
 
@@ -270,7 +271,7 @@ void SneakAttackCritImmunity::CNWSCreature__ResolveDeathAttack_hook(CNWSCreature
     {
         if (pTarget->m_pStats->GetEffectImmunity(Constants::ImmunityType::SneakAttack, pThis, true))
         {
-            CNWCCMessageData *pData = new CNWCCMessageData;
+            CNWCCMessageData* pData = new CNWCCMessageData;
             pData->SetObjectID(0, pTarget->m_idSelf);
             pData->SetInteger(0, 134);
             pAttackData->m_alstPendingFeedback.Add(pData);
@@ -281,6 +282,5 @@ void SneakAttackCritImmunity::CNWSCreature__ResolveDeathAttack_hook(CNWSCreature
         }
     }
 }
-
 
 }

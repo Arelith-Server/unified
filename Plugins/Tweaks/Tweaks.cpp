@@ -11,16 +11,18 @@
 #include "Tweaks/DisableMonkAbilitiesWhenPolymorphed.hpp"
 #include "Tweaks/StringToIntBaseToAuto.hpp"
 #include "Tweaks/StripOVTFromNotVisibleObject.hpp"
+#include "Tweaks/DeadCreatureFiresOnAreaExit.hpp"
+#include "Tweaks/PreserveActionsOnDMPossess.hpp"
+#include "Tweaks/FixGreaterSanctuaryBug.hpp"
+#include "Tweaks/ItemChargesCost.hpp"
 
 #include "Services/Config/Config.hpp"
 
 #include "API/Version.hpp"
-#include "Platform/Assembly.hpp"
-#include "Services/Patching/Patching.hpp"
 
 using namespace NWNXLib;
 
-static ViewPtr<Tweaks::Tweaks> g_plugin;
+static Tweaks::Tweaks* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -95,29 +97,6 @@ Tweaks::Tweaks(const Plugin::CreateParams& params)
         m_PreserveDepletedItems = std::make_unique<PreserveDepletedItems>(GetServices()->m_hooks.get());
     }
 
-    if (GetServices()->m_config->Get<bool>("DISABLE_SHADOWS", false))
-    {
-        LOG_INFO("Sun and moon shadows will be disabled");
-
-        // Temporary workaround for Intel crash in complex areas - disable when a proper fix is implemented.
-        // PackAreaIntoMessage
-
-        // m_bMoonShadows
-        GetServices()->m_patching->PatchWithInstructions(0x0012EB0C,
-            Platform::Assembly::PushImmInstruction(0),
-            Platform::Assembly::NoopInstruction(),
-            Platform::Assembly::NoopInstruction(),
-            Platform::Assembly::NoopInstruction(),
-            Platform::Assembly::NoopInstruction()
-        ); NWNX_EXPECT_VERSION(8186);
-
-        // m_bSunShadows
-        GetServices()->m_patching->PatchWithInstructions(0x0012EB94,
-            Platform::Assembly::PushImmInstruction(0),
-            Platform::Assembly::NoopInstruction()
-        ); NWNX_EXPECT_VERSION(8186);
-    }
-
     if (GetServices()->m_config->Get<bool>("HIDE_DMS_ON_CHAR_LIST", false))
     {
         LOG_INFO("DMs will not be visible on character list");
@@ -129,16 +108,41 @@ Tweaks::Tweaks(const Plugin::CreateParams& params)
         LOG_INFO("Monk abilities (ac, speed, attacks) will be disabled during polymorph");
         m_DisableMonkAbilitiesWhenPolymorphed = std::make_unique<DisableMonkAbilitiesWhenPolymorphed>(GetServices()->m_hooks.get());
     }
+
     if (GetServices()->m_config->Get<bool>("STRINGTOINT_BASE_TO_AUTO", false))
     {
         LOG_INFO("Setting StringToInt() base to auto to allow for conversion of hex strings to proper values.");
         m_StringToIntBaseToAuto = std::make_unique<StringToIntBaseToAuto>(GetServices()->m_hooks.get());
     }
-    
+
     if (GetServices()->m_config->Get<bool>("STRIP_OVT_FROM_NOT_VISIBLE_OBJECT", false))
     {
         LOG_INFO("Strip the Object Visual Transform flag from objects that aren't visible to the player.");
         m_StripOVTFromNotVisibleObject = std::make_unique<StripOVTFromNotVisibleObject>(GetServices()->m_hooks.get());
+    }
+    if (GetServices()->m_config->Get<bool>("DEAD_CREATURES_TRIGGER_ON_AREA_EXIT", false))
+    {
+        LOG_INFO("Dead creatures will fire on area exit.");
+        m_DeadCreatureFiresOnAreaExit = std::make_unique<DeadCreatureFiresOnAreaExit>(GetServices()->m_hooks.get());
+    }
+
+    if (GetServices()->m_config->Get<bool>("PRESERVE_ACTIONS_ON_DM_POSSESS", false))
+    {
+        LOG_INFO("DMs possessing a creature will no longer clear their actions");
+        m_PreserveActionsOnDMPossess = std::make_unique<PreserveActionsOnDMPossess>(GetServices()->m_hooks.get());
+    }
+
+    if (GetServices()->m_config->Get<bool>("FIX_GREATER_SANCTUARY_BUG", false))
+    {
+        LOG_INFO("Greater sanctuary bug fixed.");
+        m_FixGreaterSanctuaryBug = std::make_unique<FixGreaterSanctuaryBug>(GetServices()->m_hooks.get());
+    }
+
+    if (auto mode = GetServices()->m_config->Get<int>("ITEM_CHARGES_COST_MODE", 0))
+    {
+        LOG_INFO("Changing cost for items with charges.");
+        m_ItemChargesCost = std::make_unique<ItemChargesCost>(GetServices()->m_hooks.get(),
+            mode);
     }
 }
 

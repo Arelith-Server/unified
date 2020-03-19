@@ -7,7 +7,6 @@
 #include "API/CTwoDimArrays.hpp"
 #include "API/CResRef.hpp"
 #include "API/CExoResMan.hpp"
-#include "API/CExoString.hpp"
 #include "API/CExoStringList.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CTlkTable.hpp"
@@ -16,19 +15,22 @@
 #include "API/CServerExoApp.hpp"
 #include "API/CWorldTimer.hpp"
 #include "API/CGameObjectArray.hpp"
+#include "API/CScriptCompiler.hpp"
+#include "API/CExoFile.hpp"
 #include "API/Functions.hpp"
 #include "Utils.hpp"
-#include "ViewPtr.hpp"
+#include "Services/Config/Config.hpp"
+#include "Services/Commands/Commands.hpp"
 
 #include <string>
-#include <stdio.h>
+#include <cstdio>
 #include <regex>
-#include <functional>
+
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Util::Util> g_plugin;
+static Util::Util* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -53,17 +55,18 @@ NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Plugin::CreateParams params)
 namespace Util {
 
 Util::Util(const Plugin::CreateParams& params)
-    : Plugin(params)
+    : Plugin(params),
+      m_scriptCompiler(nullptr)
 {
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, std::bind(&Util::func, this, std::placeholders::_1))
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(GetCurrentScriptName);
     REGISTER(GetAsciiTableString);
     REGISTER(Hash);
     REGISTER(GetCustomToken);
     REGISTER(EffectTypeCast);
-    REGISTER(GenerateUUID);
     REGISTER(StripColors);
     REGISTER(IsValidResRef);
     REGISTER(GetEnvironmentVariable);
@@ -75,16 +78,23 @@ Util::Util(const Plugin::CreateParams& params)
     REGISTER(GetNextResRef);
     REGISTER(GetServerTicksPerSecond);
     REGISTER(GetLastCreatedObject);
+    REGISTER(AddScript);
+    REGISTER(GetNSSContents);
+    REGISTER(AddNSSFile);
+    REGISTER(RemoveNWNXResourceFile);
+    REGISTER(SetInstructionLimit);
+    REGISTER(RegisterServerConsoleCommand);
+    REGISTER(UnregisterServerConsoleCommand);
 
 #undef REGISTER
 
-    GetServices()->m_hooks->RequestSharedHook<API::Functions::CServerExoAppInternal__MainLoop, int32_t>(
-            +[](Services::Hooks::CallType type, CServerExoAppInternal*)
+    GetServices()->m_hooks->RequestSharedHook<API::Functions::_ZN21CServerExoAppInternal8MainLoopEv, int32_t>(
+            +[](bool before, CServerExoAppInternal*)
             {
                 static int ticks;
                 static time_t previous;
 
-                if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
+                if (!before)
                 {
                     time_t current = time(nullptr);
 
@@ -100,15 +110,40 @@ Util::Util(const Plugin::CreateParams& params)
                     }
                 }
             });
+
+    GetServices()->m_hooks->RequestSharedHook<API::Functions::_ZN10CNWSModule16LoadModuleFinishEv, uint32_t>(
+            +[](bool before, CNWSModule*)
+            {
+                if (before)
+                {
+                    if (auto startScript = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT"))
+                    {
+                        LOG_NOTICE("Running module start script: %s", *startScript);
+                        Utils::ExecuteScript(*startScript, 0);
+                    }
+
+                    if (auto startChunk = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT_CHUNK"))
+                    {
+                        LOG_NOTICE("Running module start script chunk: %s", *startChunk);
+
+                        bool bWrapIntoMain = startChunk->find("void main()") == std::string::npos;
+                        if (Globals::VirtualMachine()->RunScriptChunk(*startChunk, 0, true, bWrapIntoMain))
+                        {
+                            LOG_ERROR("Failed to run module start script chunk with error: %s",
+                                    Globals::VirtualMachine()->m_pJitCompiler->m_sCapturedError.CStr());
+                        }
+                    }
+                }
+            });
 }
 
 Util::~Util()
 {
+
 }
 
 ArgumentStack Util::GetCurrentScriptName(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     std::string retval = "";
 
     const auto depth = Services::Events::ExtractArgument<int32_t>(args);
@@ -121,14 +156,11 @@ ArgumentStack Util::GetCurrentScriptName(ArgumentStack&& args)
             retval = script.m_sScriptName.CStr();
     }
 
-    Services::Events::InsertArgument(stack, retval);
-    return stack;
+    return Services::Events::Arguments(retval);
 }
 
-ArgumentStack Util::GetAsciiTableString(ArgumentStack&& args)
+ArgumentStack Util::GetAsciiTableString(ArgumentStack&&)
 {
-    (void)args;
-    ArgumentStack stack;
     static char table[256];
 
     if (table[0] == 0)
@@ -138,22 +170,17 @@ ArgumentStack Util::GetAsciiTableString(ArgumentStack&& args)
             table[i] = i;
     }
 
-    Services::Events::InsertArgument(stack, std::string(table));
-    return stack;
+    return Services::Events::Arguments(std::string(table));
 }
 
 ArgumentStack Util::Hash(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     const auto str = Services::Events::ExtractArgument<std::string>(args);
-
-    Services::Events::InsertArgument(stack, (int32_t)std::hash<std::string>{}(str));
-    return stack;
+    return Services::Events::Arguments((int32_t)std::hash<std::string>{}(str));
 }
 
 ArgumentStack Util::GetCustomToken(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     std::string retVal;
 
     const auto tokenNumber = Services::Events::ExtractArgument<int32_t>(args);
@@ -174,92 +201,61 @@ ArgumentStack Util::GetCustomToken(ArgumentStack&& args)
         retVal = foundToken->m_sValue.CStr();
     }
 
-    Services::Events::InsertArgument(stack, retVal);
-
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Util::EffectTypeCast(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-    Services::Events::InsertArgument(stack, Services::Events::ExtractArgument<CGameEffect*>(args));
-    return stack;
-}
-
-ArgumentStack Util::GenerateUUID(ArgumentStack&&)
-{
-    ArgumentStack stack;
-    uint8_t bytes[16];
-    char uuid[38];
-
-    FILE *urandom = fopen("/dev/urandom", "rb");
-    ASSERT_OR_THROW(urandom);
-    ASSERT(fread(bytes, 1, 16, urandom) == 16);
-    fclose(urandom);
-
-    bytes[6] = 0x40 | (bytes[6] & 0x0F);
-    bytes[8] = 0x80 | (bytes[6] & 0x3F);
-
-    snprintf(uuid, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-        bytes[0],bytes[1],bytes[2],bytes[3],bytes[4],bytes[5],bytes[6],bytes[7],
-        bytes[8],bytes[9],bytes[10],bytes[11],bytes[12],bytes[13],bytes[14],bytes[15]);
-
-    Services::Events::InsertArgument(stack, uuid);
-    return stack;
+    return Services::Events::Arguments(Services::Events::ExtractArgument<CGameEffect*>(args));
 }
 
 ArgumentStack Util::StripColors(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     const auto s = Services::Events::ExtractArgument<std::string>(args);
 
     std::regex color_codes("<c.+?(?=>)>|<\\/c>");
     std::string retVal = std::regex_replace(s, color_codes, "");
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Util::IsValidResRef(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = 0;
     const auto resRef = Services::Events::ExtractArgument<std::string>(args);
     const auto resType = Services::Events::ExtractArgument<int32_t>(args);
 
     retVal = Globals::ExoResMan()->Exists(CResRef(resRef.c_str()), resType, nullptr);
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Util::GetEnvironmentVariable(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-    Services::Events::InsertArgument(stack, std::getenv(Services::Events::ExtractArgument<std::string>(args).c_str()));
-    return stack;
+    std::string retVal;
+    const auto envVar = Services::Events::ExtractArgument<std::string>(args);
+
+    if (const char* value = std::getenv(envVar.c_str()))
+        retVal = std::string(value);
+
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Util::GetMinutesPerHour(ArgumentStack&&)
 {
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack,Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->m_nMinutesPerHour);
-    return stack;
+    return Services::Events::Arguments(Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->m_nMinutesPerHour);
 }
 
 ArgumentStack Util::SetMinutesPerHour(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     const auto minPerHour = Services::Events::ExtractArgument<int32_t>(args);
       ASSERT_OR_THROW(minPerHour > 0);
       ASSERT_OR_THROW(minPerHour <= 255);
 
     Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->SetMinutesPerHour(minPerHour);
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Util::EncodeStringForURL(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     const auto s = Services::Events::ExtractArgument<std::string>(args);
     std::string result;
 
@@ -290,23 +286,18 @@ ArgumentStack Util::EncodeStringForURL(ArgumentStack&& args)
         }
     }
     // **
-
-    Services::Events::InsertArgument(stack, result);
-    return stack;
+    return Services::Events::Arguments(result);
 }
 
 ArgumentStack Util::Get2DARowCount(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     const auto twodaRef = Services::Events::ExtractArgument<std::string>(args);
     auto twoda = Globals::Rules()->m_p2DArrays->GetCached2DA(twodaRef.c_str(), true);
-    Services::Events::InsertArgument(stack, twoda ? twoda->m_nNumRows : 0);
-    return stack;
+    return Services::Events::Arguments(twoda ? twoda->m_nNumRows : 0);
 }
 
 ArgumentStack Util::GetFirstResRef(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     std::string retVal;
 
     const auto resRefType = Services::Events::ExtractArgument<int32_t>(args);
@@ -321,11 +312,11 @@ ArgumentStack Util::GetFirstResRef(ArgumentStack&& args)
 
     if (pList)
     {
-        std::regex rxg(regexFilter);
+        std::regex rgx(regexFilter);
 
         for (int i = 0; i < pList->m_nCount; i++)
         {
-            if (regexFilter.empty() || std::regex_match(pList->m_pStrings[i]->CStr(), rxg))
+            if (regexFilter.empty() || std::regex_match(pList->m_pStrings[i]->CStr(), rgx))
             {
                 m_listResRefs.emplace_back(pList->m_pStrings[i]->CStr());
             }
@@ -338,14 +329,11 @@ ArgumentStack Util::GetFirstResRef(ArgumentStack&& args)
         m_resRefIndex++;
     }
 
-    Services::Events::InsertArgument(stack, retVal);
-
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Util::GetNextResRef(ArgumentStack&&)
 {
-    ArgumentStack stack;
     std::string retVal;
 
     if (m_resRefIndex < m_listResRefs.size())
@@ -354,29 +342,24 @@ ArgumentStack Util::GetNextResRef(ArgumentStack&&)
         m_resRefIndex++;
     }
 
-    Services::Events::InsertArgument(stack, retVal);
-
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Util::GetServerTicksPerSecond(ArgumentStack&&)
 {
-    ArgumentStack stack;
-    Services::Events::InsertArgument(stack, m_tickCount);
-    return stack;
+    return Services::Events::Arguments(m_tickCount);
 }
 
 ArgumentStack Util::GetLastCreatedObject(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     Types::ObjectID retVal = Constants::OBJECT_INVALID;
 
     const auto objectType = Services::Events::ExtractArgument<int32_t>(args);
-    ASSERT_OR_THROW(objectType >= 0);
+      ASSERT_OR_THROW(objectType >= 0);
     const auto nthLast = Services::Events::ExtractArgument<int32_t>(args);
-    ASSERT_OR_THROW(nthLast > 0);
+      ASSERT_OR_THROW(nthLast > 0);
 
-    auto pGameObjectArray = Globals::AppManager()->m_pServerExoApp->GetObjectArray();
+    auto* pGameObjectArray = Globals::AppManager()->m_pServerExoApp->GetObjectArray();
     int count = 1;
     CGameObject *pObject;
 
@@ -399,8 +382,170 @@ ArgumentStack Util::GetLastCreatedObject(ArgumentStack&& args)
         }
     }
 
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Util::AddScript(ArgumentStack&& args)
+{
+    std::string retVal;
+
+    const auto scriptName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!scriptName.empty());
+      ASSERT_OR_THROW(scriptName.size() <= 16);
+    const auto scriptData = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!scriptData.empty());
+    const auto wrapIntoMain = Services::Events::ExtractArgument<int32_t>(args);
+
+    if (!m_scriptCompiler)
+    {
+        m_scriptCompiler = std::make_unique<CScriptCompiler>();
+        m_scriptCompiler->SetCompileDebugLevel(0);
+        m_scriptCompiler->SetCompileSymbolicOutput(0);
+        m_scriptCompiler->SetGenerateDebuggerOutput(0);
+        m_scriptCompiler->SetOptimizeBinaryCodeLength(true);
+        m_scriptCompiler->SetCompileConditionalOrMain(true);
+        m_scriptCompiler->SetIdentifierSpecification("nwscript");
+        m_scriptCompiler->SetOutputAlias("NWNX");
+    }
+
+    if (m_scriptCompiler->CompileScriptChunk(scriptData.c_str(), wrapIntoMain != 0) == 0)
+    {
+        auto writeFileResult = m_scriptCompiler->WriteFinalCodeToFile(scriptName.c_str());
+        if (writeFileResult != 0)
+            retVal = Globals::TlkTable()->GetSimpleString(abs(writeFileResult)).CStr();
+    }
+    else
+        retVal = m_scriptCompiler->m_sCapturedError.CStr();
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Util::GetNSSContents(ArgumentStack&& args)
+{
+    std::string retVal;
+
+    const auto scriptName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!scriptName.empty());
+      ASSERT_OR_THROW(scriptName.size() <= 16);
+    const auto maxLength = Services::Events::ExtractArgument<int32_t>(args);
+
+    if (Globals::ExoResMan()->Exists(scriptName.c_str(), Constants::ResRefType::NSS, nullptr))
+    {
+        CScriptSourceFile scriptSourceFile;
+        char *data;
+        uint32_t size = 0;
+
+        if (scriptSourceFile.LoadScript(scriptName, &data, &size) == 0)
+        {
+            retVal.assign(data, maxLength < 0 ? size : (uint32_t)maxLength > size ? size : maxLength);
+            scriptSourceFile.UnloadScript();
+        }
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Util::AddNSSFile(ArgumentStack&& args)
+{
+    int32_t retVal = false;
+
+    const auto fileName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!fileName.empty());
+      ASSERT_OR_THROW(fileName.size() <= 16);
+    const auto contents = Services::Events::ExtractArgument<std::string>(args);
+
+    auto file = CExoFile(("NWNX:" + fileName).c_str(), Constants::ResRefType::NSS, "w");
+
+    if (file.FileOpened())
+    {
+        if (file.Write(contents))
+        {
+            retVal = file.Flush();
+        }
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Util::RemoveNWNXResourceFile(ArgumentStack&& args)
+{
+    int32_t retVal;
+
+    const auto fileName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!fileName.empty());
+      ASSERT_OR_THROW(fileName.size() <= 16);
+    const auto type = Services::Events::ExtractArgument<int32_t>(args);
+
+    CExoString exoFileName = ("NWNX:" + fileName).c_str();
+
+    retVal = Globals::ExoResMan()->RemoveFile(exoFileName, type);
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Util::SetInstructionLimit(ArgumentStack&& args)
+{
+    const static uint32_t defaultInstructionLimit = Globals::VirtualMachine()->m_nInstructionLimit;
+    const auto limit = Services::Events::ExtractArgument<int32_t>(args);
+
+    if (limit < 0)
+        Globals::VirtualMachine()->m_nInstructionLimit = defaultInstructionLimit;
+    else
+        Globals::VirtualMachine()->m_nInstructionLimit = limit;
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Util::RegisterServerConsoleCommand(ArgumentStack&& args)
+{
+    const auto command = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!command.empty());
+    const auto scriptChunk = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!scriptChunk.empty());
+
+    bool registered = g_plugin->GetServices()->m_commands->RegisterCommand(command, [](std::string &command, std::string &args)
+    {
+        if (Globals::AppManager()->m_pServerExoApp->GetServerMode() != 2)
+            return;
+
+        LOG_INFO("Executing NWScript Server Console Command: '%s' with args: %s", command, args);
+
+        std::string scriptChunk = g_plugin->m_serverConsoleCommandMap[command];
+        bool wrapIntoMain = scriptChunk.find("void main()") == std::string::npos;
+        std::string search = "$args";
+
+        auto searchPos = scriptChunk.find(search);
+        while (searchPos != std::string::npos)
+        {
+            scriptChunk.replace(searchPos, search.size(), args);
+            searchPos = scriptChunk.find(search, searchPos + args.size());
+        }
+
+        if (Globals::VirtualMachine()->RunScriptChunk(scriptChunk, 0, true, wrapIntoMain))
+        {
+            LOG_ERROR("Failed to run NWScript Server Console Command '%s' with error: %s", command,
+                      Globals::VirtualMachine()->m_pJitCompiler->m_sCapturedError.CStr());
+        }
+    });
+
+    if (registered)
+        g_plugin->m_serverConsoleCommandMap[command] = scriptChunk;
+
+    return Services::Events::Arguments(registered);
+}
+
+ArgumentStack Util::UnregisterServerConsoleCommand(ArgumentStack&& args)
+{
+    const auto command = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!command.empty());
+
+    if (g_plugin->m_serverConsoleCommandMap.find(command) != g_plugin->m_serverConsoleCommandMap.end())
+    {
+        g_plugin->GetServices()->m_commands->UnregisterCommand(command);
+        g_plugin->m_serverConsoleCommandMap.erase(command);
+    }
+
+    return Services::Events::Arguments();
 }
 
 }

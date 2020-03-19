@@ -1,4 +1,4 @@
-/// @defgroup weapon Weapon
+/// @addtogroup weapon Weapon
 /// @brief Functions exposing additional weapon properties.
 /// @{
 /// @file nwnx_weapon.nss
@@ -38,6 +38,10 @@ void NWNX_Weapon_SetWeaponFocusFeat(int nBaseItem, int nFeat);
 /// @param nBaseItem The base item id.
 /// @param nSize The creature size minimum to consider this weapon finessable.
 void NWNX_Weapon_SetWeaponFinesseSize(int nBaseItem, int nSize);
+
+/// @brief Get required creature size for a weapon base item to be finessable.
+/// @param nBaseItem The base item id.
+int NWNX_Weapon_GetWeaponFinesseSize(int nBaseItem);
 
 /// @brief Set weapon base item to be considered as unarmed for weapon finesse feat.
 /// @param nBaseItem The base item id.
@@ -150,6 +154,17 @@ void NWNX_Weapon_SetWeaponFinesseSize(int nBaseItem, int nSize)
     NWNX_PushArgumentInt(NWNX_Weapon, sFunc, nBaseItem);
 
     NWNX_CallFunction(NWNX_Weapon, sFunc);
+}
+
+int NWNX_Weapon_GetWeaponFinesseSize(int nBaseItem)
+{
+    string sFunc = "GetWeaponFinesseSize";
+
+    NWNX_PushArgumentInt(NWNX_Weapon, sFunc, nBaseItem);
+
+    NWNX_CallFunction(NWNX_Weapon, sFunc);
+
+    return NWNX_GetReturnValueInt(NWNX_Weapon, sFunc);
 }
 
 void NWNX_Weapon_SetWeaponUnarmed(int nBaseItem)
@@ -276,7 +291,7 @@ struct NWNX_Weapon_DevastatingCriticalEvent_Data NWNX_Weapon_GetDevastatingCriti
 
     NWNX_PushArgumentInt(NWNX_Weapon, sFunc, NWNX_WEAPON_GETDATA_DC);
     NWNX_CallFunction(NWNX_Weapon, sFunc);
-    
+
     data.oWeapon = NWNX_GetReturnValueObject(NWNX_Weapon, sFunc);
     data.oTarget = NWNX_GetReturnValueObject(NWNX_Weapon, sFunc);
     data.nDamage = NWNX_GetReturnValueInt(NWNX_Weapon, sFunc);

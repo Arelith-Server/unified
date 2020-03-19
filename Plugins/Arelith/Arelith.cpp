@@ -12,14 +12,20 @@
 #include "Services/Messaging/Messaging.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
-#include "ViewPtr.hpp"
+#include "API/CNWRules.hpp"
+#include "API/CNWCCMessageData.hpp"
+#include "API/CNWSCombatRound.hpp"
+#include "API/CNWSPlayer.hpp"
+//#include "ViewPtr.hpp"
 #include <algorithm>
 #include <regex>
 #include <cstring>
 
 using namespace NWNXLib;
+using namespace NWNXLib::API;
+using namespace NWNXLib::API::Constants;
 
-static ViewPtr<Arelith::Arelith> g_plugin;
+static Arelith::Arelith* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -48,14 +54,18 @@ Arelith::Arelith(const Plugin::CreateParams& params)
     if (g_plugin == nullptr) // :(
         g_plugin = this;
 
-    GetServices()->m_events->RegisterEvent("SUBSCRIBE_EVENT", std::bind(&Arelith::OnSubscribeEvent, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("PUSH_EVENT_DATA", std::bind(&Arelith::OnPushEventData, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("SIGNAL_EVENT", std::bind(&Arelith::OnSignalEvent, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("GET_EVENT_DATA", std::bind(&Arelith::OnGetEventData, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("SKIP_EVENT", std::bind(&Arelith::OnSkipEvent, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("EVENT_RESULT", std::bind(&Arelith::OnEventResult, this, std::placeholders::_1));
-    GetServices()->m_events->RegisterEvent("GET_CURRENT_EVENT", std::bind(&Arelith::OnGetCurrentEvent, this, std::placeholders::_1));
-
+#define REGISTER(func) \
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
+    REGISTER(OnSubscribeEvent);
+    REGISTER(OnPushEventData);
+    REGISTER(OnSignalEvent);
+    REGISTER(OnGetEventData);
+    REGISTER(OnSkipEvent);
+    REGISTER(OnEventResult);
+    REGISTER(OnGetCurrentEvent);
+    REGISTER(BaseTouchAttack);
+#undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
         [](const std::vector<std::string> message)
@@ -70,8 +80,9 @@ Arelith::Arelith(const Plugin::CreateParams& params)
             ASSERT(message.size() == 2);
             PushEventData(message[0], message[1]);
         });
+    auto hooker = GetServices()->m_hooks.get();
 
-    m_arelithEvents   = std::make_unique<ArelithEvents>(GetServices()->m_hooks);
+    m_arelithEvents   = std::make_unique<ArelithEvents>(hooker);
 }
 
 Arelith::~Arelith()
@@ -80,7 +91,7 @@ Arelith::~Arelith()
 
 void Arelith::PushEventData(const std::string tag, const std::string data)
 {
-    LOG_DEBUG("Pushing event data: '%s' -> '%s'.", tag.c_str(), data.c_str());
+    LOG_DEBUG("Pushing event data: '%s' -> '%s'.", tag, data);
     g_plugin->CreateNewEventDataIfNeeded();
     g_plugin->m_eventData.top().m_EventDataMap[tag] = std::move(data);
 }
@@ -105,7 +116,7 @@ std::string Arelith::GetEventData(const std::string tag)
     }
 
     retVal=data->second;
-    LOG_DEBUG("Getting event data: '%s' -> '%s'.", tag.c_str(), retVal.c_str());
+    LOG_DEBUG("Getting event data: '%s' -> '%s'.", tag, retVal);
     return retVal;
 }
 
@@ -119,8 +130,8 @@ bool Arelith::SignalEvent(const std::string& eventName, const API::Types::Object
 
     for (const auto& script : g_plugin->m_eventMap[eventName])
     {
-        LOG_DEBUG("Dispatching notification for event '%s' to script '%s'.", eventName.c_str(), script.c_str());
-        API::CExoString scriptExoStr = script.c_str();
+       LOG_DEBUG("Dispatching notification for event '%s' to script '%s'.", eventName, script);
+       CExoString scriptExoStr = script.c_str();
 
         ++g_plugin->m_eventDepth;
         API::Globals::VirtualMachine()->RunScript(&scriptExoStr, target, 1);
@@ -135,11 +146,10 @@ bool Arelith::SignalEvent(const std::string& eventName, const API::Types::Object
         --g_plugin->m_eventDepth;
     }
 
-    g_plugin->m_eventData.pop();
 
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_RESULT",  { eventName, result ? *result : ""});
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_SKIPPED", { eventName, skipped ? "1" : "0"});
-
+    g_plugin->m_eventData.pop();
     return !skipped;
 }
 
@@ -156,7 +166,7 @@ void Arelith::RunEventInit(const std::string& eventName)
         if (std::regex_search(eventName, std::regex(it.first)))
         {
             LOG_DEBUG("Running init function for events '%s' (requested by event '%s')",
-                        it.first.c_str(), eventName.c_str());
+                        it.first, eventName);
             it.second();
             erase.push_back(it.first);
         }
@@ -181,10 +191,10 @@ Services::Events::ArgumentStack Arelith::OnSubscribeEvent(Services::Events::Argu
         throw std::runtime_error("Attempted to subscribe to an event with a script that already subscribed!");
     }
 
-    LOG_INFO("Script '%s' subscribed to event '%s'.", script.c_str(), event.c_str());
+    LOG_INFO("Script '%s' subscribed to event '%s'.", script, event);
     eventVector.emplace_back(std::move(script));
 
-    return Services::Events::ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 Services::Events::ArgumentStack Arelith::OnPushEventData(Services::Events::ArgumentStack&& args)
@@ -192,25 +202,21 @@ Services::Events::ArgumentStack Arelith::OnPushEventData(Services::Events::Argum
     const auto tag = Services::Events::ExtractArgument<std::string>(args);
     const auto data = Services::Events::ExtractArgument<std::string>(args);
     PushEventData(tag, data);
-    return Services::Events::ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 Services::Events::ArgumentStack Arelith::OnSignalEvent(Services::Events::ArgumentStack&& args)
 {
     const auto event = Services::Events::ExtractArgument<std::string>(args);
-    const auto object = Services::Events::ExtractArgument<API::Types::ObjectID>(args);
+    const auto object = Services::Events::ExtractArgument<Types::ObjectID>(args);
     bool signalled = SignalEvent(event, object);
-    Services::Events::ArgumentStack stack;
-    Services::Events::InsertArgument(stack, signalled ? 1 : 0);
-    return stack;
+    return Services::Events::Arguments(signalled ? 1 : 0);
 }
 
 Services::Events::ArgumentStack Arelith::OnGetEventData(Services::Events::ArgumentStack&& args)
 {
     std::string data = GetEventData(Services::Events::ExtractArgument<std::string>(args));
-    Services::Events::ArgumentStack stack;
-    Services::Events::InsertArgument(stack, data);
-    return stack;
+    return Services::Events::Arguments(data);
 }
 
 Services::Events::ArgumentStack Arelith::OnSkipEvent(Services::Events::ArgumentStack&&)
@@ -223,7 +229,7 @@ Services::Events::ArgumentStack Arelith::OnSkipEvent(Services::Events::ArgumentS
 
     LOG_DEBUG("Skipping last event.");
 
-    return Services::Events::ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 Services::Events::ArgumentStack Arelith::OnEventResult(Services::Events::ArgumentStack&& args)
@@ -236,9 +242,9 @@ Services::Events::ArgumentStack Arelith::OnEventResult(Services::Events::Argumen
 
     m_eventData.top().m_Result = data;
 
-    LOG_DEBUG("Received event result '%s'.", data.c_str());
+    LOG_DEBUG("Received event result '%s'.", data);
 
-    return Services::Events::ArgumentStack();
+    return Services::Events::Arguments();
 }
 
 Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::ArgumentStack&&)
@@ -248,11 +254,10 @@ Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::Arg
         throw std::runtime_error("Attempted to get the current event in an invalid context.");
     }
 
-    std::string eventName = g_plugin->m_eventData.top().m_EventName;
 
-    Services::Events::ArgumentStack stack;
-    Services::Events::InsertArgument(stack, eventName);
-    return stack;
+
+    std::string eventName = g_plugin->m_eventData.top().m_EventName;
+    return Services::Events::Arguments(eventName);
 }
 
 void Arelith::CreateNewEventDataIfNeeded()
@@ -263,6 +268,93 @@ void Arelith::CreateNewEventDataIfNeeded()
         params.m_Skipped = false;
         m_eventData.emplace(std::move(params));
     }
+}
+
+ArgumentStack Arelith::BaseTouchAttack(ArgumentStack&& args)
+{
+
+    auto creatureID = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    auto targetID = Services::Events::ExtractArgument<Types::ObjectID>(args);
+
+    if (creatureID == Constants::OBJECT_INVALID || targetID == Constants::OBJECT_INVALID)
+      return Services::Events::Arguments(0);
+
+    CNWSCreature *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(creatureID);
+    CNWSCreature *pTarget = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(targetID);
+    auto bOffhand = Services::Events::ExtractArgument<int32_t>(args);
+    auto bFeedback = Services::Events::ExtractArgument<int32_t>(args);
+    auto bRanged = Services::Events::ExtractArgument<int32_t>(args);
+    int32_t retVal = 0;
+    int32_t nAttackBonus = 0;
+    int16_t nAC = 0;
+    uint16_t nRoll = 0, nThreatRoll = 0;
+    uint8_t nConcealment = 0, nAttackResult = 0;
+
+    if (bRanged)
+        nAttackBonus = pCreature->m_pStats->GetRangedAttackBonus(1, 1);
+    else
+        nAttackBonus = pCreature->m_pStats->GetMeleeAttackBonus(bOffhand, 1, 1);
+
+    nAC = pTarget->m_pStats->GetArmorClassVersus(pCreature, 1);
+    nRoll = Globals::Rules()->RollDice(1, 20);
+    if( pTarget->m_nObjectType == Constants::ObjectType::Placeable || pTarget->m_nObjectType == Constants::ObjectType::Door)
+        retVal = 1;
+    else if (!pCreature->ResolveDefensiveEffects(pTarget, 1))
+    {
+        if (nRoll == 20)
+        {
+           retVal = (20 + nAttackBonus >= nAC) ? 2 : 1;
+        }
+        else if (nRoll > 1 && nRoll + nAttackBonus >= nAC)
+        {
+            retVal = 1;
+        }
+    }
+    else
+    {
+        auto* pAttack = pCreature->m_pcCombatRound->GetAttack(pCreature->m_pcCombatRound->m_nCurrentAttack);
+        nConcealment = pAttack->m_nConcealment;
+        nAttackResult = pAttack->m_nAttackResult;
+    }
+
+    if (bFeedback)
+    {
+        CNWCCMessageData* pMessage = new CNWCCMessageData();
+        pMessage->SetObjectID(0, pCreature->m_idSelf);
+        pMessage->SetInteger(0, nAttackBonus);
+        pMessage->SetInteger(1, nRoll);
+
+        if (retVal > 0)
+        {
+            if (retVal == 2)
+                pMessage->SetInteger(2, 3);
+            else
+                pMessage->SetInteger(2, 1);
+        }
+        else
+        {
+            if (!nAttackResult)
+                pMessage->SetInteger(2, 4);
+            else
+            {
+                pMessage->SetInteger(2, nAttackResult);
+                pMessage->SetInteger(4, nConcealment);
+            }
+        }
+
+        if (bRanged)
+            pMessage->SetInteger(3, 1);
+
+        CNWSMessage* pNWSMessage = static_cast<CNWSMessage*>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
+        if (auto* pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(pCreature->m_idSelf))
+            pNWSMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID, 0xd, pMessage, nullptr);
+
+        if (auto* pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(pTarget->m_idSelf))
+            pNWSMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID, 0xd, pMessage, nullptr);
+
+        delete pMessage;
+    }
+    return Services::Events::Arguments(retVal);
 }
 
 }

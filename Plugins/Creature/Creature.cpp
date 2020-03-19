@@ -2,13 +2,14 @@
 
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
+#include "API/CServerInfo.hpp"
 #include "API/CNWSCreature.hpp"
 #include "API/CNWSCreatureStats.hpp"
 #include "API/CNWLevelStats.hpp"
+#include "API/CNWSFaction.hpp"
 #include "API/CNWSStats_Spell.hpp"
 #include "API/CNWSStats_SpellLikeAbility.hpp"
-#include "API/CExoArrayListTemplatedCNWSStats_SpellLikeAbility.hpp"
-#include "API/CExoArrayListTemplatedshortunsignedint.hpp"
+#include "API/CExoArrayList.hpp"
 #include "API/CNWRules.hpp"
 #include "API/CNWClass.hpp"
 #include "API/Constants.hpp"
@@ -17,12 +18,14 @@
 #include "Services/Events/Events.hpp"
 #include "Services/Hooks/Hooks.hpp"
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
-#include "ViewPtr.hpp"
+#include "API/CServerExoAppInternal.hpp"
+#include "API/CFactionManager.hpp"
+
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Creature::Creature> g_plugin;
+static Creature::Creature* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -50,7 +53,8 @@ Creature::Creature(const Plugin::CreateParams& params)
     : Plugin(params)
 {
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, std::bind(&Creature::func, this, std::placeholders::_1))
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(AddFeat);
     REGISTER(AddFeatByLevel);
@@ -92,10 +96,10 @@ Creature::Creature(const Plugin::CreateParams& params)
     REGISTER(SetMovementRateFactor);
     REGISTER(SetAlignmentGoodEvil);
     REGISTER(SetAlignmentLawChaos);
-    REGISTER(GetClericDomain);
-    REGISTER(SetClericDomain);
-    REGISTER(GetWizardSpecialization);
-    REGISTER(SetWizardSpecialization);
+    REGISTER(GetDomain);
+    REGISTER(SetDomain);
+    REGISTER(GetSpecialization);
+    REGISTER(SetSpecialization);
     REGISTER(GetSoundset);
     REGISTER(SetSoundset);
     REGISTER(SetSkillRank);
@@ -134,7 +138,11 @@ Creature::Creature(const Plugin::CreateParams& params)
     REGISTER(SetFamiliarCreatureType);
     REGISTER(SetAnimalCompanionName);
     REGISTER(SetFamiliarName);
-
+    REGISTER(GetDisarmable);
+    REGISTER(SetDisarmable);
+    REGISTER(SetFaction);
+    REGISTER(GetFaction);
+	
 #undef REGISTER
 }
 
@@ -157,7 +165,6 @@ CNWSCreature *Creature::creature(ArgumentStack& args)
 
 ArgumentStack Creature::AddFeat(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto feat = Services::Events::ExtractArgument<int32_t>(args);
@@ -167,12 +174,11 @@ ArgumentStack Creature::AddFeat(ArgumentStack&& args)
         pCreature->m_pStats->AddFeat(static_cast<uint16_t>(feat));
     }
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::AddFeatByLevel(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto feat  = Services::Events::ExtractArgument<int32_t>(args);
@@ -180,7 +186,7 @@ ArgumentStack Creature::AddFeatByLevel(ArgumentStack&& args)
           ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(level >= 1);
-          ASSERT_OR_THROW(level <= 40);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
 
         if (level > 0 && level <= pCreature->m_pStats->m_lstLevelStats.num)
         {
@@ -190,12 +196,11 @@ ArgumentStack Creature::AddFeatByLevel(ArgumentStack&& args)
             pCreature->m_pStats->AddFeat(static_cast<uint16_t>(feat));
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::RemoveFeat(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto feat = Services::Events::ExtractArgument<int32_t>(args);
@@ -205,12 +210,11 @@ ArgumentStack Creature::RemoveFeat(ArgumentStack&& args)
         pCreature->m_pStats->RemoveFeat(static_cast<uint16_t>(feat));
 
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetKnowsFeat(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = 0;
     if (auto *pCreature = creature(args))
     {
@@ -220,19 +224,17 @@ ArgumentStack Creature::GetKnowsFeat(ArgumentStack&& args)
 
         retVal = pCreature->m_pStats->HasFeat(static_cast<uint16_t>(feat));
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetFeatCountByLevel(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(level >= 1);
-          ASSERT_OR_THROW(level <= 40);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
 
         if (level <= pCreature->m_pStats->m_lstLevelStats.num)
         {
@@ -241,19 +243,17 @@ ArgumentStack Creature::GetFeatCountByLevel(ArgumentStack&& args)
             retVal = pLevelStats->m_lstFeats.num;
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetFeatByLevel(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(level >= 1);
-          ASSERT_OR_THROW(level <= 40);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
         const auto index = Services::Events::ExtractArgument<int32_t>(args);
 
         if (level <= pCreature->m_pStats->m_lstLevelStats.num)
@@ -265,25 +265,21 @@ ArgumentStack Creature::GetFeatByLevel(ArgumentStack&& args)
                 retVal = pLevelStats->m_lstFeats.element[index];
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetFeatCount(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         retVal = pCreature->m_pStats->m_lstFeats.num;
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetFeatByIndex(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
@@ -294,34 +290,28 @@ ArgumentStack Creature::GetFeatByIndex(ArgumentStack&& args)
             retVal = pCreature->m_pStats->m_lstFeats.element[index];
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetMeetsFeatRequirements(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         const auto feat = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
           ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
-        // TODO: Need to clean up these templated arraylist APIs
-        CExoArrayListTemplatedshortunsignedint unused = {};
+        CExoArrayList<uint16_t> unused = {};
 
-        retVal = pCreature->m_pStats->FeatRequirementsMet(static_cast<uint16_t>(feat),
-                    reinterpret_cast<CExoArrayListTemplatedunsignedshort*>(&unused));
+        retVal = pCreature->m_pStats->FeatRequirementsMet(static_cast<uint16_t>(feat), &unused);
         free(unused.element);
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 
 ArgumentStack Creature::GetSpecialAbility(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t id = -1, ready = -1, level = -1;
     if (auto *pCreature = creature(args))
     {
@@ -336,15 +326,11 @@ ArgumentStack Creature::GetSpecialAbility(ArgumentStack&& args)
             level = static_cast<int32_t>(pAbilities->element[index].m_nCasterLevel);
         }
     }
-    Services::Events::InsertArgument(stack, id);
-    Services::Events::InsertArgument(stack, ready);
-    Services::Events::InsertArgument(stack, level);
-    return stack;
+    return Services::Events::Arguments(id, ready, level);
 }
 
 ArgumentStack Creature::GetSpecialAbilityCount(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
@@ -356,13 +342,11 @@ ArgumentStack Creature::GetSpecialAbilityCount(ArgumentStack&& args)
         for (int32_t i = 0; i < pAbilities->num; i++)
             retVal += (pAbilities->element[i].m_nSpellId != ~0u);
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::AddSpecialAbility(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
@@ -383,7 +367,7 @@ ArgumentStack Creature::AddSpecialAbility(ArgumentStack&& args)
                 pAbilities->element[i].m_nSpellId     = static_cast<uint32_t>(id);
                 pAbilities->element[i].m_bReadied     = ready;
                 pAbilities->element[i].m_nCasterLevel = static_cast<uint8_t>(level);
-                return stack;
+                return Services::Events::Arguments();
             }
         }
 
@@ -397,12 +381,11 @@ ArgumentStack Creature::AddSpecialAbility(ArgumentStack&& args)
         pAbilities->element[pAbilities->num].m_nCasterLevel = static_cast<uint8_t>(level);
         pAbilities->num++;
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::RemoveSpecialAbility(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto index = Services::Events::ExtractArgument<int32_t>(args);
@@ -414,12 +397,11 @@ ArgumentStack Creature::RemoveSpecialAbility(ArgumentStack&& args)
             pAbilities->element[index].m_nSpellId = ~0u;
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetSpecialAbility(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto index = Services::Events::ExtractArgument<int32_t>(args);
@@ -439,18 +421,17 @@ ArgumentStack Creature::SetSpecialAbility(ArgumentStack&& args)
             pAbilities->element[index].m_nCasterLevel = static_cast<uint8_t>(level);
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetClassByLevel(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(level >= 1);
-          ASSERT_OR_THROW(level <= 40);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
 
         if (level > 0 && level <= pCreature->m_pStats->m_lstLevelStats.num)
         {
@@ -460,13 +441,11 @@ ArgumentStack Creature::GetClassByLevel(ArgumentStack&& args)
             retVal = pLevelStats->m_nClass;
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetBaseAC(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto ac = Services::Events::ExtractArgument<int32_t>(args);
@@ -475,24 +454,21 @@ ArgumentStack Creature::SetBaseAC(ArgumentStack&& args)
 
         pCreature->m_pStats->m_nACNaturalBase = static_cast<int8_t>(ac);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetBaseAC(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         retVal = pCreature->m_pStats->m_nACNaturalBase;
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetRawAbilityScore(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto ability = Services::Events::ExtractArgument<int32_t>(args);
@@ -526,12 +502,11 @@ ArgumentStack Creature::SetRawAbilityScore(ArgumentStack&& args)
                 break;
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetRawAbilityScore(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
 
     if (auto *pCreature = creature(args))
@@ -564,13 +539,11 @@ ArgumentStack Creature::GetRawAbilityScore(ArgumentStack&& args)
                 break;
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::ModifyRawAbilityScore(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto ability = Services::Events::ExtractArgument<int32_t>(args);
@@ -604,12 +577,11 @@ ArgumentStack Creature::ModifyRawAbilityScore(ArgumentStack&& args)
                 break;
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetPrePolymorphAbilityScore(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
 
     if (auto *pCreature = creature(args))
@@ -633,13 +605,11 @@ ArgumentStack Creature::GetPrePolymorphAbilityScore(ArgumentStack&& args)
                 break;
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetMemorisedSpell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t id, ready, meta, domain;
     id = ready = meta = domain = -1;
     if (auto *pCreature = creature(args))
@@ -671,16 +641,11 @@ ArgumentStack Creature::GetMemorisedSpell(ArgumentStack&& args)
             }
         }
     }
-    Services::Events::InsertArgument(stack, id);
-    Services::Events::InsertArgument(stack, ready);
-    Services::Events::InsertArgument(stack, meta);
-    Services::Events::InsertArgument(stack, domain);
-    return stack;
+    return Services::Events::Arguments(id, ready, meta, domain);
 }
 
 ArgumentStack Creature::GetMemorisedSpellCountByLevel(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = 0;
     if (auto *pCreature = creature(args))
     {
@@ -701,13 +666,11 @@ ArgumentStack Creature::GetMemorisedSpellCountByLevel(ArgumentStack&& args)
             }
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetMemorisedSpell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto classId = Services::Events::ExtractArgument<int32_t>(args);
@@ -745,12 +708,11 @@ ArgumentStack Creature::SetMemorisedSpell(ArgumentStack&& args)
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetRemainingSpellSlots(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = 0;
     if (auto *pCreature = creature(args))
     {
@@ -771,13 +733,11 @@ ArgumentStack Creature::GetRemainingSpellSlots(ArgumentStack&& args)
             }
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetRemainingSpellSlots(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto classId = Services::Events::ExtractArgument<int32_t>(args);
@@ -800,12 +760,11 @@ ArgumentStack Creature::SetRemainingSpellSlots(ArgumentStack&& args)
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetMaxSpellSlots(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
@@ -826,13 +785,11 @@ ArgumentStack Creature::GetMaxSpellSlots(ArgumentStack&& args)
             }
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetKnownSpell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
@@ -858,13 +815,11 @@ ArgumentStack Creature::GetKnownSpell(ArgumentStack&& args)
             }
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetKnownSpellCount(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
@@ -885,13 +840,11 @@ ArgumentStack Creature::GetKnownSpellCount(ArgumentStack&& args)
             }
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::RemoveKnownSpell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto classId = Services::Events::ExtractArgument<int32_t>(args);
@@ -913,12 +866,11 @@ ArgumentStack Creature::RemoveKnownSpell(ArgumentStack&& args)
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::AddKnownSpell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto classId = Services::Events::ExtractArgument<int32_t>(args);
@@ -940,12 +892,11 @@ ArgumentStack Creature::AddKnownSpell(ArgumentStack&& args)
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::ClearMemorisedKnownSpells(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto classId = Services::Events::ExtractArgument<int32_t>(args);
@@ -964,12 +915,11 @@ ArgumentStack Creature::ClearMemorisedKnownSpells(ArgumentStack&& args)
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::ClearMemorisedSpell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto classId = Services::Events::ExtractArgument<int32_t>(args);
@@ -994,18 +944,17 @@ ArgumentStack Creature::ClearMemorisedSpell(ArgumentStack&& args)
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetMaxHitPointsByLevel(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(level >= 1);
-          ASSERT_OR_THROW(level <= 40);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
         if (level > 0 && level <= pCreature->m_pStats->m_lstLevelStats.num)
         {
             auto *pLevelStats = pCreature->m_pStats->m_lstLevelStats.element[level-1];
@@ -1014,18 +963,16 @@ ArgumentStack Creature::GetMaxHitPointsByLevel(ArgumentStack&& args)
             retVal = pLevelStats->m_nHitDie;
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetMaxHitPointsByLevel(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(level >= 1);
-          ASSERT_OR_THROW(level <= 40);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
         const auto value = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(value >= 0);
           ASSERT_OR_THROW(value <= 255);
@@ -1038,46 +985,41 @@ ArgumentStack Creature::SetMaxHitPointsByLevel(ArgumentStack&& args)
             pLevelStats->m_nHitDie = static_cast<uint8_t>(value);
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetMovementRate(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto rate = Services::Events::ExtractArgument<int32_t>(args);
         pCreature->m_pStats->SetMovementRate(rate);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetMovementRateFactor(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     float retVal = 0;
     if (auto *pCreature = creature(args))
     {
         retVal = pCreature->GetMovementRateFactor();
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetMovementRateFactor(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const float factor = Services::Events::ExtractArgument<float>(args);
         pCreature->SetMovementRateFactor(factor);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetAlignmentGoodEvil(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto value = Services::Events::ExtractArgument<int32_t>(args);
@@ -1085,12 +1027,11 @@ ArgumentStack Creature::SetAlignmentGoodEvil(ArgumentStack&& args)
           ASSERT_OR_THROW(value >= -32768);
         pCreature->m_pStats->m_nAlignmentGoodEvil = static_cast<int16_t>(value);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetAlignmentLawChaos(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto value = Services::Events::ExtractArgument<int32_t>(args);
@@ -1098,114 +1039,129 @@ ArgumentStack Creature::SetAlignmentLawChaos(ArgumentStack&& args)
           ASSERT_OR_THROW(value >= -32768);
         pCreature->m_pStats->m_nAlignmentLawChaos = static_cast<int16_t>(value);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
-ArgumentStack Creature::GetClericDomain(ArgumentStack&& args)
+ArgumentStack Creature::GetDomain(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
-    if (auto *pCreature = creature(args))
+    if (auto* pCreature = creature(args))
     {
+        const auto classId = Services::Events::ExtractArgument<int32_t>(args);
+        ASSERT_OR_THROW((classId >= Constants::ClassType::MIN) && (classId <= Constants::ClassType::MAX));
         const auto index = Services::Events::ExtractArgument<int32_t>(args);
-          ASSERT_OR_THROW((index == 1) || (index == 2));
+        ASSERT_OR_THROW((index == 1) || (index == 2));
+
+        CNWClass* pClass = classId < Globals::Rules()->m_nNumClasses ? &Globals::Rules()->m_lstClasses[classId] : nullptr;
+        ASSERT_OR_THROW(pClass != nullptr);
 
         for (int32_t i = 0; i < 3; i++)
         {
             auto& classInfo = pCreature->m_pStats->m_ClassInfo[i];
-            if (classInfo.m_nClass == Constants::ClassType::Cleric)
+            if (classInfo.m_nClass == classId)
             {
                 retVal = classInfo.m_nDomain[index - 1];
                 break;
             }
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
-ArgumentStack Creature::SetClericDomain(ArgumentStack&& args)
+ArgumentStack Creature::SetDomain(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-    if (auto *pCreature = creature(args))
+    if (auto* pCreature = creature(args))
     {
+        const auto classId = Services::Events::ExtractArgument<int32_t>(args);
+        ASSERT_OR_THROW(classId >= Constants::ClassType::MIN);
+        ASSERT_OR_THROW(classId <= Constants::ClassType::MAX);
         const auto index = Services::Events::ExtractArgument<int32_t>(args);
-          ASSERT_OR_THROW(index >= 1);
-          ASSERT_OR_THROW(index <= 2);
+        ASSERT_OR_THROW(index >= 1);
+        ASSERT_OR_THROW(index <= 2);
         const auto domain = Services::Events::ExtractArgument<int32_t>(args);
-          ASSERT_OR_THROW(domain <= 255);
-          ASSERT_OR_THROW(domain >= 0);
+        ASSERT_OR_THROW(domain <= 255);
+        ASSERT_OR_THROW(domain >= 0);
+
+        CNWClass* pClass = classId < Globals::Rules()->m_nNumClasses ? &Globals::Rules()->m_lstClasses[classId] : nullptr;
+        ASSERT_OR_THROW(pClass != nullptr);
 
         for (int32_t i = 0; i < 3; i++)
         {
             auto& classInfo = pCreature->m_pStats->m_ClassInfo[i];
-            if (classInfo.m_nClass == Constants::ClassType::Cleric)
+            if (classInfo.m_nClass == classId)
             {
                 classInfo.m_nDomain[index - 1] = static_cast<uint8_t>(domain);
                 break;
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
-ArgumentStack Creature::GetWizardSpecialization(ArgumentStack&& args)
+ArgumentStack Creature::GetSpecialization(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
-    if (auto *pCreature = creature(args))
+
+    if (auto* pCreature = creature(args))
     {
+        const auto classId = Services::Events::ExtractArgument<int32_t>(args);
+        ASSERT_OR_THROW((classId >= Constants::ClassType::MIN) && (classId <= Constants::ClassType::MAX));
+
+        CNWClass* pClass = classId < Globals::Rules()->m_nNumClasses ? &Globals::Rules()->m_lstClasses[classId] : nullptr;
+        ASSERT_OR_THROW(pClass != nullptr);
+
         for (int32_t i = 0; i < 3; i++)
         {
             auto& classInfo = pCreature->m_pStats->m_ClassInfo[i];
-            if (classInfo.m_nClass == Constants::ClassType::Wizard)
+            if (classInfo.m_nClass == classId)
             {
                 retVal = classInfo.m_nSchool;
                 break;
             }
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
-ArgumentStack Creature::SetWizardSpecialization(ArgumentStack&& args)
+ArgumentStack Creature::SetSpecialization(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-    if (auto *pCreature = creature(args))
+    if (auto* pCreature = creature(args))
     {
+        const auto classId = Services::Events::ExtractArgument<int32_t>(args);
+        ASSERT_OR_THROW(classId >= Constants::ClassType::MIN);
+        ASSERT_OR_THROW(classId <= Constants::ClassType::MAX);
         const auto school = Services::Events::ExtractArgument<int32_t>(args);
-          ASSERT_OR_THROW(school <= 255);
-          ASSERT_OR_THROW(school >= 0);
+        ASSERT_OR_THROW(school <= 255);
+        ASSERT_OR_THROW(school >= 0);
+
+        CNWClass* pClass = classId < Globals::Rules()->m_nNumClasses ? &Globals::Rules()->m_lstClasses[classId] : nullptr;
+        ASSERT_OR_THROW(pClass != nullptr);
 
         for (int32_t i = 0; i < 3; i++)
         {
             auto& classInfo = pCreature->m_pStats->m_ClassInfo[i];
-            if (classInfo.m_nClass == Constants::ClassType::Wizard)
+            if (classInfo.m_nClass == classId)
             {
                 classInfo.m_nSchool = static_cast<uint8_t>(school);
                 break;
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetSoundset(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         retVal = pCreature->m_nSoundSet;
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetSoundset(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto soundset = Services::Events::ExtractArgument<int32_t>(args);
@@ -1213,12 +1169,11 @@ ArgumentStack Creature::SetSoundset(ArgumentStack&& args)
 
         pCreature->m_nSoundSet = static_cast<uint16_t>(soundset);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetSkillRank(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto skill = Services::Events::ExtractArgument<int32_t>(args);
@@ -1230,12 +1185,11 @@ ArgumentStack Creature::SetSkillRank(ArgumentStack&& args)
 
         pCreature->m_pStats->SetSkillRank(static_cast<uint8_t>(skill), static_cast<int8_t>(rank));
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetClassByPosition(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto position = Services::Events::ExtractArgument<int32_t>(args);
@@ -1247,12 +1201,11 @@ ArgumentStack Creature::SetClassByPosition(ArgumentStack&& args)
 
         pCreature->m_pStats->SetClass(static_cast<uint8_t>(position), static_cast<uint8_t>(classID));
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetLevelByPosition(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto position = Services::Events::ExtractArgument<int32_t>(args);
@@ -1264,12 +1217,11 @@ ArgumentStack Creature::SetLevelByPosition(ArgumentStack&& args)
 
         pCreature->m_pStats->SetClassLevel(static_cast<uint8_t>(position), static_cast<uint8_t>(level));
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetBaseAttackBonus(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto bab = Services::Events::ExtractArgument<int32_t>(args);
@@ -1278,12 +1230,11 @@ ArgumentStack Creature::SetBaseAttackBonus(ArgumentStack&& args)
 
         pCreature->m_pStats->m_nBaseAttackBonus = static_cast<uint8_t>(bab);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetAttacksPerRound(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
@@ -1294,13 +1245,11 @@ ArgumentStack Creature::GetAttacksPerRound(ArgumentStack&& args)
         else
             retVal = pCreature->m_pStats->m_nOverrideBaseAttackBonus;
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetGender(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto gender = Services::Events::ExtractArgument<int32_t>(args);
@@ -1310,32 +1259,29 @@ ArgumentStack Creature::SetGender(ArgumentStack&& args)
         pCreature->m_pStats->m_nGender = gender;
         pCreature->m_cAppearance.m_nGender = gender;
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::RestoreFeats(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         pCreature->m_pStats->ResetFeatRemainingUses();
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::RestoreSpecialAbilities(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         pCreature->m_pStats->ResetSpellLikeAbilities();
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::RestoreSpells(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto level = Services::Events::ExtractArgument<int32_t>(args);
@@ -1352,46 +1298,41 @@ ArgumentStack Creature::RestoreSpells(ArgumentStack&& args)
                pCreature->m_pStats->ReadySpellLevel(i);
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::RestoreItems(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         pCreature->RestoreItemProperties();
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetSize(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto size = Services::Events::ExtractArgument<int32_t>(args);
 
         pCreature->m_nCreatureSize = size;
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetSkillPointsRemaining(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
         retVal = pCreature->m_pStats->m_nSkillPointsRemaining;
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetSkillPointsRemaining(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto points = Services::Events::ExtractArgument<int32_t>(args);
@@ -1400,12 +1341,11 @@ ArgumentStack Creature::SetSkillPointsRemaining(ArgumentStack&& args)
 
         pCreature->m_pStats->m_nSkillPointsRemaining = static_cast<uint16_t>(points);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetRacialType(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto race = Services::Events::ExtractArgument<int32_t>(args);
@@ -1414,7 +1354,7 @@ ArgumentStack Creature::SetRacialType(ArgumentStack&& args)
 
         pCreature->m_pStats->m_nRace = static_cast<uint16_t>(race);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetMovementType(ArgumentStack&& args)
@@ -1426,7 +1366,6 @@ ArgumentStack Creature::GetMovementType(ArgumentStack&& args)
     const int MOVEMENT_TYPE_SIDESTEP        = 3;
     const int MOVEMENT_TYPE_WALK_BACKWARDS  = 4;
 
-    ArgumentStack stack;
     int retVal = MOVEMENT_TYPE_STATIONARY;
     if (auto *pCreature = creature(args))
     {
@@ -1452,8 +1391,7 @@ ArgumentStack Creature::GetMovementType(ArgumentStack&& args)
                 break;
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetWalkRateCap(ArgumentStack&& args)
@@ -1462,7 +1400,7 @@ ArgumentStack Creature::SetWalkRateCap(ArgumentStack&& args)
 
     if (!pGetWalkRate_hook)
     {
-        GetServices()->m_hooks->RequestExclusiveHook<Functions::CNWSCreature__GetWalkRate>(
+        GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature11GetWalkRateEv>(
             +[](CNWSCreature *pThis) -> float
             {
                 float fWalkRate = pGetWalkRate_hook->CallOriginal<float>(pThis);
@@ -1471,7 +1409,7 @@ ArgumentStack Creature::SetWalkRateCap(ArgumentStack&& args)
                 return (cap && *cap < fWalkRate) ? *cap : fWalkRate;
 
             });
-        pGetWalkRate_hook = GetServices()->m_hooks->FindHookByAddress(Functions::CNWSCreature__GetWalkRate);
+        pGetWalkRate_hook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN12CNWSCreature11GetWalkRateEv);
     }
 
     if (auto *pCreature = creature(args))
@@ -1484,42 +1422,38 @@ ArgumentStack Creature::SetWalkRateCap(ArgumentStack&& args)
         }
         else
         {
-            g_plugin->GetServices()->m_perObjectStorage->Set(pCreature, "WALK_RATE_CAP", fWalkRateCap);
+            g_plugin->GetServices()->m_perObjectStorage->Set(pCreature, "WALK_RATE_CAP", fWalkRateCap, true);
         }
     }
 
-    ArgumentStack stack;
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetGold(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto gold = Services::Events::ExtractArgument<int32_t>(args);
 
         pCreature->SetGold(gold);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetCorpseDecayTime(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto nDecayTime = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(nDecayTime >= 0);
         pCreature->m_nDecayTime = nDecayTime;
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetBaseSavingThrow(ArgumentStack&& args)
 {
     // NOTE: The misc fields are used for creature save override, and will mess with ELC.
-    ArgumentStack stack;
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
@@ -1540,13 +1474,11 @@ ArgumentStack Creature::GetBaseSavingThrow(ArgumentStack&& args)
                 break;
         }
     }
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetBaseSavingThrow(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto which = Services::Events::ExtractArgument<int32_t>(args);
@@ -1573,44 +1505,50 @@ ArgumentStack Creature::SetBaseSavingThrow(ArgumentStack&& args)
                 break;
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::LevelUp(ArgumentStack&& args)
 {
-    ArgumentStack stack;
 
     static NWNXLib::Hooking::FunctionHook* pCanLevelUp_hook;
     static NWNXLib::Hooking::FunctionHook* pValidateLevelUp_hook;
     static bool bSkipLevelUpValidation = false;
-    if (!pCanLevelUp_hook)
+    if (!pValidateLevelUp_hook)
     {
-        GetServices()->m_hooks->RequestExclusiveHook<Functions::CNWSCreatureStats__CanLevelUp>(
-            +[](CNWSCreatureStats *pThis) -> int32_t
-            {
-                if (bSkipLevelUpValidation)
-                {
-                    // NPCs can have at most 60 levels
-                    ASSERT(!pThis->m_bIsPC);
-                    return pThis->GetLevel(false) < 60;
-                }
-                return pCanLevelUp_hook->CallOriginal<int32_t>(pThis);
-            });
-        pCanLevelUp_hook = GetServices()->m_hooks->FindHookByAddress(Functions::CNWSCreatureStats__CanLevelUp);
+        try
+        {
+            GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats10CanLevelUpEv>(
+                    +[](CNWSCreatureStats *pThis) -> int32_t
+                    {
+                        if (bSkipLevelUpValidation)
+                        {
+                            // NPCs can have at most 60 levels
+                            ASSERT(!pThis->m_bIsPC);
+                            return pThis->GetLevel(false) < 60;
+                        }
+                        return pCanLevelUp_hook->CallOriginal<int32_t>(pThis);
+                    });
+            pCanLevelUp_hook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN17CNWSCreatureStats10CanLevelUpEv);
+        }
+        catch (...)
+        {
+            LOG_NOTICE("NWNX_MaxLevel will manage CanLevelUp.");
+        }
 
-        GetServices()->m_hooks->RequestExclusiveHook<Functions::CNWSCreatureStats__ValidateLevelUp>(
-            +[](CNWSCreatureStats *pThis, CNWLevelStats *pLevelStats, uint8_t nDomain1, uint8_t nDomain2, uint8_t nSchool) -> uint32_t
-            {
-                if (bSkipLevelUpValidation)
+        GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats15ValidateLevelUpEP13CNWLevelStatshhh>(
+                +[](CNWSCreatureStats *pThis, CNWLevelStats *pLevelStats, uint8_t nDomain1, uint8_t nDomain2, uint8_t nSchool) -> uint32_t
                 {
-                    ASSERT(!pThis->m_bIsPC);
-                    pThis->LevelUp(pLevelStats, nDomain1, nDomain2, nSchool, true);
-                    pThis->UpdateCombatInformation();
-                    return 0;
-                }
-                return pValidateLevelUp_hook->CallOriginal<uint32_t>(pThis, pLevelStats, nDomain1, nDomain2, nSchool);
-            });
-        pValidateLevelUp_hook = GetServices()->m_hooks->FindHookByAddress(Functions::CNWSCreatureStats__ValidateLevelUp);
+                    if (bSkipLevelUpValidation)
+                    {
+                        ASSERT(!pThis->m_bIsPC);
+                        pThis->LevelUp(pLevelStats, nDomain1, nDomain2, nSchool, true);
+                        pThis->UpdateCombatInformation();
+                        return 0;
+                    }
+                    return pValidateLevelUp_hook->CallOriginal<uint32_t>(pThis, pLevelStats, nDomain1, nDomain2, nSchool);
+                });
+        pValidateLevelUp_hook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN17CNWSCreatureStats15ValidateLevelUpEP13CNWLevelStatshhh);
     }
 
     if (auto *pCreature = creature(args))
@@ -1618,7 +1556,7 @@ ArgumentStack Creature::LevelUp(ArgumentStack&& args)
         if (pCreature->m_bPlayerCharacter)
         {
             LOG_WARNING("LevelUp() does not work on PCs");
-            return stack;
+            return Services::Events::Arguments();
         }
 
         const auto cls = Services::Events::ExtractArgument<int32_t>(args);
@@ -1637,18 +1575,17 @@ ArgumentStack Creature::LevelUp(ArgumentStack&& args)
         // Restore leveling restrictions
         bSkipLevelUpValidation = false;
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::LevelDown(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         if (pCreature->m_bPlayerCharacter)
         {
             LOG_WARNING("LevelDown() does not work on PCs");
-            return stack;
+            return Services::Events::Arguments();
         }
 
         auto count = Services::Events::ExtractArgument<int32_t>(args);
@@ -1698,24 +1635,22 @@ ArgumentStack Creature::LevelDown(ArgumentStack&& args)
             }
         }
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetChallengeRating(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto fCR = Services::Events::ExtractArgument<float>(args);
           ASSERT_OR_THROW(fCR >= 0.0);
         pCreature->m_pStats->m_fChallengeRating = fCR;
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetAttackBonus(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
 
     if (auto *pCreature = creature(args))
@@ -1735,13 +1670,11 @@ ArgumentStack Creature::GetAttackBonus(ArgumentStack&& args)
         }
     }
 
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::GetHighestLevelOfFeat(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retval = -1;
     if (auto *pCreature = creature(args))
     {
@@ -1750,13 +1683,11 @@ ArgumentStack Creature::GetHighestLevelOfFeat(ArgumentStack&& args)
           ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
         retval = pCreature->m_pStats->GetHighestLevelOfFeat(feat);
     }
-    Services::Events::InsertArgument(stack, retval);
-    return stack;
+    return Services::Events::Arguments(retval);
 }
 
 ArgumentStack Creature::GetFeatRemainingUses(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retval = -1;
     if (auto *pCreature = creature(args))
     {
@@ -1765,13 +1696,11 @@ ArgumentStack Creature::GetFeatRemainingUses(ArgumentStack&& args)
           ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
         retval = pCreature->m_pStats->GetFeatRemainingUses(feat);
     }
-    Services::Events::InsertArgument(stack, retval);
-    return stack;
+    return Services::Events::Arguments(retval);
 }
 
 ArgumentStack Creature::GetFeatTotalUses(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retval = -1;
     if (auto *pCreature = creature(args))
     {
@@ -1780,13 +1709,11 @@ ArgumentStack Creature::GetFeatTotalUses(ArgumentStack&& args)
           ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
         retval = pCreature->m_pStats->GetFeatTotalUses(feat);
     }
-    Services::Events::InsertArgument(stack, retval);
-    return stack;
+    return Services::Events::Arguments(retval);
 }
 
 ArgumentStack Creature::SetFeatRemainingUses(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto feat = Services::Events::ExtractArgument<int32_t>(args);
@@ -1798,22 +1725,21 @@ ArgumentStack Creature::SetFeatRemainingUses(ArgumentStack&& args)
 
         pCreature->m_pStats->SetFeatRemainingUses(feat, uses);
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetTotalEffectBonus(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
 
     if (auto *pCreature = creature(args))
     {
-        API::CNWSObject *versus = NULL;
+        CNWSObject *versus = NULL;
         const auto bonusType = Services::Events::ExtractArgument<int32_t>(args);
         const auto versus_id = Services::Events::ExtractArgument<Types::ObjectID>(args);
         if (versus_id != Constants::OBJECT_INVALID)
         {
-            API::CGameObject *pObject = API::Globals::AppManager()->m_pServerExoApp->GetGameObject(versus_id);
+            CGameObject *pObject = API::Globals::AppManager()->m_pServerExoApp->GetGameObject(versus_id);
             versus = Utils::AsNWSObject(pObject);
         }
 
@@ -1827,13 +1753,11 @@ ArgumentStack Creature::GetTotalEffectBonus(ArgumentStack&& args)
         retVal = pCreature->GetTotalEffectBonus(bonusType, versus, isElementalDamage, isForceMax, saveType, saveSpecificType, skill, abilityScore, isOffhand);
     }
 
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetOriginalName(ArgumentStack&& args)
 {
-    ArgumentStack stack;
 
     if (auto *pCreature = creature(args))
     {
@@ -1854,12 +1778,11 @@ ArgumentStack Creature::SetOriginalName(ArgumentStack&& args)
         }
     }
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::GetOriginalName(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     std::string retVal;
 
     if (auto *pCreature = creature(args))
@@ -1876,13 +1799,11 @@ ArgumentStack Creature::GetOriginalName(ArgumentStack&& args)
         }
     }
 
-    Services::Events::InsertArgument(stack, retVal);
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Creature::SetSpellResistance(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto sr = Services::Events::ExtractArgument<int32_t>(args);
@@ -1890,12 +1811,11 @@ ArgumentStack Creature::SetSpellResistance(ArgumentStack&& args)
           ASSERT_OR_THROW(sr <= 128);
         pCreature->m_pStats->SetSpellResistance(static_cast<int8_t>(sr));
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetAnimalCompanionCreatureType(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto creatureType = Services::Events::ExtractArgument<int32_t>(args);
@@ -1903,12 +1823,11 @@ ArgumentStack Creature::SetAnimalCompanionCreatureType(ArgumentStack&& args)
 
         pCreature->m_pStats->m_nAnimalCompanionCreatureType = creatureType;
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetFamiliarCreatureType(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto creatureType = Services::Events::ExtractArgument<int32_t>(args);
@@ -1916,31 +1835,85 @@ ArgumentStack Creature::SetFamiliarCreatureType(ArgumentStack&& args)
 
         pCreature->m_pStats->m_nFamiliarCreatureType = creatureType;
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetAnimalCompanionName(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto name = Services::Events::ExtractArgument<std::string>(args);
 
         pCreature->m_pStats->m_sAnimalCompanionName = CExoString(name.c_str());
     }
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Creature::SetFamiliarName(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     if (auto *pCreature = creature(args))
     {
         const auto name = Services::Events::ExtractArgument<std::string>(args);
 
         pCreature->m_pStats->m_sFamiliarName = CExoString(name.c_str());
     }
-    return stack;
+    return Services::Events::Arguments();
 }
+
+ArgumentStack Creature::GetDisarmable(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->m_bDisarmable;
+    }
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::SetDisarmable(ArgumentStack&& args)
+{
+    if (auto *pCreature = creature(args))
+    {
+        const auto disarmable = Services::Events::ExtractArgument<int32_t>(args);
+        ASSERT_OR_THROW(disarmable <= 1);
+        ASSERT_OR_THROW(disarmable >= 0);
+
+        pCreature->m_bDisarmable = disarmable;
+    }
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::SetFaction(ArgumentStack&& args)
+{
+    if (auto *pCreature = creature(args))
+    {
+        const auto factionid = Services::Events::ExtractArgument<int32_t>(args);
+        auto* pFaction = Globals::AppManager()->m_pServerExoApp->m_pcExoAppInternal->m_pFactionManager->GetFaction(factionid);
+        if (pFaction)
+        {
+            pFaction->AddMember(pCreature->m_idSelf);
+        }
+        else
+        {
+            LOG_NOTICE("NWNX_Creature_SetFaction called with invalid faction id");
+        }
+    }
+    return Services::Events::Arguments();
+}
+
+
+ArgumentStack Creature::GetFaction(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pCreature = creature(args))
+    {
+        if (auto *pFaction = pCreature->GetFaction())
+        {
+            retVal = pFaction->m_nFactionId;
+        }
+    }
+    return Services::Events::Arguments(retVal);
+}
+
 
 }

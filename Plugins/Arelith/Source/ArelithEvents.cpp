@@ -14,36 +14,35 @@
 #include "Plugin.hpp"
 #include "Arelith.hpp"
 #include "Utils.hpp"
+#include "API/Functions.hpp"
 
 namespace Arelith {
 
 using namespace NWNXLib;
+using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
 static NWNXLib::Hooking::FunctionHook* m_CanUseItemHook=nullptr;
 static NWNXLib::Hooking::FunctionHook* m_CanEquipWeaponHook=nullptr;
 static NWNXLib::Hooking::FunctionHook* m_CanUnEquipWeaponHook=nullptr;
 static NWNXLib::Hooking::FunctionHook* m_OnApplyDisarmHook=nullptr;
-static NWNXLib::Hooking::FunctionHook* m_OnEffectAppliedHook=nullptr;
 
 
-ArelithEvents::ArelithEvents(ViewPtr<Services::HooksProxy> hooker)
+ArelithEvents::ArelithEvents(Services::HooksProxy* hooker)
 {
     Arelith::InitOnFirstSubscribe("NWNX_ARELITH_.*", [hooker]() {
-        hooker->RequestExclusiveHook<API::Functions::CNWSCreature__CanUseItem, int32_t, API::CNWSCreature*, API::CNWSItem*, int32_t>(&CanUseItemHook);
-        m_CanUseItemHook =  hooker->FindHookByAddress(API::Functions::CNWSCreature__CanUseItem);
-        hooker->RequestExclusiveHook<API::Functions::CNWSCreature__CanEquipWeapon, unsigned char, API::CNWSCreature*, API::CNWSItem*, int32_t*, int32_t, int32_t, API::CNWSPlayer*>(&CanEquipWeaponHook);
-        m_CanEquipWeaponHook =  hooker->FindHookByAddress(API::Functions::CNWSCreature__CanEquipWeapon);
-        hooker->RequestExclusiveHook<API::Functions::CNWSCreature__CanUnEquipWeapon, unsigned char, API::CNWSCreature*, API::CNWSItem*>(&CanUnEquipWeaponHook);
-        m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(API::Functions::CNWSCreature__CanUnEquipWeapon);
-        hooker->RequestExclusiveHook<API::Functions::CNWSEffectListHandler__OnApplyDisarm, int32_t,API::CNWSEffectListHandler*, API::CNWSObject*, API::CGameEffect*, int32_t>(&OnApplyDisarmHook);
-        m_OnApplyDisarmHook =  hooker->FindHookByAddress(API::Functions::CNWSEffectListHandler__OnApplyDisarm);
-        hooker->RequestExclusiveHook<API::Functions::CNWSEffectListHandler__OnEffectApplied, int32_t,API::CNWSEffectListHandler*, API::CNWSObject*, API::CGameEffect*, int32_t>(&OnEffectAppliedHook);
-        m_OnEffectAppliedHook =  hooker->FindHookByAddress(API::Functions::CNWSEffectListHandler__OnEffectApplied);
+        hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature10CanUseItemEP8CNWSItemi, int32_t, CNWSCreature*, CNWSItem*, int32_t>(&CanUseItemHook);
+        m_CanUseItemHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature10CanUseItemEP8CNWSItemi);
+        hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer, unsigned char, CNWSCreature*, CNWSItem*, int32_t*, int32_t, int32_t, CNWSPlayer*>(&CanEquipWeaponHook);
+        m_CanEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer);
+        hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem, unsigned char, CNWSCreature*, CNWSItem*>(&CanUnEquipWeaponHook);
+        m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem);
+        hooker->RequestExclusiveHook<Functions::_ZN21CNWSEffectListHandler13OnApplyDisarmEP10CNWSObjectP11CGameEffecti, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnApplyDisarmHook);
+        m_OnApplyDisarmHook =  hooker->FindHookByAddress(Functions::_ZN21CNWSEffectListHandler13OnApplyDisarmEP10CNWSObjectP11CGameEffecti);
     });
 }
 
-int32_t ArelithEvents::CanUseItemHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem, int32_t bIgnoreIdentifiedFlag)
+int32_t ArelithEvents::CanUseItemHook( CNWSCreature *pCreature, CNWSItem *pItem, int32_t bIgnoreIdentifiedFlag)
 {
     int32_t retVal = m_CanUseItemHook->CallOriginal<int32_t>(pCreature, pItem, bIgnoreIdentifiedFlag);
 
@@ -53,13 +52,13 @@ int32_t ArelithEvents::CanUseItemHook( NWNXLib::API::CNWSCreature *pCreature, NW
         Arelith::PushEventData("ITEM_OBJECT_ID", Utils::ObjectIDToString(pItem->m_idSelf)); //oidItem
         Arelith::PushEventData("CANUSEITEM_RESULT", std::to_string(retVal)); //original result
 
-        Arelith::SignalEvent("NWNX_ARELITH_CAN_USE_ITEM", pCreature->m_idSelf, &sResult);
+        Arelith::SignalEvent("NWNX_ARELITH_CANUSEITEM", pCreature->m_idSelf, &sResult);
     }
 
     return (sResult == "") ? retVal : atoi(sResult.c_str());
 }
 
-unsigned char ArelithEvents::CanEquipWeaponHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem, int32_t *nEquipToSlot, int32_t bEquipping, int32_t bDisplayFeedback, NWNXLib::API::CNWSPlayer *pFeedbackPlayer)
+unsigned char ArelithEvents::CanEquipWeaponHook( CNWSCreature *pCreature, CNWSItem *pItem, int32_t *nEquipToSlot, int32_t bEquipping, int32_t bDisplayFeedback, CNWSPlayer *pFeedbackPlayer)
 {
     unsigned char retVal = m_CanEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem, nEquipToSlot, bEquipping, 0, pFeedbackPlayer);
 
@@ -69,14 +68,14 @@ unsigned char ArelithEvents::CanEquipWeaponHook( NWNXLib::API::CNWSCreature *pCr
         Arelith::PushEventData("WEAPON_OBJECT_ID", Utils::ObjectIDToString(pItem->m_idSelf)); //oidWeapon
         Arelith::PushEventData("CANEQUIPWEAPON_RESULT", std::to_string((unsigned char)retVal)); //original result
 
-        Arelith::SignalEvent("NWNX_ARELITH_CAN_EQUIP_WEAPON", pCreature->m_idSelf, &sResult);
+        Arelith::SignalEvent("NWNX_ARELITH_CANEQUIPWEAPON", pCreature->m_idSelf, &sResult);
     }
     retVal = (sResult == "") ? retVal : (unsigned char)atoi(sResult.c_str());
     if (retVal) m_CanEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem, nEquipToSlot, bEquipping, bDisplayFeedback, pFeedbackPlayer);
     return retVal;
 }
 
-unsigned char ArelithEvents::CanUnEquipWeaponHook( NWNXLib::API::CNWSCreature *pCreature, NWNXLib::API::CNWSItem *pItem)
+unsigned char ArelithEvents::CanUnEquipWeaponHook( CNWSCreature *pCreature, CNWSItem *pItem)
 {
     unsigned char retVal = m_CanUnEquipWeaponHook->CallOriginal<unsigned char>(pCreature, pItem);
 
@@ -86,7 +85,7 @@ unsigned char ArelithEvents::CanUnEquipWeaponHook( NWNXLib::API::CNWSCreature *p
         Arelith::PushEventData("WEAPON_OBJECT_ID", Utils::ObjectIDToString(pItem->m_idSelf)); //oidWeapon
         Arelith::PushEventData("CANUNEQUIPWEAPON_RESULT", std::to_string((unsigned char)retVal)); //original result
  
-        Arelith::SignalEvent("NWNX_ARELITH_CAN_UNEQUIP_WEAPON", pCreature->m_idSelf, &sResult);
+        Arelith::SignalEvent("NWNX_ARELITH_CANUNEQUIPWEAPON", pCreature->m_idSelf, &sResult);
     }
 
     return (sResult == "") ? retVal : (unsigned char)atoi(sResult.c_str());
@@ -95,10 +94,10 @@ unsigned char ArelithEvents::CanUnEquipWeaponHook( NWNXLib::API::CNWSCreature *p
 
 
 
-int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSEffectListHandler*, NWNXLib::API::CNWSObject *pObject, NWNXLib::API::CGameEffect *pEffect, int32_t bLoadingGame)
+int32_t ArelithEvents::OnApplyDisarmHook(CNWSEffectListHandler*, CNWSObject *pObject, CGameEffect *pEffect, int32_t bLoadingGame)
 {
-	NWNXLib::API::CNWSCreature *pCreature = Utils::AsNWSCreature(pObject);
-	NWNXLib::API::CNWSCreature *pDisarmingCreature;
+	CNWSCreature *pCreature = Utils::AsNWSCreature(pObject);
+	CNWSCreature *pDisarmingCreature;
     
 	if ( pCreature )
 	{
@@ -119,57 +118,11 @@ int32_t ArelithEvents::OnApplyDisarmHook(NWNXLib::API::CNWSEffectListHandler*, N
         Arelith::PushEventData("TARGET_OBJECT_ID", Utils::ObjectIDToString(pCreature->m_idSelf)); //oidDisarmee
         Arelith::PushEventData("DISARMER_OBJECT_ID", Utils::ObjectIDToString((pDisarmingCreature) ? pDisarmingCreature->m_idSelf : API::Constants::OBJECT_INVALID)); //oidDisarmer
 
-        Arelith::SignalEvent("NWNX_ARELITH_ON_DISARM", pCreature->m_idSelf, NULL);
+        Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf, NULL);
 	 }
 
 	return 1;
 }
 
-
-
-int32_t ArelithEvents::OnEffectAppliedHook(NWNXLib::API::CNWSEffectListHandler *pEffectListHandler, NWNXLib::API::CNWSObject *pObject, NWNXLib::API::CGameEffect *pEffect, int32_t bLoadingGame)
-{
-	if (pEffect->m_nType == EffectTrueType::ItemProperty || !Utils::AsNWSCreature(pObject)) 
-    {
-        return m_OnEffectAppliedHook->CallOriginal<int32_t>(pEffectListHandler, pObject, pEffect, bLoadingGame);
-    }
-
-    Arelith::PushEventData("UNIQUE_ID", std::to_string(pEffect->m_nID));
-    Arelith::PushEventData("CREATOR", Utils::ObjectIDToString(pEffect->m_oidCreator));
-    Arelith::PushEventData("TYPE", std::to_string(pEffect->m_nType));
-    Arelith::PushEventData("SUB_TYPE", std::to_string(pEffect->m_nSubType & EffectSubType::MASK));
-    Arelith::PushEventData("DURATION_TYPE", std::to_string(pEffect->m_nSubType & EffectDurationType::MASK));
-    Arelith::PushEventData("DURATION", std::to_string(pEffect->m_fDuration));
-    Arelith::PushEventData("SPELL_ID", std::to_string(pEffect->m_nSpellId));
-    Arelith::PushEventData("CASTER_LEVEL", std::to_string(pEffect->m_nCasterLevel));
-    Arelith::PushEventData("CUSTOM_TAG", pEffect->m_sCustomTag.CStr());
-
-    for (int i = 0; i < pEffect->m_nNumIntegers; i++)
-    {// Int Params
-        Arelith::PushEventData("INT_PARAM_" + std::to_string(i + 1), std::to_string(pEffect->m_nParamInteger[i]));
-    }
-
-    for(int i = 0; i < 4; i++)
-    {// Float Params
-        Arelith::PushEventData("FLOAT_PARAM_" + std::to_string(i + 1), std::to_string(pEffect->m_nParamFloat[i]));
-    }
-
-    for(int i = 0; i < 6; i++)
-    {// String Params
-        Arelith::PushEventData("STRING_PARAM_" + std::to_string(i + 1), pEffect->m_sParamString[i].CStr());
-    }
-
-    for(int i = 0; i < 4; i++)
-    {// Object Params
-        Arelith::PushEventData("OBJECT_PARAM_" + std::to_string(i + 1), Utils::ObjectIDToString(pEffect->m_oidParamObjectID[i]));
-    }
-
-    if (Arelith::SignalEvent("NWNX_ARELITH_ON_EFFECT_APPLIED", pObject->m_idSelf))
-    {
-        return m_OnEffectAppliedHook->CallOriginal<int32_t>(pEffectListHandler, pObject, pEffect, bLoadingGame);
-    }
-
-	return 0;
-}
 
 }

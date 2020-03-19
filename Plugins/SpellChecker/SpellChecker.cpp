@@ -1,26 +1,19 @@
-
-// Log currently generates warnings when no arguments are given to format string
-// TODO: Should really clean up the log so it doesn't warn in these cases
-#pragma GCC diagnostic ignored "-Wformat-security"
-
 #include "SpellChecker.hpp"
 
 #include "API/CAppManager.hpp"
-#include "API/CServerExoApp.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
-#include <sstream>
-#include <dlfcn.h>
 #include <hunspell/hunspell.hxx>
 #include <iostream>
 #include "Services/Config/Config.hpp"
 
+#include <dlfcn.h>
+
 using namespace NWNXLib;
 using namespace NWNXLib::API;
-using namespace NWNXLib::Platform::DynamicLibraries;
 using namespace NWNXLib::Services;
 
-static ViewPtr<SpellChecker::SpellChecker> g_plugin;
+static SpellChecker::SpellChecker* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -49,11 +42,12 @@ SpellChecker::SpellChecker(const Plugin::CreateParams& params)
 {
 
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, std::bind(&SpellChecker::func, this, std::placeholders::_1))
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(FindMisspell);
     REGISTER(GetSuggestSpell);
-    SpellChecker::Init(GetServices()->m_config);
+    SpellChecker::Init(GetServices()->m_config.get());
 #undef REGISTER
 
 }
@@ -61,24 +55,24 @@ SpellChecker::SpellChecker(const Plugin::CreateParams& params)
 SpellChecker::~SpellChecker()
 {
     SpellChecker::dest_e(SpellChecker::created);
-    CloseDll(SpellChecker::handle);
+    dlclose(SpellChecker::handle);
 }
 
 uintptr_t SpellChecker::EstbSymFunction(const std::string& symbol)
 {
-    uintptr_t var = reinterpret_cast<uintptr_t>(GetFuncAddrInDll(symbol.c_str(), SpellChecker::handle));
+    uintptr_t var = reinterpret_cast<uintptr_t>(dlsym(SpellChecker::handle, symbol.c_str()));
 
-    if (!IsFuncAddrFromDllValid(var))
+    if (!var)
     {
         throw std::runtime_error("Dynamic link symbol error");
     }
     return var;
 }
-void SpellChecker::Init(NWNXLib::ViewPtr<NWNXLib::Services::ConfigProxy> config)
+void SpellChecker::Init(NWNXLib::Services::ConfigProxy* config)
 {
-    SpellChecker::handle = OpenDll("libhunspell.so");
+    SpellChecker::handle = dlopen("libhunspell.so", RTLD_NOW | RTLD_NODELETE);
 
-    if(!IsHandleValid(SpellChecker::handle))
+    if(!SpellChecker::handle)
     {
         throw std::runtime_error("Dynamic link handler error");
     }
@@ -101,9 +95,6 @@ void SpellChecker::Init(NWNXLib::ViewPtr<NWNXLib::Services::ConfigProxy> config)
 }
 ArgumentStack SpellChecker::FindMisspell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
-
     std::string sentence = Services::Events::ExtractArgument<std::string>(args);
 
     std::string  word;
@@ -126,19 +117,13 @@ ArgumentStack SpellChecker::FindMisspell(ArgumentStack&& args)
         sc = SpellChecker::spell_e(SpellChecker::created, list[i].c_str());
         if(sc == 0)
             output += list[i] + ",";
-
-
-
     }
 
-    Services::Events::InsertArgument(stack, output);
-    return stack;
+    return Services::Events::Arguments(output);
 }
 
 ArgumentStack SpellChecker::GetSuggestSpell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
     std::string word = Services::Events::ExtractArgument<std::string>(args);
 
     const char* cword;
@@ -158,11 +143,8 @@ ArgumentStack SpellChecker::GetSuggestSpell(ArgumentStack&& args)
 
             SpellChecker::free_e(SpellChecker::created, &wlst, ns);
         }
-
     }
-
-    Services::Events::InsertArgument(stack, output);
-    return stack;
+    return Services::Events::Arguments(output);
 }
 
 

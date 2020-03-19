@@ -2,21 +2,16 @@
 
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
-#include "API/CExoString.hpp"
 #include "API/CGameEffect.hpp"
 #include "API/Functions.hpp"
-#include "API/CVirtualMachine.hpp"
-#include "API/CNWSObject.hpp"
 #include "Utils.hpp"
-#include "ViewPtr.hpp"
 
 #include <string>
-#include <functional>
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<ItemProperty::ItemProperty> g_plugin;
+static ItemProperty::ItemProperty* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -44,7 +39,8 @@ ItemProperty::ItemProperty(const Plugin::CreateParams& params)
     : Plugin(params)
 {
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, std::bind(&ItemProperty::func, this, std::placeholders::_1))
+    GetServices()->m_events->RegisterEvent(#func, \
+        [this](ArgumentStack&& args){ return func(std::move(args)); })
 
     REGISTER(PackIP);
     REGISTER(UnpackIP);
@@ -59,11 +55,7 @@ ItemProperty::~ItemProperty()
 
 ArgumentStack ItemProperty::PackIP(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-    API::CGameEffect *ip = new API::CGameEffect(true);
-
-    // TODO-64bit: (effectId) Remove this, also on the nwscript side
-    auto ipId         = Services::Events::ExtractArgument<int32_t>(args);
+    CGameEffect *ip = new CGameEffect(true);
 
     auto propname     = Services::Events::ExtractArgument<int32_t>(args);
     auto subtype      = Services::Events::ExtractArgument<int32_t>(args);
@@ -97,13 +89,12 @@ ArgumentStack ItemProperty::PackIP(ArgumentStack&& args)
     ip->SetInteger(8, usable);
     ip->SetString(0, tag.c_str());
 
-    Services::Events::InsertArgument(stack, ip);
-    return stack;
+    return Services::Events::Arguments(ip);
 }
 ArgumentStack ItemProperty::UnpackIP(ArgumentStack&& args)
 {
     ArgumentStack stack;
-    auto ip = Services::Events::ExtractArgument<API::CGameEffect*>(args);
+    auto ip = Services::Events::ExtractArgument<CGameEffect*>(args);
 
     Services::Events::InsertArgument(stack, ip->GetString(0).CStr());
     Services::Events::InsertArgument(stack, (API::Types::ObjectID)ip->m_oidCreator);
@@ -117,9 +108,6 @@ ArgumentStack ItemProperty::UnpackIP(ArgumentStack&& args)
     Services::Events::InsertArgument(stack, ip->GetInteger(2));
     Services::Events::InsertArgument(stack, ip->GetInteger(1));
     Services::Events::InsertArgument(stack, ip->GetInteger(0));
-
-    // TODO-64bit: (effectId) Remove this, also on the nwscript side
-    Services::Events::InsertArgument(stack, 0);
 
     Utils::DestroyGameEffect(ip);
     return stack;

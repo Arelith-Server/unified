@@ -45,46 +45,50 @@ string NWNX_Arelith_GetCurrentEvent();
 
 void NWNX_Arelith_SubscribeEvent(string evt, string script)
 {
-    NWNX_PushArgumentString("NWNX_Arelith", "SUBSCRIBE_EVENT", script);
-    NWNX_PushArgumentString("NWNX_Arelith", "SUBSCRIBE_EVENT", evt);
-    NWNX_CallFunction("NWNX_Arelith", "SUBSCRIBE_EVENT");
+    string sFunc = "OnSubscribeEvent";
+    NWNX_PushArgumentString("NWNX_Arelith", sFunc, script);
+    NWNX_PushArgumentString("NWNX_Arelith", sFunc, evt);
+    NWNX_CallFunction("NWNX_Arelith", sFunc);
 }
 
 void NWNX_Arelith_PushEventData(string tag, string data)
 {
-    NWNX_PushArgumentString("NWNX_Arelith", "PUSH_EVENT_DATA", data);
-    NWNX_PushArgumentString("NWNX_Arelith", "PUSH_EVENT_DATA", tag);
-    NWNX_CallFunction("NWNX_Arelith", "PUSH_EVENT_DATA");
+    string sFunc = "OnPushEventData";
+    NWNX_PushArgumentString("NWNX_Arelith", sFunc, data);
+    NWNX_PushArgumentString("NWNX_Arelith", sFunc, tag);
+    NWNX_CallFunction("NWNX_Arelith", sFunc);
 }
 
 int NWNX_Arelith_SignalEvent(string evt, object target)
 {
-    NWNX_PushArgumentObject("NWNX_Arelith", "SIGNAL_EVENT", target);
-    NWNX_PushArgumentString("NWNX_Arelith", "SIGNAL_EVENT", evt);
-    NWNX_CallFunction("NWNX_Arelith", "SIGNAL_EVENT");
-    return NWNX_GetReturnValueInt("NWNX_Arelith", "SIGNAL_EVENT");
+    string sFunc = "OnSignalEvent";
+    NWNX_PushArgumentObject("NWNX_Arelith", sFunc, target);
+    NWNX_PushArgumentString("NWNX_Arelith", sFunc, evt);
+    NWNX_CallFunction("NWNX_Arelith", sFunc);
+    return NWNX_GetReturnValueInt("NWNX_Arelith", sFunc);
 }
 
 string NWNX_Arelith_GetEventData(string tag)
 {
-    NWNX_PushArgumentString("NWNX_Arelith", "GET_EVENT_DATA", tag);
-    NWNX_CallFunction("NWNX_Arelith", "GET_EVENT_DATA");
-    return NWNX_GetReturnValueString("NWNX_Arelith", "GET_EVENT_DATA");
+    string sFunc = "OnGetEventData";
+    NWNX_PushArgumentString("NWNX_Arelith", sFunc, tag);
+    NWNX_CallFunction("NWNX_Arelith", sFunc);
+    return NWNX_GetReturnValueString("NWNX_Arelith", sFunc);
 }
 
 void NWNX_Arelith_SkipEvent()
 {
-    NWNX_CallFunction("NWNX_Arelith", "SKIP_EVENT");
+    NWNX_CallFunction("NWNX_Arelith", "OnSkipEvent");
 }
 
 void NWNX_Arelith_SetEventResult(string data)
 {
-    NWNX_PushArgumentString("NWNX_Arelith", "EVENT_RESULT", data);
-    NWNX_CallFunction("NWNX_Arelith", "EVENT_RESULT");
+    NWNX_PushArgumentString("NWNX_Arelith", "OnEventResult", data);
+    NWNX_CallFunction("NWNX_Arelith", "OnEventResult");
 }
 
 string NWNX_Arelith_GetCurrentEvent()
 {
-    NWNX_CallFunction("NWNX_Arelith", "GET_CURRENT_EVENT");
-    return NWNX_GetReturnValueString("NWNX_Arelith", "GET_CURRENT_EVENT");
+    NWNX_CallFunction("NWNX_Arelith", "OnGetCurrentEvent");
+    return NWNX_GetReturnValueString("NWNX_Arelith", "OnGetCurrentEvent");
 }
