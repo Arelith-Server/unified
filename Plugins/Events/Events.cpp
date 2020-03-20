@@ -114,9 +114,9 @@ Events::Events(const Plugin::CreateParams& params)
     //m_spellEvents       = std::make_unique<SpellEvents>(hooker);
     //m_partyEvents       = std::make_unique<PartyEvents>(hooker);
     m_healerKitEvents   = std::make_unique<HealerKitEvents>(hooker);
-    /*m_skillEvents       = std::make_unique<SkillEvents>(hooker);
+    //m_skillEvents       = std::make_unique<SkillEvents>(hooker);
     m_mapEvents         = std::make_unique<MapEvents>(hooker);
-    m_polymorphEvents   = std::make_unique<PolymorphEvents>(hooker);
+    /*m_polymorphEvents   = std::make_unique<PolymorphEvents>(hooker);
     m_effectEvents      = std::make_unique<EffectEvents>(hooker);
     m_quickChatEvents   = std::make_unique<QuickChatEvents>(hooker);
     m_inventoryEvents   = std::make_unique<InventoryEvents>(hooker);
