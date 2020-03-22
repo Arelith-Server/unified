@@ -4,7 +4,7 @@
 #include "API/Globals.hpp"
 #include "API/Constants.hpp"
 #include "Events/AssociateEvents.hpp"
-//#include "Events/BarterEvents.hpp"
+#include "Events/BarterEvents.hpp"
 #include "Events/ClientEvents.hpp"
 #include "Events/CombatEvents.hpp"
 #include "Events/DMActionEvents.hpp"
@@ -13,10 +13,10 @@
 #include "Events/ItemEvents.hpp"
 #include "Events/MapEvents.hpp"
 #include "Events/StealthEvents.hpp"
-//#include "Events/SpellEvents.hpp"
-//#include "Events/PartyEvents.hpp"
+#include "Events/SpellEvents.hpp"
+#include "Events/PartyEvents.hpp"
 #include "Events/HealerKitEvents.hpp"
-/*#include "Events/SkillEvents.hpp"
+#include "Events/SkillEvents.hpp"
 #include "Events/PolymorphEvents.hpp"
 #include "Events/EffectEvents.hpp"
 #include "Events/QuickChatEvents.hpp"
@@ -28,7 +28,8 @@
 #include "Events/InputEvents.hpp"
 #include "Events/MaterialChangeEvents.hpp"
 #include "Events/ObjectEvents.hpp"
-#include "Events/UUIDEvents.hpp" */
+#include "Events/UUIDEvents.hpp"
+#include "Events/ResourceEvents.hpp"
 #include "Services/Config/Config.hpp"
 #include "Services/Messaging/Messaging.hpp"
 
@@ -103,7 +104,7 @@ Events::Events(const Plugin::CreateParams& params)
 
     auto hooker = GetServices()->m_hooks.get();
     m_associateEvents   = std::make_unique<AssociateEvents>(hooker);
-    //m_barterEvents      = std::make_unique<BarterEvents>(hooker);
+    m_barterEvents      = std::make_unique<BarterEvents>(hooker);
     m_clientEvents      = std::make_unique<ClientEvents>(hooker);
     m_combatEvents      = std::make_unique<CombatEvents>(hooker);
     m_dmActionEvents    = std::make_unique<DMActionEvents>(hooker);
@@ -111,12 +112,12 @@ Events::Events(const Plugin::CreateParams& params)
     m_itemEvents        = std::make_unique<ItemEvents>(hooker);
     m_featEvents        = std::make_unique<FeatEvents>(hooker);
     m_stealthEvents     = std::make_unique<StealthEvents>(hooker);
-    //m_spellEvents       = std::make_unique<SpellEvents>(hooker);
-    //m_partyEvents       = std::make_unique<PartyEvents>(hooker);
+    m_spellEvents       = std::make_unique<SpellEvents>(hooker);
+    m_partyEvents       = std::make_unique<PartyEvents>(hooker);
     m_healerKitEvents   = std::make_unique<HealerKitEvents>(hooker);
-    //m_skillEvents       = std::make_unique<SkillEvents>(hooker);
+    m_skillEvents       = std::make_unique<SkillEvents>(hooker);
     m_mapEvents         = std::make_unique<MapEvents>(hooker);
-    /*m_polymorphEvents   = std::make_unique<PolymorphEvents>(hooker);
+    m_polymorphEvents   = std::make_unique<PolymorphEvents>(hooker);
     m_effectEvents      = std::make_unique<EffectEvents>(hooker);
     m_quickChatEvents   = std::make_unique<QuickChatEvents>(hooker);
     m_inventoryEvents   = std::make_unique<InventoryEvents>(hooker);
@@ -127,7 +128,8 @@ Events::Events(const Plugin::CreateParams& params)
     m_inputEvents       = std::make_unique<InputEvents>(hooker);
     m_matChangeEvents   = std::make_unique<MaterialChangeEvents>(hooker);
     m_objectEvents      = std::make_unique<ObjectEvents>(hooker);
-    m_uuidEvents        = std::make_unique<UUIDEvents>(hooker);*/
+    m_uuidEvents        = std::make_unique<UUIDEvents>(hooker);
+    m_resourceEvents    = std::make_unique<ResourceEvents>(GetServices()->m_tasks.get());
 }
 
 Events::~Events()
