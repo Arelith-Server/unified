@@ -14,7 +14,8 @@ using ArgumentStack = NWNXLib::Services::Events::ArgumentStack;
 namespace Events {
 
 class AssociateEvents;
-//class BarterEvents;
+class BarterEvents;
+class CalendarEvents;
 class ClientEvents;
 class CombatEvents;
 class DMActionEvents;
@@ -23,13 +24,13 @@ class FeatEvents;
 class ItemEvents;
 class MapEvents;
 class StealthEvents;
-//class SpellEvents;
-//class PartyEvents;
+class SpellEvents;
+class PartyEvents;
 class HealerKitEvents;
-/*class SkillEvents;
+class SkillEvents;
 class PolymorphEvents;
 class EffectEvents;
-lass QuickChatEvents;
+class QuickChatEvents;
 class InventoryEvents;
 class TrapEvents;
 class TimingBarEvents;
@@ -38,7 +39,9 @@ class PVPEvents;
 class InputEvents;
 class MaterialChangeEvents;
 class ObjectEvents;
-class UUIDEvents;*/
+class UUIDEvents;
+class ResourceEvents;
+class QuickbarEvents;
 
 class Events : public NWNXLib::Plugin
 {
@@ -103,7 +106,8 @@ private:
     std::unordered_map<std::string, std::set<NWNXLib::API::Types::ObjectID>> m_dispatchList;
 
     std::unique_ptr<AssociateEvents> m_associateEvents;
-    //std::unique_ptr<BarterEvents> m_barterEvents;
+    std::unique_ptr<BarterEvents> m_barterEvents;
+    std::unique_ptr<CalendarEvents> m_calendarEvents;
     std::unique_ptr<ClientEvents> m_clientEvents;
     std::unique_ptr<CombatEvents> m_combatEvents;
     std::unique_ptr<DMActionEvents> m_dmActionEvents;
@@ -112,10 +116,10 @@ private:
     std::unique_ptr<ItemEvents> m_itemEvents;
     std::unique_ptr<MapEvents> m_mapEvents;
     std::unique_ptr<StealthEvents> m_stealthEvents;
-   /* std::unique_ptr<SpellEvents> m_spellEvents;
-    std::unique_ptr<PartyEvents> m_partyEvents;*/
+    std::unique_ptr<SpellEvents> m_spellEvents;
+    std::unique_ptr<PartyEvents> m_partyEvents;
     std::unique_ptr<HealerKitEvents> m_healerKitEvents;
-    /*std::unique_ptr<SkillEvents> m_skillEvents;
+    std::unique_ptr<SkillEvents> m_skillEvents;
     std::unique_ptr<PolymorphEvents> m_polymorphEvents;
     std::unique_ptr<EffectEvents> m_effectEvents;
     std::unique_ptr<QuickChatEvents> m_quickChatEvents;
@@ -127,7 +131,9 @@ private:
     std::unique_ptr<InputEvents> m_inputEvents;
     std::unique_ptr<MaterialChangeEvents> m_matChangeEvents;
     std::unique_ptr<ObjectEvents> m_objectEvents;
-    std::unique_ptr<UUIDEvents> m_uuidEvents;*/
+    std::unique_ptr<UUIDEvents> m_uuidEvents;
+    std::unique_ptr<ResourceEvents> m_resourceEvents;
+    std::unique_ptr<QuickbarEvents> m_quickbarEvents;
 };
 
 }

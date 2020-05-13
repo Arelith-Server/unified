@@ -1,4 +1,4 @@
-/// @addtogroup events Events
+/// @addtogroup events Events 
 /// @brief Provides an interface for plugins to create event-based systems, and exposes some events through that interface.
 /// @{
 /// @file nwnx_events.nss
@@ -43,6 +43,22 @@ _______________________________________
     TRAP_EXAMINE_SUCCESS  | int    | For trap examine only, whether the examine succeeded
 
 _______________________________________
+    ## Validate Use Item Events
+    - NWNX_ON_VALIDATE_USE_ITEM_BEFORE
+    - NWNX_ON_VALIDATE_USE_ITEM_AFTER
+
+    `OBJECT_SELF` = The creature using the item
+
+    Event Data Tag          | Type   | Notes |
+    ------------------------|--------|-------|
+    ITEM_OBJECT_ID          | object | Convert to object with NWNX_Object_StringToObject()|
+    BEFORE_RESULT           | int    | TRUE/FALSE, only in _AFTER events|
+
+    @note Setting the result to "0" will cause the item to appear unusable (red) in the inventory.
+    @note Setting the result of this event will NOT prevent the item from being equipped, only used (e.g. scrolls/wands). See the "NWNX_ON_VALIDATE_ITEM_EQUIP_*" events to control equip behaviour.
+    @note If the BEFORE event is not skipped, BEFORE_RESULT is the value of running the function normally. Otherwise, this is the set result value.
+
+_______________________________________
     ## Use Item Events
     - NWNX_ON_USE_ITEM_BEFORE
     - NWNX_ON_USE_ITEM_AFTER
@@ -58,6 +74,9 @@ _______________________________________
     TARGET_POSITION_X       | float  | |
     TARGET_POSITION_Y       | float  | |
     TARGET_POSITION_Z       | float  | |
+
+    @note You can set the event result to "0" (send feedback to the client that the item cannot be used, default)
+    or "1" to suppress that feedback.
 
 _______________________________________
     ## Item Container Events
@@ -95,6 +114,23 @@ _______________________________________
     Event Data Tag        | Type   | Notes
     ----------------------|--------|-------
     SCROLL                | object | Convert to object with NWNX_Object_StringToObject()
+
+_______________________________________
+    ## Validate Item Equip Events
+    - NWNX_ON_VALIDATE_ITEM_EQUIP_BEFORE
+    - NWNX_ON_VALIDATE_ITEM_EQUIP_AFTER
+
+    `OBJECT_SELF` = The creature trying to equip the item
+
+    Event Data Tag        | Type   | Notes |
+    ----------------------|--------|-------|
+    ITEM                  | object | Convert to object with NWNX_Object_StringToObject()|
+    SLOT                  | int    | INVENTORY_SLOT_* Constant|
+    BEFORE_RESULT         | int    | TRUE/FALSE, only in _AFTER events|
+
+    @note Manually setting the result of this event will skip all game checks for item slot validity. The client will block incompatible types (weapons into armor slots) in the GUI, but this will work using ActionEquipItem().
+    @note To show this item as unusable to the PC (red in the inventory), use in combination with the "NWNX_ON_VALIDATE_USE_ITEM_*" events.
+    @note If the BEFORE event is not skipped, BEFORE_RESULT is the value of running the function normally. Otherwise, this is the set result value.
 
 _______________________________________
     ## Item Equip Events
@@ -429,6 +465,8 @@ _______________________________________
     PROJECTILE_PATH_TYPE  | int    | |
     IS_INSTANT_SPELL      | int    | Returns TRUE if spell was instant else FALSE |
 
+@note the stock nwscript GetMetaMagicFeat() function will return any metamagic used.
+
 _______________________________________
     ## Set Memorized Spell Slot Events
     - NWNX_SET_MEMORIZED_SPELL_SLOT_BEFORE
@@ -762,6 +800,24 @@ _______________________________________
     @note Skipping the _BEFORE event will cause no player names to be accepted unless you SetEventResult("1")
 
 _______________________________________
+    ## Server Character Save Events
+    - NWNX_ON_SERVER_CHARACTER_SAVE_BEFORE
+    - NWNX_ON_SERVER_CHARACTER_SAVE_AFTER
+
+    `OBJECT_SELF` = The player character being saved.
+
+    @note This is called once for every character when the server is exiting and when the server is saved, or when ExportSingleCharacter() & ExportAllCharacters() is called.
+
+_______________________________________
+     ## Export Character Events
+    - NWNX_ON_CLIENT_EXPORT_CHARACTER_BEFORE
+    - NWNX_ON_CLIENT_EXPORT_CHARACTER_AFTER
+
+    `OBJECT_SELF` = The player
+
+    Note: This event runs when the player clicks the "Save Character" button in the options menu to export their character to their localvault.
+
+_______________________________________
     ## Levelling Events
     - NWNX_ON_LEVEL_UP_BEFORE
     - NWNX_ON_LEVEL_UP_AFTER
@@ -869,7 +925,53 @@ _______________________________________
     ----------------------|--------|-------
     TARGET                | object | Convert to object with NWNX_Object_StringToObject()
 
+ _______________________________________
+    ## Input Cast Spell Evens
+    - NWNX_ON_INPUT_CAST_SPELL_BEFORE
+    - NWNX_ON_INPUT_CAST_SPELL_AFTER
+
+    `OBJECT_SELF` = The creature casting a spell
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    TARGET                | object | Convert to object with NWNX_Object_StringToObject()
+    SPELL_ID              | int    |
+    MULTICLASS            | int    |
+    DOMAIN_LEVEL          | int    |
+    META_TYPE             | int    |
+    INSTANT               | int    | TRUE / FALSE
+    PROJECTILE_PATH       | int    |
+    SPONTANEOUS           | int    | TRUE / FALSE
+    FAKE                  | int    | TRUE / FALSE
+    FEAT                  | int    | -1 when not cast from a feat
+    CASTER_LEVEL          | int    |
+    IS_AREA_TARGET        | int    | TRUE / FALSE
+    POS_X                 | float  |
+    POS_Y                 | float  |
+    POS_Z                 | float  |
+
+    @note This event runs the moment a creature starts casting
+
 _______________________________________
+    ## Input Keyboard Events
+    - NWNX_ON_INPUT_KEYBOARD_BEFORE
+    - NWNX_ON_INPUT_KEYBOARD_AFTER
+
+    `OBJECT_SELF` = The player
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    KEY                   | string | The key pressed by the player, one of the following: W A S D Q E
+
+    @note To stop the player from moving you can do something like below, since normal immobilizing effects stop the client
+          from sending input.
+
+          location locPlayer = GetLocation(oPlayer);
+          object oBoulder = CreateObject(OBJECT_TYPE_PLACEABLE, "plc_boulder", locPlayer, FALSE, "TESTPLC");
+          NWNX_Object_SetPosition(oPlayer, GetPositionFromLocation(locPlayer));
+          ApplyEffectToObject(DURATION_TYPE_PERMANENT, EffectVisualEffect(VFX_DUR_CUTSCENE_INVISIBILITY), oBoulder);
+
+ _______________________________________
     ## Object Lock Events
     - NWNX_ON_OBJECT_LOCK_BEFORE
     - NWNX_ON_OBJECT_LOCK_AFTER
@@ -922,6 +1024,47 @@ _______________________________________
     TYPE                  | int    | The type of the file, see NWNX_UTIL_RESREF_TYPE_*
 
     Note: These events fire when a file gets added/removed/modified in the /nwnx or /development folder
+
+_______________________________________
+    ## ELC Events
+    - NWNX_ON_ELC_VALIDATE_CHARACTER_BEFORE
+    - NWNX_ON_ELC_VALIDATE_CHARACTER_AFTER
+
+    `OBJECT_SELF` = The player
+
+    Note: NWNX_ELC must be loaded for these events to work. The `_AFTER` event only fires if the character successfully
+          completes validation.
+
+_______________________________________
+     ## Quickbar Events
+    - NWNX_ON_QUICKBAR_SET_BUTTON_BEFORE
+    - NWNX_ON_QUICKBAR_SET_BUTTON_AFTER
+
+    `OBJECT_SELF` = The player
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    BUTTON                | int    | The quickbar button slot, 0-35
+    TYPE                  | int    | The type of quickbar button set, see NWNX_PLAYER_QBS_TYPE_* in nwnx_player_qbs.nss
+
+    Note: Skipping the event does not prevent the client from changing the button clientside, the change won't however
+          be saved to the bic file.
+
+_______________________________________
+     ## Calendar Events
+    - NWNX_ON_CALENDAR_HOUR
+    - NWNX_ON_CALENDAR_DAY
+    - NWNX_ON_CALENDAR_MONTH
+    - NWNX_ON_CALENDAR_YEAR
+    - NWNX_ON_CALENDAR_DAWN
+    - NWNX_ON_CALENDAR_DUSK
+
+    `OBJECT_SELF` = The module
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    OLD                   | int    | The (Hour/Day/Month/Year) before the change. Not available in DAWN/DUSK.
+    NEW                   | int    | The (Hour/Day/Month/Year) after the change. Not available in DAWN/DUSK.
 
 _______________________________________
 */
@@ -993,21 +1136,26 @@ string NWNX_Events_GetEventData(string tag);
 /// - Polymorph events
 /// - DMAction events
 /// - Client connect event
+/// - Client Export Character event
 /// - Spell events
 /// - QuickChat events
 /// - Barter event (START only)
 /// - Trap events
 /// - Sticky Player Name event
+/// - Server Character Save Events
 /// - Add/RemoveGold events
 /// - PVP Attitude Change events
 /// - {Enter|Exit}Stealth events
 /// - Object {Lock|Unlock} events
+/// - Quickbar Events
 void NWNX_Events_SkipEvent();
 
 /// Set the return value of the event.
 ///
 /// THIS SHOULD ONLY BE CALLED FROM WITHIN AN EVENT HANDLER.
 /// ONLY WORKS WITH THE FOLLOWING EVENTS:
+/// - Use Item event - "1" or "0" to send feedback whether item use is allowed
+/// - Validate Use Item Event - "1" or "0" to show the item is unusable (red) in the player inventory.
 /// - Healer's Kit event
 /// - Listen/Spot Detection events -> "1" or "0"
 /// - OnClientConnectBefore -> Reason for disconnect if skipped
