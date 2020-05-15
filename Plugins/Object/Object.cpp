@@ -21,6 +21,7 @@
 #include "API/CNWBaseItemArray.hpp"
 #include "API/CItemRepository.hpp"
 #include "API/CExoFile.hpp"
+#include "API/CNWSUUID.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "API/CLoopingVisualEffect.hpp"
@@ -30,6 +31,7 @@
 #include "Utils.hpp"
 
 #include <cstring>
+#include <math.h>
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
@@ -101,6 +103,11 @@ Object::Object(const Plugin::CreateParams& params)
     REGISTER(DeleteFloat);
     REGISTER(DeleteVarRegex);
     REGISTER(GetPositionIsInTrigger);
+    REGISTER(GetInternalObjectType);
+    REGISTER(AcquireItem);
+    REGISTER(SetFacing);
+    REGISTER(ClearSpellEffectsOnOthers);
+    REGISTER(PeekUUID);
 
 #undef REGISTER
 }
@@ -834,6 +841,87 @@ ArgumentStack Object::GetPositionIsInTrigger(ArgumentStack&& args)
 
         Vector vPosition = {fX, fY, fZ};
         retVal = pTrigger->InTrigger(vPosition);
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Object::GetInternalObjectType(ArgumentStack&& args)
+{
+    const auto objectId = Services::Events::ExtractArgument<Types::ObjectID>(args);
+
+    if (auto* go = Utils::GetGameObject(objectId))
+    {
+        return Services::Events::Arguments(go->m_nObjectType);
+    }
+
+    return Services::Events::Arguments(-1);
+}
+
+ArgumentStack Object::AcquireItem(ArgumentStack&& args)
+{
+    int32_t retVal = false;
+
+    if (auto *pObject = object(args))
+    {
+        const auto oidItem = Services::Events::ExtractArgument<Types::ObjectID>(args);
+          ASSERT_OR_THROW(oidItem != Constants::OBJECT_INVALID);
+
+        if (auto *pItem = API::Globals::AppManager()->m_pServerExoApp->GetItemByGameObjectID(oidItem))
+        {
+            retVal = Utils::AcquireItem(pItem, pObject);
+        }
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Object::SetFacing(ArgumentStack&& args)
+{
+    if (auto *pObject = object(args))
+    {
+        const auto degrees = Services::Events::ExtractArgument<float>(args);
+
+        float radians = degrees * (M_PI / 180);
+        auto vOrientation = Vector{cos(radians), sin(radians), 0.0f};
+
+        if (auto *pPlaceable = Utils::AsNWSPlaceable(pObject))
+            pPlaceable->SetOrientation(vOrientation);
+        else
+            pObject->SetOrientation(vOrientation);
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Object::ClearSpellEffectsOnOthers(ArgumentStack&& args)
+{
+    if (auto *pObject = object(args))
+    {
+        pObject->ClearSpellEffectsOnOthers();
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Object::PeekUUID(ArgumentStack&& args)
+{
+    std::string retVal;
+    const auto objectId = Services::Events::ExtractArgument<Types::ObjectID>(args);
+      ASSERT_OR_THROW(objectId != Constants::OBJECT_INVALID);
+
+    if (auto *pGameObject = Globals::AppManager()->m_pServerExoApp->GetGameObject(objectId))
+    {
+        static auto CanCarryUUID = reinterpret_cast<bool(*)(int32_t)>(
+                Platform::ASLR::GetRelocatedAddress(API::Functions::_ZN8CNWSUUID12CanCarryUUIDEi));
+
+        if (CanCarryUUID(pGameObject->m_nObjectType))
+        {
+            if (auto *pArea = Utils::AsNWSArea(pGameObject))
+                retVal = pArea->m_pUUID.m_uuid.CStr();
+            else if (auto *pObject = Utils::AsNWSObject(pGameObject))
+                retVal = pObject->m_pUUID.m_uuid.CStr();
+        }
     }
 
     return Services::Events::Arguments(retVal);

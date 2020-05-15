@@ -2,6 +2,7 @@
 
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
+#include "API/CExoBase.hpp"
 #include "API/C2DA.hpp"
 #include "API/CNWRules.hpp"
 #include "API/CTwoDimArrays.hpp"
@@ -20,7 +21,9 @@
 #include "API/Functions.hpp"
 #include "Utils.hpp"
 #include "Services/Config/Config.hpp"
+#include "Services/Plugins/Plugins.hpp"
 #include "Services/Commands/Commands.hpp"
+#include "Services/Tasks/Tasks.hpp"
 
 #include <string>
 #include <cstdio>
@@ -85,6 +88,9 @@ Util::Util(const Plugin::CreateParams& params)
     REGISTER(SetInstructionLimit);
     REGISTER(RegisterServerConsoleCommand);
     REGISTER(UnregisterServerConsoleCommand);
+    REGISTER(PluginExists);
+    REGISTER(GetUserDirectory);
+    REGISTER(GetScriptReturnValue);
 
 #undef REGISTER
 
@@ -149,7 +155,7 @@ ArgumentStack Util::GetCurrentScriptName(ArgumentStack&& args)
     const auto depth = Services::Events::ExtractArgument<int32_t>(args);
 
     auto *pVM = API::Globals::VirtualMachine();
-    if (pVM && pVM->m_pVirtualMachineScript && pVM->m_nRecursionLevel >= 0 && pVM->m_nRecursionLevel >= depth)
+    if (pVM && pVM->m_nRecursionLevel >= 0 && pVM->m_nRecursionLevel >= depth)
     {
         auto& script = pVM->m_pVirtualMachineScript[pVM->m_nRecursionLevel - depth];
         if (!script.m_sScriptName.IsEmpty())
@@ -489,11 +495,28 @@ ArgumentStack Util::SetInstructionLimit(ArgumentStack&& args)
     const auto limit = Services::Events::ExtractArgument<int32_t>(args);
 
     if (limit < 0)
-        Globals::VirtualMachine()->m_nInstructionLimit = defaultInstructionLimit;
+    {
+        // We queue it on the main thread so it'll reset after the current script is done executing
+        g_plugin->GetServices()->m_tasks->QueueOnMainThread(
+            [](){ Globals::VirtualMachine()->m_nInstructionLimit = defaultInstructionLimit; });
+    }
     else
         Globals::VirtualMachine()->m_nInstructionLimit = limit;
 
     return Services::Events::Arguments();
+}
+
+ArgumentStack Util::GetScriptReturnValue(ArgumentStack&&)
+{
+    int32_t retVal = 0;
+
+    int32_t nParameterType;
+    void* pParameter;
+    if (Globals::VirtualMachine()->GetRunScriptReturnValue(&nParameterType, &pParameter) && nParameterType == 3) {
+        retVal = (intptr_t)pParameter;
+    }
+
+    return Services::Events::Arguments(retVal);
 }
 
 ArgumentStack Util::RegisterServerConsoleCommand(ArgumentStack&& args)
@@ -546,6 +569,19 @@ ArgumentStack Util::UnregisterServerConsoleCommand(ArgumentStack&& args)
     }
 
     return Services::Events::Arguments();
+}
+
+ArgumentStack Util::PluginExists(ArgumentStack&& args)
+{
+    std::string pluginName = Services::Events::ExtractArgument<std::string>(args);
+    std::string pluginNameWithoutPrefix = pluginName.substr(5, pluginName.length() - 5);
+
+    return GetServices()->m_plugins->FindPluginByName(pluginNameWithoutPrefix) ? Services::Events::Arguments(1) : Services::Events::Arguments(0);
+}
+
+ArgumentStack Util::GetUserDirectory(ArgumentStack&&)
+{
+    return Services::Events::Arguments(Globals::ExoBase()->m_sUserDirectory.CStr());
 }
 
 }

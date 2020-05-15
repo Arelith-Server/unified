@@ -22,6 +22,7 @@ private:
     ArgumentStack GetKnowsFeat                  (ArgumentStack&& args);
     ArgumentStack GetFeatCountByLevel           (ArgumentStack&& args);
     ArgumentStack GetFeatByLevel                (ArgumentStack&& args);
+    ArgumentStack GetFeatGrantLevel             (ArgumentStack&& args);
     ArgumentStack GetFeatCount                  (ArgumentStack&& args);
     ArgumentStack GetFeatByIndex                (ArgumentStack&& args);
     ArgumentStack GetMeetsFeatRequirements      (ArgumentStack&& args);
@@ -56,9 +57,7 @@ private:
     ArgumentStack SetMovementRateFactor         (ArgumentStack&& args);
     ArgumentStack SetAlignmentGoodEvil          (ArgumentStack&& args);
     ArgumentStack SetAlignmentLawChaos          (ArgumentStack&& args);
-    ArgumentStack GetDomain                     (ArgumentStack&& args);
     ArgumentStack SetDomain                     (ArgumentStack&& args);
-    ArgumentStack GetSpecialization             (ArgumentStack&& args);
     ArgumentStack SetSpecialization             (ArgumentStack&& args);
     ArgumentStack GetSoundset                   (ArgumentStack&& args);
     ArgumentStack SetSoundset                   (ArgumentStack&& args);
@@ -102,8 +101,26 @@ private:
     ArgumentStack SetDisarmable                 (ArgumentStack&& args);
     ArgumentStack SetFaction                    (ArgumentStack&& args);
     ArgumentStack GetFaction                    (ArgumentStack&& args);
-    
+    ArgumentStack GetFlatFooted                 (ArgumentStack&& args);
+    ArgumentStack SerializeQuickbar             (ArgumentStack&& args);
+    ArgumentStack DeserializeQuickbar           (ArgumentStack&& args);
+    ArgumentStack SetCasterLevelModifier        (ArgumentStack&& args);
+    ArgumentStack GetCasterLevelModifier        (ArgumentStack&& args);
+    ArgumentStack SetCasterLevelOverride        (ArgumentStack&& args);
+    ArgumentStack GetCasterLevelOverride        (ArgumentStack&& args);
+    ArgumentStack JumpToLimbo                   (ArgumentStack&& args);
+
     CNWSCreature *creature(ArgumentStack& args);
+
+private:
+    static bool s_bAdjustCasterLevel;
+    static bool s_bCasterLevelHooksInitialized;
+
+    static void InitCasterLevelHooks();
+    static void CNWSCreatureStats__GetClassLevel(bool before, CNWSCreatureStats* thisPtr, uint8_t nMultiClass, BOOL bUseNegativeLevel);
+    static void CNWVirtualMachineCommands__ExecuteCommandGetCasterLevel(bool before, CNWVirtualMachineCommands*, int32_t, int32_t);
+    static void CNWVirtualMachineCommands__ExecuteCommandResistSpell(bool before, CNWVirtualMachineCommands*, int32_t, int32_t);
+    static void CGameEffect__SetCreator(bool before, CGameEffect*, OBJECT_ID);
 
 };
 

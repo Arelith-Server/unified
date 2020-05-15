@@ -287,7 +287,7 @@ ArgumentStack Arelith::BaseTouchAttack(ArgumentStack&& args)
     int32_t retVal = 0;
     int32_t nAttackBonus = 0;
     int16_t nAC = 0;
-    uint16_t nRoll = 0, nThreatRoll = 0;
+    uint16_t nRoll = 0;
     uint8_t nConcealment = 0, nAttackResult = 0;
 
     if (bRanged)
