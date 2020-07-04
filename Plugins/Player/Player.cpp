@@ -102,6 +102,7 @@ Player::Player(const Plugin::CreateParams& params)
     REGISTER(GetPlatformId);
     REGISTER(GetLanguage);
     REGISTER(SetResManOverride);
+    REGISTER(SetCustomToken);
 
 #undef REGISTER
 
@@ -1187,7 +1188,7 @@ ArgumentStack Player::PossessCreature(ArgumentStack&& args)
         return Services::Events::Arguments(0);
     }
     auto *pPOS = g_plugin->GetServices()->m_perObjectStorage.get();
-    auto possessedOidPOS = *pPOS->Get<int>(pPossessor->m_idSelf, "possessedOid");
+    auto possessedOidPOS = pPOS->Get<int>(pPossessor->m_idSelf, "possessedOid");
     if (possessedOidPOS)
     {
         LOG_ERROR("Attempt to possess a creature while already possessing.");
@@ -1203,9 +1204,9 @@ ArgumentStack Player::PossessCreature(ArgumentStack&& args)
                 +[](CNWSCreature *pPossessed) -> void
                 {
                     auto *pPOS = g_plugin->GetServices()->m_perObjectStorage.get();
-                    auto possessorOidPOS = *pPOS->Get<int>(pPossessed->m_idSelf, "possessorOid");
+                    auto possessorOidPOS = pPOS->Get<int>(pPossessed->m_idSelf, "possessorOid");
                     auto pServer = Globals::AppManager()->m_pServerExoApp;
-                    auto *pPossessor = pServer->GetCreatureByGameObjectID(possessorOidPOS);
+                    auto *pPossessor = possessorOidPOS ? pServer->GetCreatureByGameObjectID(*possessorOidPOS) : nullptr;
                     if (pPossessor)
                     {
                         pPossessor->UnpossessFamiliar();
@@ -1224,7 +1225,7 @@ ArgumentStack Player::PossessCreature(ArgumentStack&& args)
                 +[](CNWSCreature *pPossessor) -> void
                 {
                     auto *pPOS = g_plugin->GetServices()->m_perObjectStorage.get();
-                    auto possessorOidPOS = *pPOS->Get<int>(pPossessor->m_idSelf, "possessorOid");
+                    auto possessorOidPOS = pPOS->Get<int>(pPossessor->m_idSelf, "possessorOid");
                     if (possessorOidPOS)
                     {
                         LOG_ERROR("Attempt to possess a familiar while already possessing.");
@@ -1242,29 +1243,39 @@ ArgumentStack Player::PossessCreature(ArgumentStack&& args)
                     if (!before)
                     {
                         auto *pPOS = g_plugin->GetServices()->m_perObjectStorage.get();
-                        auto possessedOidPOS = *pPOS->Get<int>(pPossessor->m_idSelf, "possessedOid");
+                        auto possessedOidPOS = pPOS->Get<int>(pPossessor->m_idSelf, "possessedOid");
                         if (possessedOidPOS)
                         {
-                            pPossessor->RemoveAssociate(possessedOidPOS);
+                            pPossessor->RemoveAssociate(*possessedOidPOS);
                             pPOS->Remove(pPossessor->m_idSelf, "possessedOid");
-                            pPOS->Remove(possessedOidPOS, "possessorOid");
+                            pPOS->Remove(*possessedOidPOS, "possessorOid");
+
+                            auto possessedAssociateType = pPOS->Get<int>(pPossessor->m_idSelf, "possessedAssociateType");
+                            if (possessedAssociateType && *possessedAssociateType != Constants::AssociateType::None)
+                            {
+                                pPossessor->AddAssociate(*possessedOidPOS, *possessedAssociateType);
+                                pPOS->Remove(pPossessor->m_idSelf, "possessedAssociateType");
+                            }
                         }
                     }
                 });
     }
 
+    // Save previous associate type so it can be set back after unpossess
+    pPOS->Set(possessorId, "possessedAssociateType", (int32_t)pPossessed->m_nAssociateType);
+
     // If they already have a familiar we temporarily remove it as an associate
     // then we add the possessed creature as a familiar. We then add the regular familiar back.
     // This is because PossessFamiliar looks for the first associate of type familiar.
-    auto pFamiliarId = pPossessor->GetAssociateId(3, 1);
+    auto pFamiliarId = pPossessor->GetAssociateId(Constants::AssociateType::Familiar, 1);
     if (pFamiliarId)
         pPossessor->RemoveAssociate(pFamiliarId);
 
-    pPossessor->AddAssociate(possessedId, 3);
+    pPossessor->AddAssociate(possessedId, Constants::AssociateType::Familiar);
     pPossessor->PossessFamiliar();
 
     if (pFamiliarId)
-        pPossessor->AddAssociate(pFamiliarId, 3);
+        pPossessor->AddAssociate(pFamiliarId, Constants::AssociateType::Familiar);
 
     if (bCreateQB)
         pPossessed->CreateDefaultQuickButtons();
@@ -1333,6 +1344,27 @@ ArgumentStack Player::SetResManOverride(ArgumentStack&& args)
         if (pMessage)
         {
             pMessage->SendServerToPlayerResmanOverride(pPlayer->m_nPlayerID, resType, oldResName.c_str(), newResName.c_str());
+        }
+        else
+        {
+            LOG_ERROR("Unable to get CNWSMessage");
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SetCustomToken(ArgumentStack&& args)
+{
+    if (auto *pPlayer = player(args))
+    {
+        const auto tokenNumber = Services::Events::ExtractArgument<int32_t>(args);
+        const auto tokenText = Services::Events::ExtractArgument<std::string>(args);
+
+        auto *pMessage = static_cast<CNWSMessage *>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
+        if (pMessage)
+        {
+            pMessage->SendServerToPlayerSetCustomToken(pPlayer->m_nPlayerID, tokenNumber, tokenText.c_str());
         }
         else
         {
