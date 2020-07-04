@@ -2,26 +2,26 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CExoString.hpp"
-#include "CServerAIList.hpp"
 #include "CExoLinkedList.hpp"
+#include "CExoString.hpp"
 #include "CServerAIEventNode.hpp"
+#include "CServerAIList.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CServerAIMaster)
 #endif
 
-struct CResGFF;
-struct CNWSCreature;
-struct CServerExoAppInternal;
 struct CGameEffect;
-struct CNWSObject;
-struct CItemPropertyApplierRemover;
-struct CNWSItem;
-struct CNWItemProperty;
-struct CResStruct;
 struct CGameEffectApplierRemover;
+struct CItemPropertyApplierRemover;
+struct CNWItemProperty;
+struct CNWSCreature;
+struct CNWSItem;
+struct CNWSObject;
+struct CResGFF;
+struct CResStruct;
+struct CServerExoAppInternal;
 
 
 typedef int BOOL;

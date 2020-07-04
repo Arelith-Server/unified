@@ -7,14 +7,13 @@
 #include "API/Types.hpp"
 #include "Services/Hooks/Hooks.hpp"
 #include "Services/Messaging/Messaging.hpp"
-#include "ViewPtr.hpp"
 #include "Utils.hpp"
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
-static ViewPtr<CombatModes::CombatModes> g_plugin;
+static CombatModes::CombatModes* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -46,14 +45,14 @@ CombatModes::CombatModes(const Plugin::CreateParams& params)
     g_SetCombatModeHook = GetServices()->m_hooks->FindHookByAddress(API::Functions::_ZN12CNWSCreature13SetCombatModeEhi);
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_EVENT_SIGNAL_EVENT_SKIPPED",
-        [this](const std::vector<std::string> message)
+        [this](const std::vector<std::string>& message)
         {
             if (message[0] == "NWNX_ON_COMBAT_MODE_ON" || message[0] == "NWNX_ON_COMBAT_MODE_OFF")
                 this->m_Skipped = std::strtoul(message[1].c_str(), NULL, 0) == 1;
         });
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_WEAPON_SIGNAL",
-        [this](const std::vector<std::string> message)
+        [this](const std::vector<std::string>& message)
         {
             if (message[0] == "FLURRY_OF_BLOWS_REQUIRED")
                 this->m_FlurryOfBlows = true;

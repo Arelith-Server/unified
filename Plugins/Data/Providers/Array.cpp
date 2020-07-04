@@ -32,42 +32,39 @@ CommonArgs ExtractCommonArgs(Events::ArgumentStack& args)
 
 Array::Array(EventsProxy& events)
 {
-    events.RegisterEvent("ARRAY_AT", &Array::OnArrayAt);
-    events.RegisterEvent("ARRAY_CLEAR", &Array::OnArrayClear);
-    events.RegisterEvent("ARRAY_CONTAINS", &Array::OnArrayContains);
-    events.RegisterEvent("ARRAY_COPY", &Array::OnArrayCopy);
-    events.RegisterEvent("ARRAY_ERASE", &Array::OnArrayErase);
-    events.RegisterEvent("ARRAY_FIND", &Array::OnArrayFind);
-    events.RegisterEvent("ARRAY_INSERT", &Array::OnArrayInsert);
-    events.RegisterEvent("ARRAY_PUSH_BACK", &Array::OnArrayPushBack);
-    events.RegisterEvent("ARRAY_RESIZE", &Array::OnArrayResize);
-    events.RegisterEvent("ARRAY_SHUFFLE", &Array::OnArrayShuffle);
-    events.RegisterEvent("ARRAY_SIZE", &Array::OnArraySize);
-    events.RegisterEvent("ARRAY_SORT_ASCENDING", &Array::OnArraySortAscending);
-    events.RegisterEvent("ARRAY_SORT_DESCENDING", &Array::OnArraySortDescending);
-    events.RegisterEvent("ARRAY_SET", &Array::OnArraySet);
+    events.RegisterEvent("ArrayAt", &Array::ArrayAt);
+    events.RegisterEvent("ArrayClear", &Array::ArrayClear);
+    events.RegisterEvent("ArrayContains", &Array::ArrayContains);
+    events.RegisterEvent("ArrayCopy", &Array::ArrayCopy);
+    events.RegisterEvent("ArrayErase", &Array::ArrayErase);
+    events.RegisterEvent("ArrayFind", &Array::ArrayFind);
+    events.RegisterEvent("ArrayInsert", &Array::ArrayInsert);
+    events.RegisterEvent("ArrayPushBack", &Array::ArrayPushBack);
+    events.RegisterEvent("ArrayResize", &Array::ArrayResize);
+    events.RegisterEvent("ArrayShuffle", &Array::ArrayShuffle);
+    events.RegisterEvent("ArraySize", &Array::ArraySize);
+    events.RegisterEvent("ArraySortAscending", &Array::ArraySortAscending);
+    events.RegisterEvent("ArraySortDescending", &Array::ArraySortDescending);
+    events.RegisterEvent("ArraySet", &Array::ArraySet);
 }
 
-Events::ArgumentStack Array::OnArrayAt(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayAt(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
     const int32_t index = Events::ExtractArgument<int32_t>(rawArgs);
 
-    Events::ArgumentStack ret;
-
     switch (args.type)
     {
-        case ArrayType::FLOAT: Events::InsertArgument(ret, ArrayImpl<float>::At(args.oid, args.tag, index)); break;
-        case ArrayType::INTEGER: Events::InsertArgument(ret, ArrayImpl<int32_t>::At(args.oid, args.tag, index)); break;
-        case ArrayType::OBJECT: Events::InsertArgument(ret, ArrayImpl<ObjectID>::At(args.oid, args.tag, index)); break;
-        case ArrayType::STRING: Events::InsertArgument(ret, ArrayImpl<std::string>::At(args.oid, args.tag, index)); break;
-        default: ASSERT_FAIL(); break;
+        case ArrayType::FLOAT:   return Events::Arguments(ArrayImpl<float>::At(args.oid, args.tag, index));
+        case ArrayType::INTEGER: return Events::Arguments(ArrayImpl<int32_t>::At(args.oid, args.tag, index));
+        case ArrayType::OBJECT:  return Events::Arguments(ArrayImpl<ObjectID>::At(args.oid, args.tag, index));
+        case ArrayType::STRING:  return Events::Arguments(ArrayImpl<std::string>::At(args.oid, args.tag, index));
+        default: ASSERT_FAIL();  return Events::Arguments();
     }
 
-    return ret;
 }
 
-Events::ArgumentStack Array::OnArrayClear(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayClear(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
 
@@ -80,10 +77,10 @@ Events::ArgumentStack Array::OnArrayClear(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArrayContains(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayContains(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
     bool containsElement = false;
@@ -97,12 +94,10 @@ Events::ArgumentStack Array::OnArrayContains(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    Events::ArgumentStack ret;
-    Events::InsertArgument(ret, containsElement ? 1 : 0);
-    return ret;
+    return Events::Arguments(containsElement ? 1 : 0);
 }
 
-Events::ArgumentStack Array::OnArrayCopy(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayCopy(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
     std::string otherTag = Events::ExtractArgument<std::string>(rawArgs);
@@ -116,10 +111,10 @@ Events::ArgumentStack Array::OnArrayCopy(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArrayErase(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayErase(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
     const int32_t index = Events::ExtractArgument<int32_t>(rawArgs);
@@ -133,27 +128,24 @@ Events::ArgumentStack Array::OnArrayErase(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArrayFind(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayFind(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
-    Events::ArgumentStack ret;
 
     switch (args.type)
     {
-        case ArrayType::FLOAT: Events::InsertArgument(ret, ArrayImpl<float>::Find(args.oid, args.tag, Events::ExtractArgument<float>(rawArgs))); break;
-        case ArrayType::INTEGER: Events::InsertArgument(ret, ArrayImpl<int32_t>::Find(args.oid, args.tag, Events::ExtractArgument<int32_t>(rawArgs))); break;
-        case ArrayType::OBJECT: Events::InsertArgument(ret, ArrayImpl<ObjectID>::Find(args.oid, args.tag, Events::ExtractArgument<ObjectID>(rawArgs))); break;
-        case ArrayType::STRING: Events::InsertArgument(ret, ArrayImpl<std::string>::Find(args.oid, args.tag, Events::ExtractArgument<std::string>(rawArgs))); break;
-        default: ASSERT_FAIL(); break;
+        case ArrayType::FLOAT:   return Events::Arguments(ArrayImpl<float>::Find(args.oid, args.tag, Events::ExtractArgument<float>(rawArgs)));
+        case ArrayType::INTEGER: return Events::Arguments(ArrayImpl<int32_t>::Find(args.oid, args.tag, Events::ExtractArgument<int32_t>(rawArgs)));
+        case ArrayType::OBJECT:  return Events::Arguments(ArrayImpl<ObjectID>::Find(args.oid, args.tag, Events::ExtractArgument<ObjectID>(rawArgs)));
+        case ArrayType::STRING:  return Events::Arguments(ArrayImpl<std::string>::Find(args.oid, args.tag, Events::ExtractArgument<std::string>(rawArgs)));
+        default: ASSERT_FAIL();  return Events::Arguments();
     }
-
-    return ret;
 }
 
-Events::ArgumentStack Array::OnArrayInsert(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayInsert(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
     const int32_t index = Events::ExtractArgument<int32_t>(rawArgs);
@@ -167,10 +159,10 @@ Events::ArgumentStack Array::OnArrayInsert(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArrayPushBack(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayPushBack(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
 
@@ -183,10 +175,10 @@ Events::ArgumentStack Array::OnArrayPushBack(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArrayResize(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayResize(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
     const int32_t size = Events::ExtractArgument<int32_t>(rawArgs);
@@ -200,10 +192,10 @@ Events::ArgumentStack Array::OnArrayResize(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArrayShuffle(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArrayShuffle(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
 
@@ -216,10 +208,10 @@ Events::ArgumentStack Array::OnArrayShuffle(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArraySize(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArraySize(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
     int32_t size = 0;
@@ -233,12 +225,10 @@ Events::ArgumentStack Array::OnArraySize(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    Events::ArgumentStack ret;
-    Events::InsertArgument(ret, size);
-    return ret;
+    return Events::Arguments(size);
 }
 
-Events::ArgumentStack Array::OnArraySortAscending(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArraySortAscending(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
 
@@ -251,10 +241,10 @@ Events::ArgumentStack Array::OnArraySortAscending(Events::ArgumentStack&& rawArg
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArraySortDescending(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArraySortDescending(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
 
@@ -267,10 +257,10 @@ Events::ArgumentStack Array::OnArraySortDescending(Events::ArgumentStack&& rawAr
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
-Events::ArgumentStack Array::OnArraySet(Events::ArgumentStack&& rawArgs)
+Events::ArgumentStack Array::ArraySet(Events::ArgumentStack&& rawArgs)
 {
     const CommonArgs args = ExtractCommonArgs(rawArgs);
     const int32_t index = Events::ExtractArgument<int32_t>(rawArgs);
@@ -284,7 +274,7 @@ Events::ArgumentStack Array::OnArraySet(Events::ArgumentStack&& rawArgs)
         default: ASSERT_FAIL(); break;
     }
 
-    return Events::ArgumentStack();
+    return Events::Arguments();
 }
 
 }

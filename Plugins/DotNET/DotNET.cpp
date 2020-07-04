@@ -13,6 +13,7 @@
 
 #include "sdk/coreclr_delegates.h"
 #include "sdk/hostfxr.h"
+#include <dirent.h>
 #include <dlfcn.h>
 #include <limits.h>
 
@@ -53,7 +54,7 @@ bool DotNET::InitThunks()
     if (auto nethost_path = Instance->GetServices()->m_config->Get<std::string>("NETHOST_PATH"))
     {
         nethost = dlopen(nethost_path->c_str(), RTLD_LAZY);
-        ASSERT_MSG(nethost, "NETHOST_PATH specified ('%s') but failed to open libnethost.so at that path", *nethost_path);
+        ASSERT_MSG(nethost, "NETHOST_PATH specified ('%s') but failed to open libnethost.so at that path", nethost_path->c_str());
     }
 
     if (!nethost)
@@ -61,9 +62,7 @@ bool DotNET::InitThunks()
         const char *paths[] = {
             "libnethost.so",
             "./libnethost.so",
-            "lib/libnethost.so",
-            "/usr/share/dotnet/packs/Microsoft.NETCore.App.Host.linux-x64/3.0.0/runtimes/linux-x64/native/libnethost.so",
-            "/usr/share/dotnet/packs/Microsoft.NETCore.App.Host.linux-x64/3.0.1/runtimes/linux-x64/native/libnethost.so"
+            "lib/libnethost.so"
         };
         for (size_t i = 0; i < std::size(paths); i++)
         {
@@ -72,6 +71,48 @@ bool DotNET::InitThunks()
             {
                 LOG_INFO("Loaded libnethost.so from: %s (autodetected)", paths[i]);
                 break;
+            }
+        }
+    }
+
+    if (!nethost)
+    {
+        const auto hostBaseDir = "/usr/share/dotnet/packs/Microsoft.NETCore.App.Host.linux-x64/";
+        const auto hostLibSuffix = "/runtimes/linux-x64/native/libnethost.so";
+
+        DIR* dir = opendir(hostBaseDir);
+
+        if (dir != nullptr)
+        {
+            dirent* directoryEntry = readdir(dir);
+            std::vector<std::string> paths;
+
+            while (directoryEntry != nullptr)
+            {
+                if (directoryEntry->d_type == DT_DIR)
+                {
+                    const auto path = (std::string(hostBaseDir) + directoryEntry->d_name + hostLibSuffix);
+                    paths.push_back(path);
+                }
+
+                directoryEntry = readdir(dir);
+            }
+
+            closedir(dir);
+
+            if (!paths.empty())
+            {
+                std::sort(paths.begin(), paths.end(), std::greater<std::string>());
+                for (std::string path : paths)
+                {
+                    nethost = dlopen(path.c_str(), RTLD_LAZY);
+
+                    if (nethost)
+                    {
+                        LOG_INFO("Loaded libnethost.so from: %s (autodetected)", path);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -245,9 +286,9 @@ void DotNET::RegisterHandlers(AllHandlers *handlers, unsigned size)
 
     LOG_DEBUG("Registered main loop handler: %p", Handlers.MainLoop);
     Instance->GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CServerExoAppInternal8MainLoopEv, int32_t>(
-        +[](Services::Hooks::CallType type, CServerExoAppInternal*)
+        +[](bool before, CServerExoAppInternal*)
         {
-            if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+            if (before)
             {
                 static uint64_t frame = 0;
                 if (Handlers.MainLoop)

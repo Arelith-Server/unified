@@ -116,6 +116,9 @@ void NWNX_Administration_SetModuleName(string name);
 /// @param name The name to give the server.
 void NWNX_Administration_SetServerName(string name);
 
+/// @brief Returns the server's name as shown to the serverlist.
+string NWNX_Administration_GetServerName();
+
 /// @brief Get an @ref admin_opts "Administration Option" value.
 /// @param option An @ref admin_opts "Administration Option".
 /// @return The current setting for the supplied option from @ref admin_opts "Administration Options".
@@ -147,6 +150,10 @@ int NWNX_Administration_GetDebugValue(int type);
 /// @param type The debug type to adjust from @ref admin_debug "Administration Debug Types".
 /// @param state The new state for the debug type, TRUE or FALSE
 void NWNX_Administration_SetDebugValue(int type, int state);
+
+/// @brief Reload all rules (2da stuff etc).
+/// @warning DANGER, DRAGONS. Bad things may or may not happen.
+void NWNX_Administration_ReloadRules();
 
 /// @}
 
@@ -271,6 +278,13 @@ void NWNX_Administration_SetServerName(string name)
     NWNX_CallFunction(NWNX_Administration, sFunc);
 }
 
+string NWNX_Administration_GetServerName()
+{
+    string sFunc = "GetServerName";
+    NWNX_CallFunction(NWNX_Administration, sFunc);
+    return NWNX_GetReturnValueString(NWNX_Administration, sFunc);
+}
+
 int NWNX_Administration_GetPlayOption(int option)
 {
     string sFunc = "GetPlayOption";
@@ -317,5 +331,12 @@ void NWNX_Administration_SetDebugValue(int type, int state)
 
     NWNX_PushArgumentInt(NWNX_Administration, sFunc, state);
     NWNX_PushArgumentInt(NWNX_Administration, sFunc, type);
+    NWNX_CallFunction(NWNX_Administration, sFunc);
+}
+
+void NWNX_Administration_ReloadRules()
+{
+    string sFunc = "ReloadRules";
+
     NWNX_CallFunction(NWNX_Administration, sFunc);
 }

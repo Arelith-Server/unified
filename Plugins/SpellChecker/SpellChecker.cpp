@@ -13,7 +13,7 @@ using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::Services;
 
-static ViewPtr<SpellChecker::SpellChecker> g_plugin;
+static SpellChecker::SpellChecker* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -47,7 +47,7 @@ SpellChecker::SpellChecker(const Plugin::CreateParams& params)
 
     REGISTER(FindMisspell);
     REGISTER(GetSuggestSpell);
-    SpellChecker::Init(GetServices()->m_config);
+    SpellChecker::Init(GetServices()->m_config.get());
 #undef REGISTER
 
 }
@@ -68,7 +68,7 @@ uintptr_t SpellChecker::EstbSymFunction(const std::string& symbol)
     }
     return var;
 }
-void SpellChecker::Init(NWNXLib::ViewPtr<NWNXLib::Services::ConfigProxy> config)
+void SpellChecker::Init(NWNXLib::Services::ConfigProxy* config)
 {
     SpellChecker::handle = dlopen("libhunspell.so", RTLD_NOW | RTLD_NODELETE);
 
@@ -95,9 +95,6 @@ void SpellChecker::Init(NWNXLib::ViewPtr<NWNXLib::Services::ConfigProxy> config)
 }
 ArgumentStack SpellChecker::FindMisspell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
-
     std::string sentence = Services::Events::ExtractArgument<std::string>(args);
 
     std::string  word;
@@ -120,19 +117,13 @@ ArgumentStack SpellChecker::FindMisspell(ArgumentStack&& args)
         sc = SpellChecker::spell_e(SpellChecker::created, list[i].c_str());
         if(sc == 0)
             output += list[i] + ",";
-
-
-
     }
 
-    Services::Events::InsertArgument(stack, output);
-    return stack;
+    return Services::Events::Arguments(output);
 }
 
 ArgumentStack SpellChecker::GetSuggestSpell(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
     std::string word = Services::Events::ExtractArgument<std::string>(args);
 
     const char* cword;
@@ -152,11 +143,8 @@ ArgumentStack SpellChecker::GetSuggestSpell(ArgumentStack&& args)
 
             SpellChecker::free_e(SpellChecker::created, &wlst, ns);
         }
-
     }
-
-    Services::Events::InsertArgument(stack, output);
-    return stack;
+    return Services::Events::Arguments(output);
 }
 
 

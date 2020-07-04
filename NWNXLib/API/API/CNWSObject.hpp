@@ -1,47 +1,47 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CNWSScriptVarTable.hpp"
-#include "CResRef.hpp"
 #include "CExoArrayList.hpp"
-#include "MaterialShaderParam.hpp"
-#include "CNWSObjectActionNode.hpp"
-#include "CNWSUUID.hpp"
-#include "CExoString.hpp"
-#include "CScriptLocation.hpp"
 #include "CExoLinkedList.hpp"
+#include "CExoLocString.hpp"
+#include "CExoString.hpp"
+#include "CGameObject.hpp"
+#include "CNWSObjectActionNode.hpp"
+#include "CNWSScriptVarTable.hpp"
+#include "CNWSTransition.hpp"
+#include "CNWSUUID.hpp"
+#include "CResRef.hpp"
+#include "CScriptLocation.hpp"
+#include "MaterialShaderParam.hpp"
 #include "ObjectVisualTransformData.hpp"
 #include "Vector.hpp"
-#include "CGameObject.hpp"
-#include "CExoLocString.hpp"
-#include "CNWSTransition.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSObject)
 #endif
 
-struct CNWSPlayer;
-struct CNWSExpression;
 struct CExoString;
-struct CNWSArea;
-struct CNWSDialog;
-struct CNWSExpression;
-struct CResGFF;
 struct CGameEffect;
-struct CNWSCreature;
-struct CNWSpell;
-struct CNWSAnimBase;
-struct CNWCCMessageData;
 struct CGameEffect;
 struct CLoopingVisualEffect;
+struct CNWCCMessageData;
+struct CNWSAnimBase;
+struct CNWSArea;
+struct CNWSCreature;
+struct CNWSDialog;
+struct CNWSExpression;
+struct CNWSExpression;
+struct CNWSPlayer;
+struct CNWSpell;
+struct CResGFF;
 struct CResStruct;
 
 
-typedef uint32_t STRREF;
 typedef int BOOL;
 typedef CExoLinkedListNode * CExoLinkedListPosition;
 typedef uint32_t OBJECT_ID;
+typedef uint32_t STRREF;
 
 
 struct CNWSObject : CGameObject

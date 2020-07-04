@@ -1,10 +1,10 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CResHelper.hpp"
-#include "CResSET.hpp"
-#include "CResRef.hpp"
 #include "CExoString.hpp"
+#include "CResHelper.hpp"
+#include "CResRef.hpp"
+#include "CResSET.hpp"
 #include "Vector.hpp"
 
 

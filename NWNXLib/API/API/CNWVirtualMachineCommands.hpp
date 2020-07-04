@@ -9,10 +9,10 @@
 NWN_API_PROLOGUE(CNWVirtualMachineCommands)
 #endif
 
-struct CResGFF;
-typedef int32_t (*pfCVMCommands)(int32_t, int32_t);
 struct C2DA;
+struct CResGFF;
 struct CResStruct;
+typedef int32_t (*pfCVMCommands)(int32_t, int32_t);
 
 
 typedef int BOOL;
@@ -239,6 +239,7 @@ struct CNWVirtualMachineCommands : CVirtualMachineCmdImplementer
     int32_t ExecuteCommandGetDistanceBetween(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetDistanceBetweenLocations(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetDistanceToObject(int32_t nCommandId, int32_t nParameters);
+    int32_t ExecuteCommandGetDomain(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetDroppableFlag(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetEffect(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetEffectCasterLevel(int32_t nCommandId, int32_t nParameters);
@@ -402,6 +403,7 @@ struct CNWVirtualMachineCommands : CVirtualMachineCmdImplementer
     int32_t ExecuteCommandGetPCChatVolume(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetPCIPAddress(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetPlayerConnectionRelayed(int32_t nCommandId, int32_t nParameters);
+    int32_t ExecuteCommandGetPlayerBuildInfo(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetPCLevellingUp(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetPCPlayerName(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetPCPublicCDKey(int32_t nCommandId, int32_t nParameters);
@@ -422,6 +424,7 @@ struct CNWVirtualMachineCommands : CVirtualMachineCmdImplementer
     int32_t ExecuteCommandGetSittingCreature(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetSkillRank(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetSkyBox(int32_t nCommandId, int32_t nParameters);
+    int32_t ExecuteCommandGetSpecialization(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetSpellCast(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetSpellCasterItem(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandGetSpellId(int32_t nCommandId, int32_t nParameters);
@@ -505,6 +508,7 @@ struct CNWVirtualMachineCommands : CVirtualMachineCmdImplementer
     int32_t ExecuteCommandPlaySoundByStrRef(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandPlayVisualAreaEffect(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandPopUpGUIPanel(int32_t nCommandId, int32_t nParameters);
+    int32_t ExecuteCommandPostString(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandPrintFloat(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandPrintInteger(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandPrintLogEntry(int32_t nCommandId, int32_t nParameters);
@@ -601,6 +605,7 @@ struct CNWVirtualMachineCommands : CVirtualMachineCmdImplementer
     int32_t ExecuteCommandSetSubRace(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandSetSubType(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandSetTag(int32_t nCommandId, int32_t nParameters);
+    int32_t ExecuteCommandSetTextureOverride(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandSetTime(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandSetTileLightColor(int32_t nCommandId, int32_t nParameters);
     int32_t ExecuteCommandSetTransitionTarget(int32_t nCommandId, int32_t nParameters);

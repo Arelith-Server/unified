@@ -2,21 +2,21 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CResRef.hpp"
-#include "CNWSObject.hpp"
-#include "CExoString.hpp"
-#include "Vector.hpp"
 #include "CExoLocString.hpp"
+#include "CExoString.hpp"
+#include "CNWSObject.hpp"
+#include "CResRef.hpp"
+#include "Vector.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSTrigger)
 #endif
 
-struct CResGFF;
 struct CNWSArea;
-struct CScriptLocation;
+struct CResGFF;
 struct CResStruct;
+struct CScriptLocation;
 
 
 typedef int BOOL;

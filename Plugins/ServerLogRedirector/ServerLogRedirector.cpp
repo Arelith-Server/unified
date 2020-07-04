@@ -1,14 +1,11 @@
 #include "ServerLogRedirector.hpp"
-#include "API/Version.hpp"
-#include "API/Functions.hpp"
 #include "API/CExoString.hpp"
 #include "Services/Config/Config.hpp"
 #include "Services/Hooks/Hooks.hpp"
-#include "ViewPtr.hpp"
 
 using namespace NWNXLib;
 
-static ViewPtr<ServerLogRedirector::ServerLogRedirector> g_plugin;
+static ServerLogRedirector::ServerLogRedirector* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -35,6 +32,9 @@ using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::Services;
 
+static bool s_printString;
+static bool s_hideValidateGFFResourceMessage;
+
 ServerLogRedirector::ServerLogRedirector(const Plugin::CreateParams& params)
     : Plugin(params)
 {
@@ -44,6 +44,11 @@ ServerLogRedirector::ServerLogRedirector(const Plugin::CreateParams& params)
 
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN17CExoDebugInternal16WriteToErrorFileERK10CExoString,
         void, CExoDebugInternal*, CExoString*>(&WriteToErrorFileHook);
+
+    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN25CNWVirtualMachineCommands25ExecuteCommandPrintStringEii,
+        int32_t>(+[](bool before, CNWVirtualMachineCommands*, int32_t, int32_t){ s_printString = before; });
+
+    s_hideValidateGFFResourceMessage = GetServices()->m_config->Get<bool>("HIDE_VALIDATEGFFRESOURCE_MESSAGES", false);
 }
 
 ServerLogRedirector::~ServerLogRedirector()
@@ -54,28 +59,40 @@ inline std::string TrimMessage(CExoString* message)
 {
     std::string s = std::string(message->CStr());
 
-    // Eat the auto-added timestamp.
-    auto idxOfBracket = s.find_first_of(']');
-    if (idxOfBracket != std::string::npos)
-        s.erase(0, idxOfBracket + 1);
+    if (!s_printString)
+    {
+        // Eat the auto-added timestamp.
+        auto idxOfBracket = s.find_first_of(']');
+        if (idxOfBracket != std::string::npos)
+            s.erase(0, idxOfBracket + 1);
+    }
 
     return Utils::trim(s);
 }
 
-void ServerLogRedirector::WriteToLogFileHook(Hooks::CallType type,
-    CExoDebugInternal*, CExoString* message)
+void ServerLogRedirector::WriteToLogFileHook(bool before, CExoDebugInternal*, CExoString* message)
 {
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
     {
         std::string str = TrimMessage(message);
-        LOG_INFO("(Server) %s", str);
+
+        if (s_hideValidateGFFResourceMessage)
+        {
+            if(str.find("*** ValidateGFFResource sent by user.") == std::string::npos)
+            {
+                LOG_INFO("(Server) %s", str);
+            }
+        }
+        else
+        {
+            LOG_INFO("(Server) %s", str);
+        }
     }
 }
 
-void ServerLogRedirector::WriteToErrorFileHook(Hooks::CallType type,
-    CExoDebugInternal*, CExoString* message)
+void ServerLogRedirector::WriteToErrorFileHook(bool before, CExoDebugInternal*, CExoString* message)
 {
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
     {
         std::string str = TrimMessage(message);
         LOG_INFO("(Error) %s", str);

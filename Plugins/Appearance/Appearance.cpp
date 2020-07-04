@@ -9,13 +9,12 @@
 #include "API/CNWSCreature.hpp"
 #include "Services/Events/Events.hpp"
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
-#include "ViewPtr.hpp"
 
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Appearance::Appearance> g_plugin;
+static Appearance::Appearance* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -79,14 +78,14 @@ CNWSPlayer *Appearance::Player(ArgumentStack& args)
     return pPlayer;
 }
 
-void Appearance::ComputeGameObjectUpdateForObjectHook(Services::Hooks::CallType type, CNWSMessage*,
+void Appearance::ComputeGameObjectUpdateForObjectHook(bool before, CNWSMessage*,
         CNWSPlayer *pPlayer, CNWSObject*, CGameObjectArray*, Types::ObjectID oidObjectToUpdate)
 {
     if (auto *pCreature = Utils::AsNWSCreature(Utils::GetGameObject(oidObjectToUpdate)))
     {
         static AppearanceOverrideData *pAOD;
 
-        if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+        if (before)
         {
             if (auto appearanceOverrideData = g_plugin->GetServices()->m_perObjectStorage->Get<void*>(oidObjectToUpdate,
                     Utils::ObjectIDToString(pPlayer->m_oidNWSObject)))
@@ -142,8 +141,6 @@ void Appearance::SetIntValue(int32_t type, int32_t value, std::bitset<OverrideTy
 
 ArgumentStack Appearance::SetOverride(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
     if (auto *pPlayer = Player(args))
     {
         const auto oidCreature = Services::Events::ExtractArgument<Types::ObjectID>(args);
@@ -239,12 +236,11 @@ ArgumentStack Appearance::SetOverride(ArgumentStack&& args)
         }
     }
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Appearance::GetOverride(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int32_t retVal = -1;
 
     if (auto *pPlayer = Player(args))
@@ -319,9 +315,7 @@ ArgumentStack Appearance::GetOverride(ArgumentStack&& args)
         }
     }
 
-    Services::Events::InsertArgument(stack, retVal);
-
-    return stack;
+    return Services::Events::Arguments(retVal);
 }
 
 }

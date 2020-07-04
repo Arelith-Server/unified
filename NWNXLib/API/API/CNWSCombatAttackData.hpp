@@ -10,11 +10,11 @@
 NWN_API_PROLOGUE(CNWSCombatAttackData)
 #endif
 
-struct CResGFF;
-struct CNWCCMessageData;
 struct CGameEffect;
-struct CResStruct;
+struct CNWCCMessageData;
 struct CNWSSpellScriptData;
+struct CResGFF;
+struct CResStruct;
 
 
 typedef int BOOL;

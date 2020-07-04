@@ -1,40 +1,40 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CExoArrayList.hpp"
-#include "CResRef.hpp"
 #include "AurList.hpp"
 #include "CBaseExoApp.hpp"
-#include "CExoString.hpp"
+#include "CExoArrayList.hpp"
 #include "CExoLocString.hpp"
+#include "CExoString.hpp"
+#include "CResRef.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CServerExoApp)
 #endif
 
-struct CNWSDoor;
-struct CNWSPlayer;
-struct CNWSArea;
-struct CNWSItem;
-struct CNWSClient;
-struct CNWSEncounter;
-struct CGameObject;
-struct CNWSStore;
-struct CWorldTimer;
-struct CNetLayer;
-struct CNWSModule;
-struct CServerExoAppInternal;
-struct CNWSCreature;
-struct CGameObjectArray;
-struct CNWSAreaOfEffectObject;
-struct CNWSWaypoint;
-struct CNWSPlaceable;
-struct CNWSTrigger;
-struct CConnectionLib;
 struct CCampaignDB;
-struct CServerAIMaster;
+struct CConnectionLib;
+struct CGameObject;
+struct CGameObjectArray;
+struct CNWSArea;
+struct CNWSAreaOfEffectObject;
+struct CNWSClient;
+struct CNWSCreature;
+struct CNWSDoor;
+struct CNWSEncounter;
+struct CNWSItem;
+struct CNWSModule;
+struct CNWSPlaceable;
+struct CNWSPlayer;
 struct CNWSSoundObject;
+struct CNWSStore;
+struct CNWSTrigger;
+struct CNWSWaypoint;
+struct CNetLayer;
+struct CServerAIMaster;
+struct CServerExoAppInternal;
+struct CWorldTimer;
 
 
 typedef int BOOL;
@@ -186,6 +186,8 @@ struct CServerExoApp : CBaseExoApp
     void AddSubNetProfileSendSize(uint32_t nPlayerID, uint32_t nSize);
     BOOL GetCreatureDeathLogging();
     void SetCreatureDeathLogging(BOOL );
+    BOOL GetHeartBeatLogging();
+    void SetHeartBeatLogging(BOOL );
     uint32_t GetClientsRequiredToDisableCPUSleep();
     BOOL GetStickyCombatModesEnabled();
     void SetStickyCombatModesEnabled(BOOL v);

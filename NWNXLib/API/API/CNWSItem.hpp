@@ -2,22 +2,22 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CResRef.hpp"
-#include "CNWSObject.hpp"
-#include "CNWItem.hpp"
-#include "CExoString.hpp"
 #include "CExoLocString.hpp"
+#include "CExoString.hpp"
+#include "CNWItem.hpp"
 #include "CNWItemProperty.hpp"
+#include "CNWSObject.hpp"
+#include "CResRef.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSItem)
 #endif
 
-struct CResGFF;
-struct CNWSCreature;
-struct CNWSArea;
 struct CItemRepository;
+struct CNWSArea;
+struct CNWSCreature;
+struct CResGFF;
 struct CResStruct;
 
 

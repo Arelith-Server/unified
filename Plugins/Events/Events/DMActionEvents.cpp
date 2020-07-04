@@ -22,7 +22,7 @@ using namespace NWNXLib::Platform;
 
 static NWNXLib::Hooking::FunctionHook* m_HandlePlayerToServerDungeonMasterMessageHook = nullptr;
 
-DMActionEvents::DMActionEvents(NWNXLib::ViewPtr<NWNXLib::Services::HooksProxy> hooker)
+DMActionEvents::DMActionEvents(NWNXLib::Services::HooksProxy* hooker)
 {
     Events::InitOnFirstSubscribe("NWNX_ON_DM_.*", [hooker]() {
         hooker->RequestExclusiveHook<Functions::_ZN11CNWSMessage40HandlePlayerToServerDungeonMasterMessageEP10CNWSPlayerhi>(&HandleDMMessageHook);
@@ -559,7 +559,25 @@ int32_t DMActionEvents::HandleDMMessageHook(CNWSMessage *thisPtr, CNWSPlayer *pP
         case MessageDungeonMasterMinor::DumpLocals:
         {
             event += "DUMP_LOCALS";
-            DefaultSignalEvent();
+            auto type = Utils::PeekMessage<int32_t>(thisPtr, 0);
+            std::string target = Utils::ObjectIDToString(Utils::PeekMessage<Types::ObjectID>(thisPtr, 4) & 0x7FFFFFFF);
+
+            auto PushAndSignalDumpLocalsEvent = [&](const std::string& ev) -> bool {
+                Events::PushEventData("TYPE", std::to_string(type));
+                Events::PushEventData("TARGET", target);
+                return Events::SignalEvent(ev, oidDM);
+            };
+
+            if (PushAndSignalDumpLocalsEvent(event + "_BEFORE"))
+            {
+                retVal = m_HandlePlayerToServerDungeonMasterMessageHook->CallOriginal<int32_t>(thisPtr, pPlayer, nMinor, bGroup);
+            }
+            else
+            {
+                retVal = false;
+            }
+
+            PushAndSignalDumpLocalsEvent(event + "_AFTER");
             break;
         }
         case MessageDungeonMasterMinor::GiveGoodAlignment:

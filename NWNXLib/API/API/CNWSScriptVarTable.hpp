@@ -2,17 +2,17 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CScriptLocation.hpp"
 #include "CExoString.hpp"
 #include "CNWSScriptVar.hpp"
+#include "CScriptLocation.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSScriptVarTable)
 #endif
 
-struct CResGFF;
 struct CNWSCreature;
+struct CResGFF;
 struct CResStruct;
 
 

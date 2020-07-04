@@ -8,9 +8,9 @@
 NWN_API_PROLOGUE(CNWClass)
 #endif
 
-struct CNWRules;
-struct CNWClass_Skill;
 struct CNWClass_Feat;
+struct CNWClass_Skill;
+struct CNWRules;
 
 
 typedef int BOOL;
@@ -51,6 +51,19 @@ struct CNWClass
     uint8_t m_nMaxLevel;
     BOOL m_bXPPenalty;
     uint32_t m_nDefaultPackage;
+    uint8_t m_nSpellcastingAbility;
+    BOOL m_bNeedsToMemorizeSpells;
+    BOOL m_bSpellbookRestricted;
+    BOOL m_bHasDomains;
+    BOOL m_bHasSpecialization;
+    BOOL m_bCanLearnFromScrolls;
+    BOOL m_bIsArcane;
+    BOOL m_bSuffersArcaneSpellFailure;
+    CExoString m_sSpellsTableColumn;
+    float m_fCasterLevelMultiplier;
+    int32_t m_nMinCastingLevel;
+    BOOL m_bCanCastSpontaneously;
+    uint8_t m_nMinAssociateLevel;
     uint8_t m_nArcSpellUsePerDayLevel;
     uint8_t m_nDivSpellUsePerDayLevel;
     uint8_t m_nEpicLevel;
@@ -68,7 +81,7 @@ struct CNWClass
     uint8_t GetRefSaveBonus(uint8_t nLevel);
     uint8_t GetWillSaveBonus(uint8_t nLevel);
     uint8_t GetSpellGain(uint8_t nLevel, uint8_t nSpellLevel);
-    uint8_t GetSpellsKnownPerLevel(uint8_t nLevel, uint8_t nSpellLevel, uint8_t nClass, uint16_t nRace, uint8_t nCHABase);
+    uint8_t GetSpellsKnownPerLevel(uint8_t nLevel, uint8_t nSpellLevel, uint8_t nClass, uint16_t nRace, uint8_t nCastingAbilityBase);
     void LoadAttackBonusTable(CExoString sTable);
     void LoadFeatsTable(CExoString sTable, CNWRules * pRules);
     void LoadSavingThrowTable(CExoString sTable);
@@ -87,6 +100,7 @@ struct CNWClass
     BOOL IsGrantedFeat(uint16_t nFeat, uint8_t & nLevelGranted);
     BOOL IsFeatUseable(uint16_t nFeat);
     uint8_t GetLevelGranted(uint16_t nFeat);
+    int8_t GetAbilityGainForSingleLevel(int ability, int level);
     int8_t GetAbilityGainForLevel(int ability, int level);
     int8_t GetNaturalACGainForLevel(int level);
 

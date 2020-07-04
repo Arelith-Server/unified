@@ -1,14 +1,14 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CResRef.hpp"
-#include "CNWSPlayerLUOAppearanceInfo.hpp"
 #include "CExoArrayList.hpp"
-#include "MaterialShaderParam.hpp"
+#include "CExoLocString.hpp"
 #include "CExoString.hpp"
+#include "CNWSPlayerLUOAppearanceInfo.hpp"
+#include "CResRef.hpp"
+#include "MaterialShaderParam.hpp"
 #include "ObjectVisualTransformData.hpp"
 #include "Vector.hpp"
-#include "CExoLocString.hpp"
 
 
 #ifdef NWN_API_PROLOGUE

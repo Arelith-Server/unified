@@ -4,14 +4,13 @@
 #include "API/Vector.hpp"
 #include "Common.hpp"
 #include "Services/Hooks/Hooks.hpp"
-#include "ViewPtr.hpp"
 
 namespace Events {
 
 class SpellEvents
 {
 public:
-    SpellEvents(NWNXLib::ViewPtr<NWNXLib::Services::HooksProxy> hooker);
+    SpellEvents(NWNXLib::Services::HooksProxy* hooker);
 
 private:
     static void CastSpellHook
@@ -38,6 +37,7 @@ private:
         int32_t
     );
     static void ClearMemorizedSpellSlotHook(CNWSCreatureStats*, uint8_t, uint8_t, uint8_t);
+    static void BroadcastSpellCastHook(CNWSCreature*, uint32_t, uint8_t, uint16_t);
 };
 
 }

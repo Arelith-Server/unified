@@ -9,11 +9,11 @@
 NWN_API_PROLOGUE(CAppManager)
 #endif
 
+struct CClientExoApp;
 struct CNWReentrantServerStats;
+struct CNWTileSetManager;
 struct CObjectTableManager;
 struct CServerExoApp;
-struct CNWTileSetManager;
-struct CClientExoApp;
 
 
 typedef int BOOL;

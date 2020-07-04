@@ -2,20 +2,20 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CNWSStats_SpellLikeAbility.hpp"
 #include "CNWActionNode.hpp"
+#include "CNWSStats_SpellLikeAbility.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSPlayerLastUpdateObject)
 #endif
 
-struct CNWSStats_Spell;
 struct CEffectIconObject;
+struct CFeatUseListEntry;
+struct CNWSStats_Spell;
+struct CNWVisibilityNode;
 struct CSpell_Add;
 struct CSpell_Delete;
-struct CNWVisibilityNode;
-struct CFeatUseListEntry;
 
 
 typedef int BOOL;

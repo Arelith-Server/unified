@@ -1,9 +1,9 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CResRef.hpp"
-#include "CNWSObject.hpp"
 #include "CExoLocString.hpp"
+#include "CNWSObject.hpp"
+#include "CResRef.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
@@ -12,8 +12,8 @@ NWN_API_PROLOGUE(CNWSWaypoint)
 
 struct CExoString;
 struct CNWSArea;
-struct CResStruct;
 struct CResGFF;
+struct CResStruct;
 
 
 typedef int BOOL;

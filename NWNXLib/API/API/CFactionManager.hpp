@@ -8,11 +8,11 @@
 NWN_API_PROLOGUE(CFactionManager)
 #endif
 
+struct CExoString;
+struct CNWSFaction;
 struct CNWSFaction;
 struct CResGFF;
 struct CResList;
-struct CExoString;
-struct CNWSFaction;
 
 
 typedef int BOOL;

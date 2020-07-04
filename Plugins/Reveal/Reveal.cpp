@@ -4,14 +4,13 @@
 #include "API/CNWSFaction.hpp"
 #include "API/Functions.hpp"
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
-#include "ViewPtr.hpp"
 
 
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Reveal::Reveal> g_plugin;
+static Reveal::Reveal* g_plugin;
 
 //key names for Per Object Storage
 const std::string revealKey = "REVEAL";
@@ -100,7 +99,6 @@ int32_t Reveal::HookStealthDetection(CNWSCreature* pObserverCreature, CNWSCreatu
 
 ArgumentStack Reveal::RevealTo(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     auto stealtherID = Services::Events::ExtractArgument<Types::ObjectID>(args);
     auto observerID = Services::Events::ExtractArgument<Types::ObjectID>(args);
     auto detectionVector = Services::Events::ExtractArgument<int>(args);
@@ -109,21 +107,20 @@ ArgumentStack Reveal::RevealTo(ArgumentStack&& args)
 
     pPOS->Set(stealtherID, revealKey + Utils::ObjectIDToString(observerID), true); //store stealth to observer reveal map
     pPOS->Set(stealtherID, detectionKey + Utils::ObjectIDToString(observerID), detectionVector); //store the means through which detection happens
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack Reveal::SetRevealToParty(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     auto stealtherID = Services::Events::ExtractArgument<Types::ObjectID>(args);
     auto revealToPartyState = Services::Events::ExtractArgument<int>(args);
     auto detectionVector = Services::Events::ExtractArgument<int>(args);
 
     Services::PerObjectStorageProxy* pPOS = g_plugin->GetServices()->m_perObjectStorage.get();
 
-    pPOS->Set(stealtherID, revealKey + "PARTY", revealToPartyState); //store party reveal state
-    pPOS->Set(stealtherID, detectionKey + "PARTY", detectionVector); //store the means through which detection happens
-    return stack;
+    pPOS->Set(stealtherID, revealKey + "PARTY", revealToPartyState, true); //store party reveal state
+    pPOS->Set(stealtherID, detectionKey + "PARTY", detectionVector, true); //store the means through which detection happens
+    return Services::Events::Arguments();
 }
 
 }

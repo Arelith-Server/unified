@@ -7,8 +7,8 @@
 NWN_API_PROLOGUE(CNWSPlayerInventoryGUI)
 #endif
 
-struct CNWSPlayerContainerGUI;
 struct CNWSPlayer;
+struct CNWSPlayerContainerGUI;
 struct CNWSPlayerLUOInventory;
 
 

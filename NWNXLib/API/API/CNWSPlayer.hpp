@@ -1,32 +1,32 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CLastUpdatePartyObject.hpp"
-#include "CResRef.hpp"
-#include "CExoString.hpp"
 #include "CExoLinkedList.hpp"
-#include "CNWSClient.hpp"
+#include "CExoString.hpp"
 #include "CLastUpdateObject.hpp"
+#include "CLastUpdatePartyObject.hpp"
+#include "CNWSClient.hpp"
+#include "CResRef.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSPlayer)
 #endif
 
-struct CNWSPlayerInventoryGUI;
 struct CNWSCreature;
-struct CNWSPlayerTURD;
-struct CNWSObject;
-struct CNWSPlayerJournalQuest;
-struct CNWSPlayerStoreGUI;
-struct CNWSPlayerCharSheetGUI;
 struct CNWSItem;
+struct CNWSObject;
+struct CNWSPlayerCharSheetGUI;
+struct CNWSPlayerInventoryGUI;
+struct CNWSPlayerJournalQuest;
 struct CNWSPlayerLastUpdateObject;
+struct CNWSPlayerStoreGUI;
+struct CNWSPlayerTURD;
 
 
-typedef uint32_t STRREF;
 typedef int BOOL;
 typedef uint32_t OBJECT_ID;
+typedef uint32_t STRREF;
 
 
 struct CNWSPlayer : CNWSClient

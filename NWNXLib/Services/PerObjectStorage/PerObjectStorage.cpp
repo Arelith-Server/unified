@@ -5,15 +5,15 @@
 #include "API/CNWSPlayer.hpp"
 #include "API/CNWSPlayerTURD.hpp"
 #include "API/CNWSModule.hpp"
+#include "API/CNWSUUID.hpp"
 #include "API/CExoLinkedListInternal.hpp"
 #include "API/CExoLinkedListNode.hpp"
 #include "API/Constants.hpp"
 
 #include <sstream>
+#include <regex>
 
-namespace NWNXLib {
-
-namespace Services {
+namespace NWNXLib::Services {
 
 PerObjectStorage::ObjectStorage* PerObjectStorage::GetObjectStorage(CGameObject *pGameObject)
 {
@@ -33,25 +33,25 @@ PerObjectStorage::ObjectStorage* PerObjectStorage::GetObjectStorage(API::Types::
 }
 
 
-void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, int value)
+void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, int value, bool persist)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
-        pOS->GetIntMap()[key] = value;
+        pOS->GetIntMap()[key] = std::make_pair<>(value, persist);
     }
 }
-void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, float value)
+void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, float value, bool persist)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
-        pOS->GetFloatMap()[key] = value;
+        pOS->GetFloatMap()[key] = std::make_pair<>(value, persist);
     }
 }
-void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, std::string value)
+void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, std::string value, bool persist)
 {
     if (auto *pOS = GetObjectStorage(pGameObject))
     {
-        pOS->GetStringMap().emplace(key, std::move(value));
+        pOS->GetStringMap()[key] = std::make_pair<>(std::move(value), persist);
     }
 }
 void PerObjectStorage::Set(CGameObject *pGameObject, const std::string& key, void *value, CleanupFunc cleanup)
@@ -77,6 +77,36 @@ void PerObjectStorage::Remove(CGameObject *pGameObject, const std::string& key)
             pOS->m_FloatMap->erase(key);
         if (pOS->m_PointerMap)
             pOS->m_PointerMap->erase(key);
+    }
+}
+
+void PerObjectStorage::RemoveRegex(CGameObject *pGameObject, const std::string& regex)
+{
+    if (auto *pOS = GetObjectStorage(pGameObject))
+    {
+        std::regex rgx(regex);
+
+        auto Remove = [&](auto &map) -> void {
+            std::vector<std::string> erase;
+
+            for (const auto& it: *map)
+            {
+                if (std::regex_match(it.first, rgx))
+                    erase.push_back(it.first);
+            }
+
+            for (const auto& e: erase)
+            {
+                map->erase(e);
+            }
+        };
+
+        if (pOS->m_StringMap)
+            Remove(pOS->m_StringMap);
+        if (pOS->m_IntMap)
+            Remove(pOS->m_IntMap);
+        if (pOS->m_FloatMap)
+            Remove(pOS->m_FloatMap);
     }
 }
 
@@ -156,17 +186,17 @@ std::string PerObjectStorage::ObjectStorage::DumpToString()
     if (m_IntMap)
     {
         for (auto it: *m_IntMap)
-            ss << it.first << " = " << std::dec << it.second << std::endl;
+            ss << it.first << " = " << std::dec << it.second.first << (it.second.second?" (persistant)":"") << std::endl;
     }
     if (m_FloatMap)
     {
         for (auto it: *m_FloatMap)
-            ss << it.first << " = " << it.second << std::endl;
+            ss << it.first << " = " << it.second.first << (it.second.second?" (persistant)":"") << std::endl;
     }
     if (m_StringMap)
     {
         for (auto it: *m_StringMap)
-            ss << it.first << " = " << it.second << std::endl;
+            ss << it.first << " = " << it.second.first << (it.second.second?" (persistant)":"") << std::endl;
     }
     if (m_PointerMap)
     {
@@ -174,6 +204,123 @@ std::string PerObjectStorage::ObjectStorage::DumpToString()
             ss << it.first << " = " << it.second.first << std::endl;
     }
     return ss.str();
+}
+
+
+std::string PerObjectStorage::ObjectStorage::Serialize(bool persistonly)
+{
+    std::stringstream ss;
+    if (m_IntMap)
+    {
+        int count = 0;
+        for (auto it: *m_IntMap)
+            count += (!persistonly || it.second.second) ? 1:0;
+
+        if (count > 0)
+        {
+            ss << "[INTMAP:" << count << "]";
+            for (auto it: *m_IntMap)
+                if (!persistonly || it.second.second)
+                    ss << "<" << it.first.length() << ">" << it.first << " = " << std::dec << it.second.first << ";";
+        }
+    }
+    if (m_FloatMap)
+    {
+        int count = 0;
+        for (auto it: *m_FloatMap)
+            count += (!persistonly || it.second.second) ? 1:0;
+
+        if (count > 0)
+        {
+            ss << "[FLTMAP:" << count << "]";
+            for (auto it: *m_FloatMap)
+                if (!persistonly || it.second.second)
+                    ss << "<" << it.first.length() << ">" << it.first << " = " << it.second.first << ";";
+        }
+    }
+    if (m_StringMap)
+    {
+        int count = 0;
+        for (auto it: *m_StringMap)
+            count += (!persistonly || it.second.second) ? 1:0;
+
+        if (count > 0)
+        {
+            ss << "[STRMAP:" << count << "]";
+            for (auto it: *m_StringMap)
+                if (!persistonly || it.second.second)
+                    ss << "<" << it.first.length() << ">" << it.first << " = " << "<" << it.second.first.length() << ">" << it.second.first << ";";
+        }
+    }
+    return ss.str();
+}
+void PerObjectStorage::ObjectStorage::Deserialize(const char *serialized, bool persist)
+{
+    if (m_IntMap)     m_IntMap->clear();
+    if (m_FloatMap)   m_FloatMap->clear();
+    if (m_StringMap)  m_IntMap->clear();
+    if (m_PointerMap) m_PointerMap->clear();
+
+#define SSCANF_OR_ABORT(s, fmt, val) \
+    do { int inc = 0; if (sscanf(s, fmt "%n", val, &inc) != 1)                                                        \
+    {                                                                                                                 \
+        LOG_ERROR("[%d] Serialized POS corrupted at '%20s', expected to parse '%s'. Aborting.\n", __LINE__, s, fmt);  \
+        return;                                                                                                       \
+    } s += inc; } while(0)
+
+    const char *s;
+    std::string name;
+    int count, len;
+    if ((s = strstr(serialized, "[INTMAP:")))
+    {
+        SSCANF_OR_ABORT(s, "[INTMAP:%d]", &count);
+
+        for (int i = 0; i < count; i++)
+        {
+            SSCANF_OR_ABORT(s, "<%d>", &len);
+            name = std::string{s, (size_t)len};
+            s += len;
+
+            int value;
+            SSCANF_OR_ABORT(s, " = %d;", &value);
+            GetIntMap()[name] = std::make_pair<>(value, persist);
+        }
+    }
+
+    if ((s = strstr(serialized, "[FLTMAP:")))
+    {
+        SSCANF_OR_ABORT(s, "[FLTMAP:%d]", &count);
+
+        for (int i = 0; i < count; i++)
+        {
+            SSCANF_OR_ABORT(s, "<%d>", &len);
+            name = std::string{s, (size_t)len};
+            s += len;
+
+            float value;
+            SSCANF_OR_ABORT(s, " = %f;", &value);
+            GetFloatMap()[name] = std::make_pair<>(value, persist);
+        }
+    }
+
+    if ((s = strstr(serialized, "[STRMAP:")))
+    {
+        SSCANF_OR_ABORT(s, "[STRMAP:%d]", &count);
+
+        for (int i = 0; i < count; i++)
+        {
+            SSCANF_OR_ABORT(s, "<%d>", &len);
+            name = std::string{s, (size_t)len};
+            s += len;
+
+            SSCANF_OR_ABORT(s, " = <%d>", &len);
+            std::string value = std::string{s, (size_t)len};
+            s += len + 1; // ';' at the end.
+            GetStringMap().emplace(name, std::make_pair<>(std::move(value), persist));
+        }
+    }
+
+#undef SSCANF_OR_ABORT
 }
 
 PerObjectStorageProxy::PerObjectStorageProxy(PerObjectStorage& perObjectStorage, std::string pluginName)
@@ -186,17 +333,17 @@ PerObjectStorageProxy::~PerObjectStorageProxy()
     // TODO cleanup all storage from this plugin
 }
 
-void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, int value)
+void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, int value, bool persist)
 {
-    m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, value);
+    m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, value, persist);
 }
-void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, float value)
+void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, float value, bool persist)
 {
-    m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, value);
+    m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, value, persist);
 }
-void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, std::string value)
+void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, std::string value, bool persist)
 {
-    m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, std::move(value));
+    m_proxyBase.Set(pGameObject, m_pluginName + "!" + key, std::move(value), persist);
 }
 void PerObjectStorageProxy::Set(CGameObject *pGameObject, const std::string& key, void *value, PerObjectStorage::CleanupFunc cleanup)
 {
@@ -207,6 +354,10 @@ void PerObjectStorageProxy::Remove(CGameObject *pGameObject, const std::string& 
 {
     m_proxyBase.Remove(pGameObject, m_pluginName + "!" + key);
 }
+void PerObjectStorageProxy::RemoveRegex(CGameObject *pGameObject, const std::string& regex)
+{
+    m_proxyBase.RemoveRegex(pGameObject, "(?:" + m_pluginName + "!)" + regex);
+}
 
 
 template <> std::optional<int> PerObjectStorage::Get<int>(CGameObject *pGameObject, const std::string& key)
@@ -216,7 +367,7 @@ template <> std::optional<int> PerObjectStorage::Get<int>(CGameObject *pGameObje
         auto map = pOS->GetIntMap();
         auto it = map.find(key);
         if (it != map.end())
-            return std::make_optional<int>(it->second);
+            return std::make_optional<int>(it->second.first);
     }
     return std::optional<int>();
 }
@@ -228,7 +379,7 @@ template <> std::optional<float> PerObjectStorage::Get<float>(CGameObject *pGame
         auto map = pOS->GetFloatMap();
         auto it = map.find(key);
         if (it != map.end())
-            return std::make_optional<float>(it->second);
+            return std::make_optional<float>(it->second.first);
     }
     return std::optional<float>();
 }
@@ -240,7 +391,7 @@ template <> std::optional<std::string> PerObjectStorage::Get<std::string>(CGameO
         auto map = pOS->GetStringMap();
         auto it = map.find(key);
         if (it != map.end())
-            return std::make_optional<std::string>(it->second);
+            return std::make_optional<std::string>(it->second.first);
     }
     return std::optional<std::string>();
 }
@@ -266,26 +417,26 @@ void PerObjectStorage::DestroyObjectStorage(CGameObject *pGameObject)
     }
 }
 
-void PerObjectStorage::CNWSObject__CNWSObjectDtor__0_hook(Services::Hooks::CallType type, CNWSObject* pThis)
+void PerObjectStorage::CNWSObject__CNWSObjectDtor__0_hook(bool before, CNWSObject* pThis)
 {
-    if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
+    if (!before)
         DestroyObjectStorage(static_cast<CGameObject*>(pThis));
 }
-void PerObjectStorage::CNWSArea__CNWSAreaDtor__0_hook(Services::Hooks::CallType type, CNWSArea* pThis)
+void PerObjectStorage::CNWSArea__CNWSAreaDtor__0_hook(bool before, CNWSArea* pThis)
 {
-    if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
+    if (!before)
         DestroyObjectStorage(static_cast<CGameObject*>(pThis));
 }
-void PerObjectStorage::CNWSPlayer__EatTURD_hook(Services::Hooks::CallType type, CNWSPlayer* thisPtr, CNWSPlayerTURD* pTURD)
+void PerObjectStorage::CNWSPlayer__EatTURD_hook(bool before, CNWSPlayer* thisPtr, CNWSPlayerTURD* pTURD)
 {
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
     {
         GetObjectStorage(thisPtr->m_oidNWSObject)->CloneFrom(GetObjectStorage(pTURD));
     }
 }
-void PerObjectStorage::CNWSPlayer__DropTURD_hook(Services::Hooks::CallType type, CNWSPlayer* thisPtr)
+void PerObjectStorage::CNWSPlayer__DropTURD_hook(bool before, CNWSPlayer* thisPtr)
 {
-    if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
+    if (!before)
     {
         // Be very, very paranoid. Bad things happen when the TURD list doesn't exist
         // This can happen when you BootPC() the very first PC to connect to your sever
@@ -303,5 +454,23 @@ void PerObjectStorage::CNWSPlayer__DropTURD_hook(Services::Hooks::CallType type,
     }
 }
 
+
+void PerObjectStorage::CNWSUUID__SaveToGff_hook(bool before, CNWSUUID* pThis, CResGFF* pRes, CResStruct* pStruct)
+{
+    if (before)
+    {
+        pRes->WriteFieldCExoString(pStruct, GetObjectStorage(pThis->m_parent)->Serialize(), GffFieldName);
+    }
 }
+void PerObjectStorage::CNWSUUID__LoadFromGff_hook(bool before, CNWSUUID* pThis, CResGFF* pRes, CResStruct* pStruct)
+{
+    if (before)
+    {
+        int32_t success;
+        auto str = pRes->ReadFieldCExoString(pStruct, GffFieldName, success);
+        if (success)
+            GetObjectStorage(pThis->m_parent)->Deserialize(str.CStr());
+    }
+}
+
 }

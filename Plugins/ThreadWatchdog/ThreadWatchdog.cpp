@@ -4,11 +4,10 @@
 #include "Services/Metrics/Metrics.hpp"
 #include "Services/Tasks/Tasks.hpp"
 #include "Services/Config/Config.hpp"
-#include "ViewPtr.hpp"
 
 using namespace NWNXLib;
 
-static ViewPtr<ThreadWatchdog::ThreadWatchdog> g_plugin;
+static ThreadWatchdog::ThreadWatchdog* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -58,7 +57,7 @@ ThreadWatchdog::~ThreadWatchdog()
     }
 }
 
-void ThreadWatchdog::MainLoopUpdate(Services::Hooks::CallType, CServerExoAppInternal*)
+void ThreadWatchdog::MainLoopUpdate(bool, CServerExoAppInternal*)
 {
     ++s_mainThreadCounter;
 

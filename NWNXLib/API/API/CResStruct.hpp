@@ -9,8 +9,8 @@ NWN_API_PROLOGUE(CResStruct)
 #endif
 
 struct CResStructInternal;
-struct CStringFieldIDType;
 struct CResStructLookUp;
+struct CStringFieldIDType;
 
 
 typedef int BOOL;

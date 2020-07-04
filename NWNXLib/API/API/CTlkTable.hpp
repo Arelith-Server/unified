@@ -9,13 +9,13 @@ NWN_API_PROLOGUE(CTlkTable)
 #endif
 
 struct CTlkFile;
+struct CTlkTableToken;
 struct CTlkTableTokenCustom;
 struct STR_RES;
-struct CTlkTableToken;
 
 
-typedef uint32_t STRREF;
 typedef int BOOL;
+typedef uint32_t STRREF;
 
 
 struct CTlkTable
@@ -28,6 +28,8 @@ struct CTlkTable
     CTlkTableTokenCustom * m_pTokensCustom;
     uint32_t m_nTokensCustom;
     BOOL m_bRemove;
+    CExoString m_sTlkFilePath;
+    CExoString m_sTlkFileAlternatePath;
 
     CTlkTable();
     virtual ~CTlkTable();
@@ -41,6 +43,7 @@ struct CTlkTable
     CExoString GetSimpleString(STRREF strId);
     uint32_t GetLanguageVersion();
     BOOL SetUseLargeDialogFont(BOOL bUseIt);
+    BOOL Reload();
     virtual void GetTokenValue(const CTlkTableToken & cTlkTableToken, CExoString & sToken);
     BOOL FetchInternal(uint32_t strId, STR_RES & strRes, BOOL bParse);
     void CloseFile(CTlkFile * pTlkFile);

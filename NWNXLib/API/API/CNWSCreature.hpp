@@ -1,16 +1,16 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CNWSPersonalReputation.hpp"
-#include "CNWSCreatureAppearanceInfo.hpp"
 #include "CExoArrayList.hpp"
-#include "CResRef.hpp"
-#include "CNWSObject.hpp"
-#include "CNWActionNode.hpp"
-#include "CNWSInvitationDetails.hpp"
 #include "CExoString.hpp"
-#include "Vector.hpp"
+#include "CNWActionNode.hpp"
+#include "CNWSCreatureAppearanceInfo.hpp"
+#include "CNWSInvitationDetails.hpp"
+#include "CNWSObject.hpp"
 #include "CNWSPVPEntry.hpp"
+#include "CNWSPersonalReputation.hpp"
+#include "CResRef.hpp"
+#include "Vector.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
@@ -18,35 +18,35 @@ NWN_API_PROLOGUE(CNWSCreature)
 #endif
 
 struct CEffectIconObject;
-struct CNWSQuickbarButton;
-struct CNWSForcedAction;
-struct CNWSPlayer;
-struct CNWSJournal;
-struct CNWSInventory;
-struct CNWSArea;
-struct CNWSItem;
-struct CNWSCombatRound;
-struct CNWItemProperty;
-struct CResGFF;
-struct CPathfindInformation;
 struct CGameEffect;
-struct CNWSBarter;
-struct CNWSCreatureStats;
-struct CNWVisibilityNode;
-struct CNWSObjectActionNode;
+struct CGameEffect;
 struct CItemRepository;
-struct CNWSFaction;
 struct CNWCCMessageData;
+struct CNWItemProperty;
+struct CNWSArea;
+struct CNWSBarter;
 struct CNWSCombatAttackData;
-struct CGameEffect;
+struct CNWSCombatRound;
 struct CNWSCreRestorePolymorphData;
+struct CNWSCreatureStats;
+struct CNWSFaction;
+struct CNWSForcedAction;
+struct CNWSInventory;
+struct CNWSItem;
+struct CNWSJournal;
+struct CNWSObjectActionNode;
+struct CNWSPlayer;
+struct CNWSQuickbarButton;
 struct CNWVisibilityNode;
+struct CNWVisibilityNode;
+struct CPathfindInformation;
+struct CResGFF;
 struct CResStruct;
 
 
-typedef uint32_t STRREF;
 typedef int BOOL;
 typedef uint32_t OBJECT_ID;
+typedef uint32_t STRREF;
 
 
 struct CNWSCreature : CNWSObject

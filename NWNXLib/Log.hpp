@@ -6,9 +6,9 @@
 #include <sstream>
 #include <ctime>
 
-namespace NWNXLib {
+namespace NWNXLib::Services { class Tasks; }
 
-namespace Log {
+namespace NWNXLib::Log {
 
 #define LOG_DEBUG(format, ...) \
     ::NWNXLib::Log::Trace(::NWNXLib::Log::Channel::SEV_DEBUG, PLUGIN_NAME, __FILE__, __LINE__, (format), ##__VA_ARGS__)
@@ -72,6 +72,8 @@ Channel::Enum GetLogLevel(const char* plugin);
 void SetLogLevel(const char* plugin, Channel::Enum logLevel);
 void SetPrintTimestamp(bool value);
 bool GetPrintTimestamp();
+void SetPrintDate(bool value);
+bool GetPrintDate();
 void SetPrintPlugin(bool value);
 bool GetPrintPlugin();
 void SetPrintSource(bool value);
@@ -81,14 +83,14 @@ bool GetColorOutput();
 void SetForceColor(bool value);
 bool GetForceColor();
 
+void SetAsync(NWNXLib::Services::Tasks* tasks);
+
 #include "Log.inl"
 
 }
 
-}
-
-class CExoString;
-class CResRef;
+struct CExoString;
+struct CResRef;
 
 std::ostream& operator<<(std::ostream& out, const CExoString& str);
 std::ostream& operator<<(std::ostream& out, const CResRef& str);

@@ -1,44 +1,44 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CGameObject.hpp"
-#include "CExoLocString.hpp"
-#include "CResHelper.hpp"
-#include "NWMODULEEXPANSION.hpp"
-#include "NWMODULECUTSCENE.hpp"
-#include "CResIFO.hpp"
-#include "CExoLinkedList.hpp"
-#include "CNWSPlayerTURD.hpp"
-#include "NWPLAYERLISTITEM.hpp"
-#include "CWorldJournalEntry.hpp"
-#include "CResRef.hpp"
 #include "CExoArrayList.hpp"
-#include "CNWSTagNode.hpp"
+#include "CExoLinkedList.hpp"
+#include "CExoLocString.hpp"
 #include "CExoString.hpp"
-#include "Vector.hpp"
+#include "CGameObject.hpp"
+#include "CNWSPlayerTURD.hpp"
 #include "CNWSScriptVarTable.hpp"
+#include "CNWSTagNode.hpp"
+#include "CResHelper.hpp"
+#include "CResIFO.hpp"
+#include "CResRef.hpp"
+#include "CWorldJournalEntry.hpp"
+#include "NWMODULECUTSCENE.hpp"
+#include "NWMODULEEXPANSION.hpp"
+#include "NWPLAYERLISTITEM.hpp"
 #include "NWSyncAdvertisement.hpp"
+#include "Vector.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSModule)
 #endif
 
-struct CResGFF;
+struct CERFFile;
+struct CNWSArea;
 struct CNWSPlayer;
+struct CPathfindInformation;
+struct CResGFF;
+struct CResStruct;
+struct NWMODULEENTRYINFO;
 struct NWMODULEHEADER;
 struct NWPLAYERCHARACTERLISTITEM;
-struct CPathfindInformation;
-struct CNWSArea;
-struct CERFFile;
-struct NWMODULEENTRYINFO;
-struct CResStruct;
 
 
-typedef uint32_t STRREF;
-typedef uint16_t RESTYPE;
 typedef int BOOL;
 typedef uint32_t OBJECT_ID;
+typedef uint16_t RESTYPE;
+typedef uint32_t STRREF;
 
 
 struct CNWSModule : CResHelper<CResIFO, 2014>, CGameObject

@@ -8,9 +8,9 @@
 NWN_API_PROLOGUE(CNWSPortal)
 #endif
 
-struct CResGFF;
-struct CNWSMessage;
 struct CNWSArea;
+struct CNWSMessage;
+struct CResGFF;
 struct CResStruct;
 
 

@@ -5,14 +5,13 @@
 #include "API/CGameEffect.hpp"
 #include "API/Functions.hpp"
 #include "Utils.hpp"
-#include "ViewPtr.hpp"
 
 #include <string>
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<ItemProperty::ItemProperty> g_plugin;
+static ItemProperty::ItemProperty* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -56,7 +55,6 @@ ItemProperty::~ItemProperty()
 
 ArgumentStack ItemProperty::PackIP(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     CGameEffect *ip = new CGameEffect(true);
 
     auto propname     = Services::Events::ExtractArgument<int32_t>(args);
@@ -91,8 +89,7 @@ ArgumentStack ItemProperty::PackIP(ArgumentStack&& args)
     ip->SetInteger(8, usable);
     ip->SetString(0, tag.c_str());
 
-    Services::Events::InsertArgument(stack, ip);
-    return stack;
+    return Services::Events::Arguments(ip);
 }
 ArgumentStack ItemProperty::UnpackIP(ArgumentStack&& args)
 {

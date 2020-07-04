@@ -7,7 +7,7 @@
 
 using namespace NWNXLib;
 
-static ViewPtr<Ruby::Ruby> g_plugin;
+static Ruby::Ruby* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -55,7 +55,7 @@ Ruby::Ruby(const Plugin::CreateParams& params)
         SafeRequire(*preloadScript);
     }
 
-    GetServices()->m_events->RegisterEvent("EVALUATE", std::bind(&Ruby::OnEvaluate, this, std::placeholders::_1));
+    GetServices()->m_events->RegisterEvent("Evaluate", std::bind(&Ruby::Evaluate, this, std::placeholders::_1));
 }
 
 Ruby::~Ruby()
@@ -63,7 +63,7 @@ Ruby::~Ruby()
 
 }
 
-NWNXLib::Services::Events::ArgumentStack Ruby::OnEvaluate(NWNXLib::Services::Events::ArgumentStack&& args)
+NWNXLib::Services::Events::ArgumentStack Ruby::Evaluate(NWNXLib::Services::Events::ArgumentStack&& args)
 {
     const auto code = Events::ExtractArgument<std::string>(args);
 
@@ -119,12 +119,9 @@ NWNXLib::Services::Events::ArgumentStack Ruby::OnEvaluate(NWNXLib::Services::Eve
         retString = evaluate(code);
     }
 
-    Events::ArgumentStack stack;
-    Events::InsertArgument(stack, std::string(retString));
-
     LOG_INFO("Evaluated Ruby. Ruby ID: '%i', code: '%s', got return value '%s'.", evaluationId, code, retString);
 
-    return stack;
+    return Events::Arguments(std::string(retString));
 }
 
 void Ruby::SafeRequire(const std::string& script)

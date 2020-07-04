@@ -2,18 +2,18 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
+#include "CNWTile.hpp"
 #include "CResRef.hpp"
 #include "Vector.hpp"
-#include "CNWTile.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSTile)
 #endif
 
-struct CPathfindInformation;
 struct CNWArea;
 struct CNWTileData;
+struct CPathfindInformation;
 
 
 typedef int BOOL;

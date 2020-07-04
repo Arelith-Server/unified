@@ -41,7 +41,10 @@ private:
     ArgumentStack CreateTransition          (ArgumentStack&& args);
     ArgumentStack GetTileAnimationLoop      (ArgumentStack&& args);
     ArgumentStack SetTileAnimationLoop      (ArgumentStack&& args);
+    ArgumentStack GetTileModelResRef        (ArgumentStack&& args);
     ArgumentStack TestDirectLine            (ArgumentStack&& args);
+    ArgumentStack GetMusicIsPlaying         (ArgumentStack&& args);
+    ArgumentStack CreateGenericTrigger      (ArgumentStack&& args);
 
     CNWSArea *area(ArgumentStack& args);
     static CNWSTile *GetTile(CNWSArea *pArea, float x, float y);

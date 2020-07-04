@@ -1,8 +1,8 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CResRef.hpp"
 #include "CExoString.hpp"
+#include "CResRef.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
@@ -70,6 +70,7 @@ struct CNWSpell
     BOOL m_bHostile;
     int32_t m_nFeatId;
     BOOL m_bHasProjectile;
+    uint32_t m_nSpellId;
 
     CNWSpell();
     ~CNWSpell();

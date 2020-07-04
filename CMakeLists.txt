@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(NWNX-Unified)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/Build/CMakeModules)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Includes the sanitizer package to facilitate debugging.
 # If you want to build with this support (I suggest you do), you should pass in one or all of the following:
@@ -11,7 +13,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/Build/CMa
 # -DSANITIZE_ADDRESS=On
 find_package(Sanitizers)
 
-set(TARGET_NWN_BUILD 8192)
+set(TARGET_NWN_BUILD 8193)
+set(TARGET_NWN_BUILD_REVISION 13)
 set(PLUGIN_PREFIX NWNX_)
 set(NWNX64 1)
 
@@ -45,8 +48,6 @@ set(NWNX_STANDARD_FLAGS "-m64 -march=x86-64 -fdiagnostics-show-option -fno-omit-
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${NWNX_STANDARD_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${NWNX_STANDARD_FLAGS} ${WARNING_FLAGS_CXX} -std=c++17")
 
-add_definitions(-D_FILE_OFFSET_BITS=64)
-
 # Define targets.
 # TAR_RELEASE_FINAL: Shipping version.
 # TAR_RELEASE: Fast testing version.
@@ -57,6 +58,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DTAR_RELEASE_FINAL=0 -DTAR_
 
 add_definitions(-DNWNX_PLUGIN_PREFIX="${PLUGIN_PREFIX}")
 add_definitions(-DNWNX_TARGET_NWN_BUILD=${TARGET_NWN_BUILD})
+add_definitions(-DNWNX_TARGET_NWN_BUILD_REVISION=${TARGET_NWN_BUILD_REVISION})
 
 # Provides the NWN API and other useful things as a static lib.
 add_subdirectory(NWNXLib)

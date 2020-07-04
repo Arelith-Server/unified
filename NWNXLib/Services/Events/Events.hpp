@@ -2,6 +2,7 @@
 
 #include "API/Types.hpp"
 #include "API/CGameEffect.hpp"
+#include "ScriptVariant.hpp"
 #include "Services/Services.hpp"
 
 #include <cstdint>
@@ -20,26 +21,10 @@ namespace Services {
 class Events
 {
 public: // Structures
-    struct Argument
-    {
-        std::optional<int32_t>              m_int;
-        std::optional<float>                m_float;
-        std::optional<API::Types::ObjectID> m_object;
-        std::optional<std::string>          m_string;
-        std::optional<CGameEffect*>         m_effect;
+    // Defined in ScriptVariant.hpp
+    using Argument = ScriptVariant;
+    using ArgumentStack = ScriptVariantStack;
 
-        // Constructors
-        Argument(int32_t v)                : m_int(v)    { }
-        Argument(float v)                  : m_float(v)  { }
-        Argument(API::Types::ObjectID v)   : m_object(v) { }
-        Argument(std::string v)            : m_string(std::move(v)) { }
-        Argument(CGameEffect* v)           : m_effect(v) { }
-
-        template <typename T> std::optional<T>& Get();
-        std::string toString() const;
-    };
-
-    using ArgumentStack = std::stack<Argument>;
     using FunctionCallback = std::function<ArgumentStack(ArgumentStack&& in)>;
 
     struct EventData
@@ -54,9 +39,6 @@ public: // Structures
     };
 
 public:
-    Events();
-    ~Events();
-
     template <typename T>
     void Push(const std::string& pluginName, const std::string& eventName, T&& value);
 
@@ -69,7 +51,13 @@ public:
     void ClearEvent(RegistrationToken&& token);
 
     template <typename T>
-    static void InsertArgument(ArgumentStack& stack, T arg);
+    static void InsertArgument(ArgumentStack& stack, T&& arg);
+
+    template <typename... Args>
+    static void InsertArguments(ArgumentStack& stack, Args&&... args);
+
+    template <typename... Args>
+    static ArgumentStack Arguments(Args&&... args);
 
     template <typename T>
     static T ExtractArgument(ArgumentStack& arguments);
@@ -109,5 +97,3 @@ private:
 }
 
 }
-
-std::ostream& operator<<(std::ostream& os, const NWNXLib::Services::Events::Argument& arg);

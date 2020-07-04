@@ -1,10 +1,10 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CERFRes.hpp"
-#include "CExoLinkedList.hpp"
 #include "CERFKey.hpp"
+#include "CERFRes.hpp"
 #include "CERFString.hpp"
+#include "CExoLinkedList.hpp"
 #include "NWERFHEADER.hpp"
 
 
@@ -17,8 +17,8 @@ struct CExoString;
 struct CRes;
 
 
-typedef uint16_t RESTYPE;
 typedef int BOOL;
+typedef uint16_t RESTYPE;
 
 
 struct CERFFile

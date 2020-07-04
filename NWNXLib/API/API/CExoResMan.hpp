@@ -2,11 +2,12 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CNWSync.hpp"
-#include "CExoString.hpp"
 #include "CExoLinkedList.hpp"
-#include "CRes.hpp"
 #include "CExoLocString.hpp"
+#include "CExoString.hpp"
+#include "CNWSync.hpp"
+#include "CRes.hpp"
+#include "CResRef.hpp"
 #include "RESID.hpp"
 
 
@@ -14,23 +15,22 @@
 NWN_API_PROLOGUE(CExoResMan)
 #endif
 
-struct CExoKeyTable;
-struct CKeyTableEntry;
-struct CResRef;
 struct CExoFile;
-struct CExoStringList;
 struct CExoKeyTable;
+struct CExoKeyTable;
+struct CExoStringList;
+struct CKeyTableEntry;
 
 
-typedef uint16_t RESTYPE;
 typedef int BOOL;
+typedef uint16_t RESTYPE;
 
 
 struct CExoResMan
 {
-    int32_t m_nTotalPhysicalMemory;
-    int32_t m_nTotalAvailableMemory;
-    int32_t m_nAvailableMemory;
+    int64_t m_nTotalPhysicalMemory;
+    int64_t m_nTotalAvailableMemory;
+    int64_t m_nAvailableMemory;
     CExoArrayList<CExoKeyTable *> m_pKeyTables;
     CExoLinkedList<CRes> m_lstToBeFreed;
     CExoLinkedList<CRes> m_lstAsyncResQueue;
@@ -41,17 +41,24 @@ struct CExoResMan
     uint32_t m_nTotalCacheHits;
     uint32_t m_nTotalOldReleases;
     uint32_t m_nTotalNewReleases;
+    uint32_t m_nTotalLookupFailures;
+    bool m_bLogLookupFailures;
+    CResRef m_cLastFailedLookup;
+    RESTYPE m_nLastFailedLookupType;
     BOOL m_bOverrideAll;
     CNWSync m_pNWSync;
+    void * m_pResourceOverrideMap;
 
     CExoResMan();
     ~CExoResMan();
+    void SetupDefaultSearchPath();
     BOOL AddEncapsulatedResourceFile(const CExoString & sName, uint32_t nPriority);
     BOOL AddResourceImageFile(const CExoString & sName, uint8_t * pCipher = nullptr, uint32_t nPriority = (60*1000000));
     BOOL AddFixedKeyTableFile(const CExoString & sName, uint32_t nPriority = (1*1000000));
     BOOL AddResourceDirectory(const CExoString & sName, uint32_t nPriority, BOOL bDetectChanges = false);
     BOOL AddManifest(const CExoString & manifestHash, uint32_t nPriority);
     void DumpAll();
+    void DumpAllOfType(RESTYPE nType);
     void FreeResourceData(CRes * pRes);
     BOOL Exists(const CResRef & cResRef, RESTYPE nType, uint32_t * pTableType = nullptr);
     CExoLocString GetEncapsulatedFileDescription(const CExoString & sFileName);
@@ -59,7 +66,7 @@ struct CExoResMan
     CExoStringList * GetResOfType(RESTYPE nType, BOOL bERFOnly = false);
     CExoStringList * GetResOfType(RESTYPE nType, CRes * pRes);
     RESID GetResID(const CResRef & cResRef, RESTYPE nType);
-    uint32_t GetTotalPhysicalMemory();
+    int64_t GetTotalPhysicalMemory();
     int32_t ReleaseResObject(CRes * pRes, bool bDontCache = false);
     BOOL RemoveEncapsulatedResourceFile(const CExoString & sName, BOOL bEmitWarningOnFailure = true);
     BOOL RemoveResourceImageFile(const CExoString & sName);
@@ -68,7 +75,7 @@ struct CExoResMan
     BOOL RemoveManifest(const CExoString & sManifestHash);
     void ResumeServicing();
     void SetResObject(const CResRef & cResRef, RESTYPE nType, CRes * pNewRes);
-    BOOL SetTotalResourceMemory(int32_t totalAvailableMemory);
+    BOOL SetTotalResourceMemory(int64_t totalAvailableMemory);
     void SuspendServicing();
     void Update(uint32_t nTimeSlice);
     BOOL UpdateEncapsulatedResourceFile(const CExoString & sName);
@@ -77,7 +84,7 @@ struct CExoResMan
     BOOL UpdateManifest(const CExoString & sManifestHash);
     RESTYPE GetResTypeFromFile(const CExoString & sName);
     void GetResRefFromFile(CResRef & cResRef, const CExoString & sName);
-    BOOL GetKeyEntry(const CResRef & cResRef, RESTYPE nType, CExoKeyTable * * pNewTable, CKeyTableEntry * * pNewKey);
+    BOOL GetKeyEntry(const CResRef & cResRef, RESTYPE nType, CExoKeyTable * * pNewTable, CKeyTableEntry * * pNewKey, bool bLogFailure = true);
     int32_t CancelRequest(CRes * pRes);
     void * Demand(CRes * pRes);
     void Dump(CRes * pRes, BOOL bRemove = false);
@@ -97,6 +104,9 @@ struct CExoResMan
     BOOL AddKeyTable(uint32_t nPriority, const CExoString & sName, uint32_t nTableType, uint8_t * pCipher = nullptr, BOOL bDetectChanges = false);
     BOOL RemoveKeyTable(const CExoString & sName, uint32_t nTableType, BOOL bEmitWarningOnFailure = true);
     size_t CountKeyTablesOf(int32_t type, const CExoString & sName = "");
+    void AddOverride(const CResRef & oldname, const CResRef & newname, RESTYPE restype);
+    void RemoveOverride(const CResRef & name, RESTYPE restype);
+    void ClearOverrides();
     BOOL WipeDirectory(CExoString sDirectory, BOOL bDeleteAllFiles, BOOL bRemoveDirectory, BOOL bDeleteAllSubDirectoryFiles, BOOL bDeleteAllSubDirectories);
     BOOL Free(CRes * pRes);
     BOOL FreeChunk();
@@ -112,6 +122,7 @@ struct CExoResMan
     BOOL ServiceFromEncapsulatedRaw(CRes * pRes, int32_t nSize, char * pBuffer);
     BOOL ServiceFromResFileRaw(CRes * pRes, int32_t nSize, char * pBuffer);
     BOOL ServiceFromImageRaw(CRes * pRes, int32_t nSize, char * pBuffer);
+    CResRef GetOverride(const CResRef & name, RESTYPE restype);
 
 
 #ifdef NWN_CLASS_EXTENSION_CExoResMan

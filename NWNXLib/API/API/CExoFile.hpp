@@ -11,8 +11,8 @@ struct CExoFileInternal;
 struct CExoString;
 
 
-typedef uint16_t RESTYPE;
 typedef int BOOL;
+typedef uint16_t RESTYPE;
 
 
 struct CExoFile
@@ -23,7 +23,7 @@ struct CExoFile
     CExoFile(const CExoString & fileName, RESTYPE fileType, const CExoString & mode);
     CExoFile(const void * pBuffer, int32_t nSize);
     void SetMemoryBuffer(const void * pMemoryBuffer, int32_t nSize);
-    BOOL IsMemoryBacked();
+    BOOL IsMemoryBacked() const;
     virtual ~CExoFile();
     BOOL Eof();
     BOOL FileOpened();
@@ -41,7 +41,7 @@ struct CExoFile
     BOOL Seek(int32_t offset, int32_t whence);
     BOOL SeekBeginning();
     BOOL SeekEnd();
-    BOOL IsMMapped();
+    BOOL IsMMapped() const;
 
 
 #ifdef NWN_CLASS_EXTENSION_CExoFile

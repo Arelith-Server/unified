@@ -1,9 +1,9 @@
 #pragma once
 #include "nwn_api.hpp"
 
+#include "CResDWK.hpp"
 #include "CResHelper.hpp"
 #include "CResRef.hpp"
-#include "CResDWK.hpp"
 #include "Vector.hpp"
 
 

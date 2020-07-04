@@ -19,7 +19,6 @@
 #include "API/Constants.hpp"
 #include "Services/Events/Events.hpp"
 #include "Services/Config/Config.hpp"
-#include "ViewPtr.hpp"
 #include <regex>
 
 using namespace NWNXLib;
@@ -29,7 +28,7 @@ using namespace NWNXLib::API::Constants;
 const int CORE_MAX_LEVEL = 40;
 const int MAX_LEVEL_MAX = 60;
 
-static ViewPtr<MaxLevel::MaxLevel> g_plugin;
+static MaxLevel::MaxLevel* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -86,18 +85,18 @@ MaxLevel::~MaxLevel()
 {
 }
 
-void MaxLevel::GetServerInfoFromIniFileHook(Services::Hooks::CallType type, CServerExoAppInternal* pServer)
+void MaxLevel::GetServerInfoFromIniFileHook(bool before, CServerExoAppInternal* pServer)
 {
-    if (type == Services::Hooks::CallType::AFTER_ORIGINAL)
+    if (!before)
     {
         pServer->m_pServerInfo->m_JoiningRestrictions.nMaxLevel = g_plugin->m_maxLevel;
     }
 }
 
 // After Rules aggregates all its information we add to our custom experience table map
-void MaxLevel::ReloadAllHook(Services::Hooks::CallType type, CNWRules* pRules)
+void MaxLevel::ReloadAllHook(bool before, CNWRules* pRules)
 {
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL || !pRules)
+    if (before || !pRules)
         return;
 
     auto *twoda = Globals::Rules()->m_p2DArrays->GetCached2DA("EXPTABLE", true);
@@ -204,9 +203,9 @@ void MaxLevel::SummonAssociateHook(CNWSCreature *pCreature, CResRef cResRef, CEx
 }
 
 // After the server loads 1-40 we populate our map with the values for 41+
-void MaxLevel::LoadSpellGainTableHook(Services::Hooks::CallType type, CNWClass* pClass, CExoString *pTable)
+void MaxLevel::LoadSpellGainTableHook(bool before, CNWClass* pClass, CExoString *pTable)
 {
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
         return;
 
     C2DA twoda(pTable->CStr(), true);
@@ -269,9 +268,9 @@ uint8_t MaxLevel::GetSpellGainHook(CNWClass *pClass, uint8_t nLevel, uint8_t nSp
 }
 
 // After the server loads 1-40 we populate our map with the values for 41+
-void MaxLevel::LoadSpellKnownTableHook(Services::Hooks::CallType type, CNWClass* pClass, CExoString *pTable)
+void MaxLevel::LoadSpellKnownTableHook(bool before, CNWClass* pClass, CExoString *pTable)
 {
-    if (type == Services::Hooks::CallType::BEFORE_ORIGINAL)
+    if (before)
         return;
 
     C2DA twoda(pTable->CStr(), true);
@@ -322,7 +321,7 @@ uint8_t MaxLevel::GetSpellsKnownPerLevelHook(CNWClass *pClass, uint8_t nLevel, u
             spellLevelsPerLevel = g_plugin->m_nSpellLevelsPerLevelAdded[pClass->m_nName][nLevel - 1];
             spellsKnownPerSpellLevel = g_plugin->m_nSpellKnownTableAdded[pClass->m_nName][nLevel - 1][nSpellLevel];
             if (nLevel == CORE_MAX_LEVEL + 1)
-                spellsKnownPreviousSpellLevel = pClass->m_lstSpellKnownTable[CORE_MAX_LEVEL][nSpellLevel - 1];
+                spellsKnownPreviousSpellLevel = pClass->m_lstSpellKnownTable[CORE_MAX_LEVEL - 1][nSpellLevel - 1];
             else
                 spellsKnownPreviousSpellLevel = g_plugin->m_nSpellKnownTableAdded[pClass->m_nName][nLevel - 1][nSpellLevel - 1];
         }

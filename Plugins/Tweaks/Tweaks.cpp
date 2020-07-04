@@ -13,6 +13,9 @@
 #include "Tweaks/DeadCreatureFiresOnAreaExit.hpp"
 #include "Tweaks/PreserveActionsOnDMPossess.hpp"
 #include "Tweaks/FixGreaterSanctuaryBug.hpp"
+#include "Tweaks/ItemChargesCost.hpp"
+#include "Tweaks/FixDispelEffectLevels.hpp"
+#include "Tweaks/AddPrestigeclassCasterLevels.hpp"
 
 #include "Services/Config/Config.hpp"
 
@@ -20,7 +23,7 @@
 
 using namespace NWNXLib;
 
-static ViewPtr<Tweaks::Tweaks> g_plugin;
+static Tweaks::Tweaks* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -129,6 +132,25 @@ Tweaks::Tweaks(const Plugin::CreateParams& params)
     {
         LOG_INFO("Greater sanctuary bug fixed.");
         m_FixGreaterSanctuaryBug = std::make_unique<FixGreaterSanctuaryBug>(GetServices()->m_hooks.get());
+    }
+
+    if (auto mode = GetServices()->m_config->Get<int>("ITEM_CHARGES_COST_MODE", 0))
+    {
+        LOG_INFO("Changing cost for items with charges.");
+        m_ItemChargesCost = std::make_unique<ItemChargesCost>(GetServices()->m_hooks.get(),
+            mode);
+    }
+
+    if (GetServices()->m_config->Get<bool>("FIX_DISPEL_EFFECT_LEVELS", false))
+    {
+        LOG_INFO("Fixing dispel checks vs. effects created by deleted objects.");
+        m_FixDispelEffectLevels = std::make_unique<FixDispelEffectLevels>(GetServices()->m_hooks.get());
+    }
+
+    if (GetServices()->m_config->Get<bool>("ADD_PRESTIGECLASS_CASTER_LEVELS", false))
+    {
+        LOG_INFO("Automatically adding prestige class caster levels using (Div|Arc)SpellLvlMod colums in classes.2da");
+        m_AddPrestigeclassCasterLevels = std::make_unique<AddPrestigeclassCasterLevels>(GetServices()->m_hooks.get());
     }
 }
 

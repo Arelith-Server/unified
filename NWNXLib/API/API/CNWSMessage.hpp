@@ -1,47 +1,48 @@
 #pragma once
 #include "nwn_api.hpp"
 
+#include "CExoArrayList.hpp"
+#include "CExoLocString.hpp"
+#include "CExoString.hpp"
 #include "CNWMessage.hpp"
 #include "CResRef.hpp"
-#include "CExoArrayList.hpp"
-#include "CExoString.hpp"
 #include "Vector.hpp"
-#include "CExoLocString.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSMessage)
 #endif
 
-struct CNWSDoor;
-struct CNWSPlayer;
-struct CNWSArea;
-struct CNWSItem;
-struct CNWSPlayerLastUpdateObject;
-struct CLastUpdateObject;
-struct CGameObject;
-struct CNWSStore;
-struct CNWSPlayerLUOInventory;
-struct CNWSPlayerInventoryGUI;
-struct CNWSObject;
-struct CNWSPlayerLUOSortedObjectList;
-struct CNWSCreature;
-struct CGameObjectArray;
-struct CNWSAreaOfEffectObject;
-struct CNWSPlaceable;
-struct CNWSTrigger;
-struct CItemRepository;
-struct CNWCCMessageData;
-struct CNWSCombatAttackData;
-struct CLastUpdatePartyObject;
 struct CEffectIconObject;
+struct CGameObject;
+struct CGameObjectArray;
+struct CItemRepository;
+struct CLastUpdateObject;
+struct CLastUpdatePartyObject;
 struct CLoopingVisualEffect;
+struct CNWCCMessageData;
+struct CNWSArea;
+struct CNWSAreaOfEffectObject;
+struct CNWSCombatAttackData;
+struct CNWSCreature;
+struct CNWSDoor;
+struct CNWSItem;
+struct CNWSObject;
+struct CNWSPlaceable;
+struct CNWSPlayer;
+struct CNWSPlayerInventoryGUI;
+struct CNWSPlayerLUOInventory;
+struct CNWSPlayerLUOSortedObjectList;
+struct CNWSPlayerLastUpdateObject;
+struct CNWSStore;
+struct CNWSTrigger;
 
 
-typedef uint32_t STRREF;
 typedef int BOOL;
 typedef CExoLinkedListNode * CExoLinkedListPosition;
 typedef uint32_t OBJECT_ID;
+typedef uint16_t RESTYPE;
+typedef uint32_t STRREF;
 
 
 struct CNWSMessage : CNWMessage
@@ -282,6 +283,7 @@ struct CNWSMessage : CNWMessage
     BOOL SendServerToPlayerAmbientSoundLoopPlay(OBJECT_ID nPlayer, BOOL bPlay);
     BOOL SendServerToPlayerAmbientSoundLoopChange(OBJECT_ID nPlayer, BOOL bDay, int32_t nTrack);
     BOOL SendServerToPlayerAmbientSoundVolumeChange(OBJECT_ID nPlayer, BOOL bDay, int32_t nVolume);
+    BOOL SendServerToPlayerResmanOverride(uint32_t nPlayerId, RESTYPE restype, const CResRef & sOldName, const CResRef & sNewName);
     BOOL HandleServerAdminToServerMessage(uint32_t nPlayerId, uint8_t * pMessage, uint32_t nSize);
     BOOL SendServerToServerAdminMessage(uint32_t nPlayerId, CExoString sCommand);
     void SendServerToServerAdminModuleList(uint32_t nPlayerId);

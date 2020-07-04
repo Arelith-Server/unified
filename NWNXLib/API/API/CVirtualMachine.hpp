@@ -2,25 +2,25 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CVirtualMachineScript.hpp"
-#include "Vector.hpp"
-#include "CVirtualMachineStack.hpp"
 #include "CVirtualMachineFile.hpp"
+#include "CVirtualMachineScript.hpp"
+#include "CVirtualMachineStack.hpp"
+#include "Vector.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CVirtualMachine)
 #endif
 
-struct CVirtualMachineDebuggingContext;
-struct CResGFF;
-struct CScriptCompiler;
-struct CVirtualMachineCache;
-struct CResStruct;
-struct CScriptLog;
 struct CExoString;
-struct CVirtualMachineCmdImplementer;
+struct CResGFF;
+struct CResStruct;
+struct CScriptCompiler;
 struct CScriptLog;
+struct CScriptLog;
+struct CVirtualMachineCache;
+struct CVirtualMachineCmdImplementer;
+struct CVirtualMachineDebuggingContext;
 
 
 typedef int BOOL;

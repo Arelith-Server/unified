@@ -1,8 +1,8 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CResRef.hpp"
 #include "CExoString.hpp"
+#include "CResRef.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
@@ -11,8 +11,8 @@ NWN_API_PROLOGUE(CNWBaseItem)
 
 
 
-typedef uint32_t STRREF;
 typedef int BOOL;
+typedef uint32_t STRREF;
 
 
 struct CNWBaseItem
@@ -68,6 +68,14 @@ struct CNWBaseItem
     char m_nAmmunitionType;
     uint8_t m_nQBBehaviourType;
     uint8_t m_nArcaneSpellFailure;
+    uint16_t m_nWeaponFocusFeat;
+    uint16_t m_nEpicWeaponFocusFeat;
+    uint16_t m_nWeaponSpecializationFeat;
+    uint16_t m_nEpicWeaponSpecializationFeat;
+    uint16_t m_nWeaponImprovedCriticalFeat;
+    uint16_t m_nEpicWeaponOverwhelmingCriticalFeat;
+    uint16_t m_nEpicWeaponDevastatingCriticalFeat;
+    uint16_t m_nWeaponOfChoiceFeat;
 
     CNWBaseItem();
     ~CNWBaseItem();

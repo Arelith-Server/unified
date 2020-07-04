@@ -1,12 +1,12 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "DestroyHelper.hpp"
-#include <memory>
 #include "Database.hpp"
-#include "Serial.hpp"
-#include "using.hpp"
+#include "DestroyHelper.hpp"
 #include "Identifier.hpp"
+#include "Serial.hpp"
+#include <memory>
+#include "using.hpp"
 
 
 #ifdef NWN_API_PROLOGUE

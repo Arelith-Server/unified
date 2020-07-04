@@ -2,8 +2,8 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CResRef.hpp"
 #include "CExoLocString.hpp"
+#include "CResRef.hpp"
 #include "NWPlayerCharacterListClass_st.hpp"
 
 

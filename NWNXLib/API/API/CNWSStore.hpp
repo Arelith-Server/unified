@@ -2,25 +2,25 @@
 #include "nwn_api.hpp"
 
 #include "CExoArrayList.hpp"
-#include "CResRef.hpp"
-#include "CNWSObject.hpp"
-#include "CExoString.hpp"
 #include "CExoLocString.hpp"
+#include "CExoString.hpp"
+#include "CNWSObject.hpp"
+#include "CResRef.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSStore)
 #endif
 
-struct CResGFF;
-struct CNWSCreature;
-struct CNWSPlayer;
-struct CStoreCustomer;
-struct CStoreCustomer;
-struct CNWSArea;
 struct CItemRepository;
+struct CNWSArea;
+struct CNWSCreature;
 struct CNWSItem;
+struct CNWSPlayer;
+struct CResGFF;
 struct CResStruct;
+struct CStoreCustomer;
+struct CStoreCustomer;
 
 
 typedef int BOOL;

@@ -17,7 +17,7 @@
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static ViewPtr<Damage::Damage> g_plugin;
+static Damage::Damage* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -73,7 +73,6 @@ Damage::~Damage()
 
 ArgumentStack Damage::SetEventScript(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     const std::string event = Services::Events::ExtractArgument<std::string>(args);
     const std::string script = Services::Events::ExtractArgument<std::string>(args);
     Types::ObjectID oidOwner = Services::Events::ExtractArgument<Types::ObjectID>(args);
@@ -87,7 +86,7 @@ ArgumentStack Damage::SetEventScript(ArgumentStack&& args)
     {
         if (script != "")
         {
-            g_plugin->GetServices()->m_perObjectStorage->Set(oidOwner, event + "_EVENT_SCRIPT", script);
+            g_plugin->GetServices()->m_perObjectStorage->Set(oidOwner, event + "_EVENT_SCRIPT", script, true);
             LOG_INFO("Set object 0x%08x %s Event Script to %s", oidOwner, event, script);
         }
         else
@@ -97,7 +96,7 @@ ArgumentStack Damage::SetEventScript(ArgumentStack&& args)
         }
     }
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 std::string Damage::GetEventScript(CNWSObject *pObject, const std::string &event)
@@ -186,10 +185,10 @@ ArgumentStack Damage::SetAttackEventData(ArgumentStack&& args)
     return stack;
 }
 
-void Damage::OnSignalDamage(Services::Hooks::CallType type, CNWSCreature *pThis, CNWSObject *pTarget, uint32_t nAttacks)
+void Damage::OnSignalDamage(bool before, CNWSCreature *pThis, CNWSObject *pTarget, uint32_t nAttacks)
 {
     // only call once, either before or after original
-    if ( type == Services::Hooks::CallType::BEFORE_ORIGINAL )
+    if (before)
     {
         std::string script = GetEventScript(pThis, "ATTACK");
         if ( !script.empty() )
@@ -225,7 +224,6 @@ void Damage::OnCombatAttack(CNWSCreature *pThis, CNWSObject *pTarget, std::strin
 
 ArgumentStack Damage::DealDamage(ArgumentStack&& args)
 {
-    ArgumentStack stack;
     int vDamage[13];
     std::bitset<13> positive;
 
@@ -240,6 +238,16 @@ ArgumentStack Damage::DealDamage(ArgumentStack&& args)
         positive[k] = vDamage[k] > 0;
     }
     int damagePower = Services::Events::ExtractArgument<int32_t>(args);
+
+    int range = 0;
+    try
+    {
+        range = Services::Events::ExtractArgument<int>(args);
+    }
+    catch(const std::runtime_error& e)
+    {
+        LOG_WARNING("NWNX_Damage_DealDamage() called from NWScript without final parameter. Please download the latest versions of NWNX scripts.");
+    }
 
     CNWSCreature *pSource = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(oidSource);
     CNWSObject *pTarget = Utils::AsNWSObject(Globals::AppManager()->m_pServerExoApp->GetGameObject(oidTarget));
@@ -270,9 +278,13 @@ ArgumentStack Damage::DealDamage(ArgumentStack&& args)
         pEffect->SetInteger(k, positive[k] ? vDamage[k] : -1);
     pEffect->SetInteger(17, true); // combat damage
     // ... and apply it
+
+    //Check if ranged (this sets bRangedAttack internally)
+    pEffect->SetInteger(18, !!range);
+
     pTarget->ApplyEffect(pEffect, false, true);
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 }

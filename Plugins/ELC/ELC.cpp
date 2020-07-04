@@ -29,7 +29,6 @@
 #include "Services/Config/Config.hpp"
 #include "Services/Messaging/Messaging.hpp"
 #include "Platform/ASLR.hpp"
-#include "ViewPtr.hpp"
 
 #include <set>
 #include <map>
@@ -39,7 +38,7 @@ using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
-static ViewPtr<ELC::ELC> g_plugin;
+static ELC::ELC* g_plugin;
 
 NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
 {
@@ -102,8 +101,6 @@ const int32_t STRREF_CUSTOM                                 = 164;
 const int32_t NUM_CREATURE_ITEM_SLOTS       = 4;
 const int32_t NUM_MULTICLASS                = 3;
 const int32_t CHARACTER_EPIC_LEVEL          = 21;
-const int32_t MIN_STARTING_ABILITY_VALUE    = 8;
-const int32_t MAX_STARTING_ABILITY_VALUE    = 18;
 const int32_t NUM_SPELL_LEVELS              = 10;
 
 
@@ -205,6 +202,9 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
 
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ELC_SIGNAL",
             {"VALIDATE_CHARACTER_BEFORE", NWNXLib::Utils::ObjectIDToString(pPlayer->m_oidNWSObject)});
+
+    g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_EVENT_SIGNAL_EVENT",
+            { "NWNX_ON_ELC_VALIDATE_CHARACTER_BEFORE", NWNXLib::Utils::ObjectIDToString(pPlayer->m_oidNWSObject) });
 
     // *** Server Restrictions **********************************************************************************************
     CServerInfo *pServerInfo = Globals::AppManager()->m_pServerExoApp->GetServerInfo();
@@ -495,10 +495,13 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
             nAbility[nAbilityGain]--;
     }
 
+    static int32_t charGenBaseAbilityMin = Globals::Rules()->GetRulesetIntEntry("CHARGEN_BASE_ABILITY_MIN", 8);
+    static int32_t charGenBaseAbilityMax = Globals::Rules()->GetRulesetIntEntry("CHARGEN_BASE_ABILITY_MAX", 18);
+
     // Check if >18 in an ability
     for (int nAbilityIndex = 0; nAbilityIndex <= Ability::MAX; nAbilityIndex++)
     {
-        if (nAbility[nAbilityIndex] > MAX_STARTING_ABILITY_VALUE)
+        if (nAbility[nAbilityIndex] > charGenBaseAbilityMax)
         {
             if (auto strrefFailure = HandleValidationFailure(
                     ValidationFailureType::Character,
@@ -513,13 +516,17 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
     // Point Buy System calculation
     uint8_t nAbilityAtLevel[6] = {0};
     uint8_t nPointBuy = pRace->m_nAbilitiesPointBuyNumber;
+
+    static int32_t abilityCostIncrement2 = Globals::Rules()->GetRulesetIntEntry("CHARGEN_ABILITY_COST_INCREMENT2", 14);
+    static int32_t abilityCostIncrement3 = Globals::Rules()->GetRulesetIntEntry("CHARGEN_ABILITY_COST_INCREMENT3", 16);
+
     for (int nAbilityIndex = 0; nAbilityIndex <= Ability::MAX; nAbilityIndex++)
     {
         nAbilityAtLevel[nAbilityIndex] = nAbility[nAbilityIndex];
 
-        while (nAbility[nAbilityIndex] > MIN_STARTING_ABILITY_VALUE)
+        while (nAbility[nAbilityIndex] > charGenBaseAbilityMin)
         {
-            if (nAbility[nAbilityIndex] > 16)
+            if (nAbility[nAbilityIndex] > abilityCostIncrement3)
             {
                 if (nPointBuy < 3)
                 {
@@ -535,7 +542,7 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
                 nAbility[nAbilityIndex]--;
                 nPointBuy -= 3;
             }
-            else if (nAbility[nAbilityIndex] > 14)
+            else if (nAbility[nAbilityIndex] > abilityCostIncrement2)
             {
                 if (nPointBuy < 2)
                 {
@@ -572,18 +579,18 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
 
     // Get Cleric Domain Feats
     uint16_t nDomainFeat1 = -1, nDomainFeat2 = -1;
-    for (int i = 0; i < pCreatureStats->m_nNumMultiClasses; i++)
+    for (int nMultiClass = 0; nMultiClass < pCreatureStats->m_nNumMultiClasses; nMultiClass++)
     {
-        if (pCreatureStats->GetClass(i) == ClassType::Cleric)
+        if (Globals::Rules()->m_lstClasses[pCreatureStats->GetClass(nMultiClass)].m_bHasDomains)
         {
-            CNWDomain *pDomain = pRules->GetDomain(pCreatureStats->GetDomain1(i));
+            CNWDomain *pDomain = pRules->GetDomain(pCreatureStats->GetDomain1(nMultiClass));
 
             if (pDomain)
             {
                 nDomainFeat1 = pDomain->m_nGrantedFeat;
             }
 
-            pDomain = pRules->GetDomain(pCreatureStats->GetDomain2(i));
+            pDomain = pRules->GetDomain(pCreatureStats->GetDomain2(nMultiClass));
 
             if (pDomain)
             {
@@ -687,6 +694,20 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
         for (int nAbilityIndex = 0; nAbilityIndex <= Ability::MAX; nAbilityIndex++)
         {
             nAbilityAtLevel[nAbilityIndex] += nStatMods[nAbilityIndex];
+        }
+
+        for (int nMultiClass = 0; nMultiClass < NUM_MULTICLASS; nMultiClass++)
+        {
+            uint8_t nClassId = pCreatureStats->GetClass(nMultiClass);
+            CNWClass *pClass = nClassId < pRules->m_nNumClasses ? &pRules->m_lstClasses[nClassId] : nullptr;
+
+            if (pClass)
+            {
+                for (int nAbilityIndex = 0; nAbilityIndex <= Ability::MAX; nAbilityIndex++)
+                {
+                    nAbilityAtLevel[nAbilityIndex] += pClass->GetAbilityGainForSingleLevel(nAbilityIndex, nMultiClassLevel[nMultiClassLeveledUpIn]);
+                }
+            }
         }
 
 // *** Check Hit Die ********************************************************************************************************
@@ -816,9 +837,10 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
                 listSkillRanks[nSkill] += nRankChange;
 
                 // Can't have more than Level + 3 in a class skill, or (Level + 3) / 2 for a non class skill
+                static int32_t skillMaxLevel1Bonus = Globals::Rules()->GetRulesetIntEntry("CHARGEN_SKILL_MAX_LEVEL_1_BONUS", 3);
                 if (bClassSkill)
                 {
-                    if (listSkillRanks[nSkill] > nLevel + 3)
+                    if (listSkillRanks[nSkill] > nLevel + skillMaxLevel1Bonus)
                     {
                         if (auto strrefFailure = HandleValidationFailure(
                                 ValidationFailureType::Skill,
@@ -831,7 +853,7 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
                 }
                 else
                 {
-                    if (listSkillRanks[nSkill] > (nLevel + 3) / 2)
+                    if (listSkillRanks[nSkill] > (nLevel + skillMaxLevel1Bonus) / 2)
                     {
                         if (auto strrefFailure = HandleValidationFailure(
                                 ValidationFailureType::Skill,
@@ -867,7 +889,7 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
         uint8_t nNumberBonusFeats = 0;
 
         // First and every nth level gets a normal feat
-        if ((nLevel == 1) || (nLevel % pRace->m_nNormalFeatEveryNthLevel == 0))
+        if ((nLevel == 1) || ((pRace->m_nNormalFeatEveryNthLevel != 0) && (nLevel % pRace->m_nNormalFeatEveryNthLevel == 0)))
         {
             nNumberNormalFeats = pRace->m_nNumberNormalFeatsEveryNthLevel;
         }
@@ -926,7 +948,7 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
             // Check if it's one of our cleric domain feats
             if (!bGranted)
             {
-                if ((nClassLeveledUpIn == ClassType::Cleric) && (nMultiClassLevel[nMultiClassLeveledUpIn] == 1))
+                if (pClassLeveledUpIn->m_bHasDomains && (nMultiClassLevel[nMultiClassLeveledUpIn] == 1))
                 {
                     if ((nFeat == nDomainFeat1) || (nFeat == nDomainFeat2))
                     {
@@ -986,11 +1008,11 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
 
                         if (pClass->m_bIsSpellCasterClass)
                         {
-                            if ((nClass == ClassType::Bard) || (nClass == ClassType::Sorcerer))
+                            if (!pClass->m_bNeedsToMemorizeSpells)
                             {
                                 if (pClass->GetSpellsKnownPerLevel(nMultiClassLevel[nMultiClass], pFeat->m_nMinSpellLevel,
                                                                    nClass, pCreatureStats->m_nRace,
-                                                                   nAbilityAtLevel[Ability::Charisma]))
+                                                                   nAbilityAtLevel[pClass->m_nSpellcastingAbility]))
                                 {
                                     bSpellLevelMet = true;
                                 }
@@ -1394,7 +1416,7 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
         uint32_t nNumberWizardSpellsToAdd = 0;
 
         // Calculate the num of spells a wizard can add
-        if (nClassLeveledUpIn == ClassType::Wizard)
+        if (pClassLeveledUpIn->m_bCanLearnFromScrolls)
         {
             if (nMultiClassLevel[nMultiClassLeveledUpIn] == 1)
             {
@@ -1412,7 +1434,7 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
             for (int nSpellIndex = 0; nSpellIndex < pLevelStats->m_pAddedKnownSpellList[nSpellLevel].num; nSpellIndex++)
             {
                 // Can we add spells this level?
-                if (nClassLeveledUpIn == ClassType::Wizard)
+                if (pClassLeveledUpIn->m_bSpellbookRestricted && pClassLeveledUpIn->m_bNeedsToMemorizeSpells)
                 {
                     if (!pClassLeveledUpIn->GetSpellGain(nMultiClassLevel[nMultiClassLeveledUpIn], nSpellLevel))
                     {
@@ -1425,10 +1447,10 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
                         }
                     }
                 }
-                else if ((nClassLeveledUpIn == ClassType::Bard) || (nClassLeveledUpIn == ClassType::Sorcerer))
+                else if (pClassLeveledUpIn->m_bSpellbookRestricted && !pClassLeveledUpIn->m_bNeedsToMemorizeSpells)
                 {
                     if (!pClassLeveledUpIn->GetSpellsKnownPerLevel(nMultiClassLevel[nMultiClassLeveledUpIn], nSpellLevel,
-                            nClassLeveledUpIn, pCreatureStats->m_nRace, nAbilityAtLevel[Ability::Charisma]))
+                            nClassLeveledUpIn, pCreatureStats->m_nRace, nAbilityAtLevel[pClassLeveledUpIn->m_nSpellcastingAbility]))
                     {
                         if (auto strrefFailure = HandleValidationFailure(
                                 ValidationFailureType::Spell,
@@ -1480,45 +1502,22 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
                 }
 
                 // Check for minimum ability
-                if ((nClassLeveledUpIn == ClassType::Bard) || (nClassLeveledUpIn == ClassType::Sorcerer))
+                if (pClassLeveledUpIn->m_bSpellbookRestricted)
                 {
-                    if (nAbilityAtLevel[Ability::Charisma] < 10 + nSpellLevel)
+                    if (nAbilityAtLevel[pClassLeveledUpIn->m_nSpellcastingAbility] < 10 + nSpellLevel)
                     {
                         if (auto strrefFailure = HandleValidationFailure(
                                 ValidationFailureType::Spell,
-                                ValidationFailureSubType::SpellMinimumAbilityBardSorcerer,
+                                ValidationFailureSubType::SpellMinimumAbility,
                                 STRREF_SPELL_REQ_ABILITY))
                         {
                             return strrefFailure;
                         }
-                    }
-                }
-                else if (nClassLeveledUpIn == ClassType::Wizard)
-                {
-                    if (nAbilityAtLevel[Ability::Intelligence] < 10 + nSpellLevel)
-                    {
-                        if (auto strrefFailure = HandleValidationFailure(
-                                ValidationFailureType::Spell,
-                                ValidationFailureSubType::SpellMinimumAbilityWizard,
-                                STRREF_SPELL_REQ_ABILITY))
-                        {
-                            return strrefFailure;
-                        }
-                    }
-                }
-                else
-                {
-                    if (auto strrefFailure = HandleValidationFailure(
-                            ValidationFailureType::Spell,
-                            ValidationFailureSubType::SpellMinimumAbilityOtherClasses,
-                            STRREF_SPELL_REQ_ABILITY))
-                    {
-                        return strrefFailure;
                     }
                 }
 
                 // Check Opposition School
-                if (nClassLeveledUpIn == ClassType::Wizard)
+                if (pClassLeveledUpIn->m_bSpellbookRestricted && pClassLeveledUpIn->m_bNeedsToMemorizeSpells)
                 {
                     uint8_t nSchool = pCreatureStats->GetSchool(nClassLeveledUpIn);
 
@@ -1554,7 +1553,7 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
                 }
 
                 // Check if we're a wizard and haven't exceeded the number of spells we can add
-                if (nClassLeveledUpIn == ClassType::Wizard)
+                if (pClassLeveledUpIn->m_bSpellbookRestricted && pClassLeveledUpIn->m_bNeedsToMemorizeSpells)
                 {
                     if (nSpellLevel != 0)
                     {
@@ -1582,10 +1581,10 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
             // Check Bard/Sorc removed spells
             for (int nSpellIndex = 0; nSpellIndex < pLevelStats->m_pRemovedKnownSpellList[nSpellLevel].num; nSpellIndex++)
             {
-                if (((nClassLeveledUpIn != ClassType::Bard) && (nClassLeveledUpIn != ClassType::Sorcerer)) ||
+                if (!pClassLeveledUpIn->m_bSpellbookRestricted || pClassLeveledUpIn->m_bNeedsToMemorizeSpells ||
                     (nMultiClassLevel[nMultiClassLeveledUpIn] == 1) ||
                     !pClassLeveledUpIn->GetSpellsKnownPerLevel(nMultiClassLevel[nMultiClassLeveledUpIn],
-                            nSpellLevel, nClassLeveledUpIn, pCreatureStats->m_nRace, nAbilityAtLevel[Ability::Charisma]))
+                            nSpellLevel, nClassLeveledUpIn, pCreatureStats->m_nRace, nAbilityAtLevel[pClassLeveledUpIn->m_nSpellcastingAbility]))
                 {
                     if (auto strrefFailure = HandleValidationFailure(
                             ValidationFailureType::Spell,
@@ -1635,13 +1634,13 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
         }
 
         // Check if we have the valid number of spells
-        if (nClassLeveledUpIn != ClassType::Wizard)
+        if (pClassLeveledUpIn->m_bSpellbookRestricted && !pClassLeveledUpIn->m_bCanLearnFromScrolls)
         {
             for (int nSpellLevel = 0; nSpellLevel < NUM_SPELL_LEVELS; nSpellLevel++)
             {
                 if (listSpells[nMultiClassLeveledUpIn][nSpellLevel].size() >
                         pClassLeveledUpIn->GetSpellsKnownPerLevel(nMultiClassLevel[nMultiClassLeveledUpIn],
-                        nSpellLevel, nClassLeveledUpIn, pCreatureStats->m_nRace, nAbilityAtLevel[Ability::Charisma]))
+                        nSpellLevel, nClassLeveledUpIn, pCreatureStats->m_nRace, nAbilityAtLevel[pClassLeveledUpIn->m_nSpellcastingAbility]))
                 {
                     if (auto strrefFailure = HandleValidationFailure(
                             ValidationFailureType::Spell,
@@ -1661,16 +1660,15 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
     // Check if our list of spells from LevelStats are the same as the spells the character knows
     for (int nMultiClass = 0; nMultiClass < pCreatureStats->m_nNumMultiClasses; nMultiClass++)
     {
+        auto *pClass = &Globals::Rules()->m_lstClasses[pCreatureStats->GetClass(nMultiClass)];
         // We skip wizard because they can learn spells from scrolls
-        if (pCreatureStats->GetClass(nMultiClass) != ClassType::Wizard)
+        if (!pClass->m_bCanLearnFromScrolls)
         {
             for (int nSpellLevel = 0; nSpellLevel < NUM_SPELL_LEVELS; nSpellLevel++)
             {
                 //  NOTE: Not sure if this is still needed, removing it for now.
                 /*
-                if (nSpellLevel != 0 ||
-                    (pCreatureStats->GetClass(nMultiClass) != ClassType::Bard &&
-                    pCreatureStats->GetClass(nMultiClass) != ClassType::Sorcerer))
+                if (nSpellLevel != 0 || !(pClass->m_bSpellbookRestricted && pClass->m_bCanLearnFromScrolls))
                 {
                 */
                 for (int nSpellIndex = 0; nSpellIndex < pCreatureStats->GetNumberKnownSpells(nMultiClass, nSpellLevel); nSpellIndex++)
@@ -1837,29 +1835,28 @@ int32_t ELC::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerRe
     g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ELC_SIGNAL",
             {"VALIDATE_CHARACTER_AFTER", NWNXLib::Utils::ObjectIDToString(pPlayer->m_oidNWSObject)});
 
+    g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_EVENT_SIGNAL_EVENT",
+            {"NWNX_ON_ELC_VALIDATE_CHARACTER_AFTER", NWNXLib::Utils::ObjectIDToString(pPlayer->m_oidNWSObject) });
+
     return 0;
 }
 
 ArgumentStack ELC::SetELCScript(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
     auto elcScript = Services::Events::ExtractArgument<std::string>(args);
 
     g_plugin->m_elcScript = elcScript;
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack ELC::EnableCustomELCCheck(ArgumentStack&& args)
 {
-    ArgumentStack stack;
-
     auto enabled = Services::Events::ExtractArgument<int32_t>(args);
 
     g_plugin->m_enableCustomELCCheck = enabled != 0;
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack ELC::SkipValidationFailure(ArgumentStack&&)
@@ -1869,11 +1866,9 @@ ArgumentStack ELC::SkipValidationFailure(ArgumentStack&&)
         throw std::runtime_error("Called SkipValidationFailure() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
     g_plugin->m_skipValidationFailure = true;
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack ELC::GetValidationFailureType(ArgumentStack&&)
@@ -1883,11 +1878,7 @@ ArgumentStack ELC::GetValidationFailureType(ArgumentStack&&)
         throw std::runtime_error("Called GetValidationFailureType() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack, g_plugin->m_validationFailureType);
-
-    return stack;
+    return Services::Events::Arguments(g_plugin->m_validationFailureType);
 }
 
 ArgumentStack ELC::GetValidationFailureSubType(ArgumentStack&&)
@@ -1897,11 +1888,7 @@ ArgumentStack ELC::GetValidationFailureSubType(ArgumentStack&&)
         throw std::runtime_error("Called GetValidationFailureSubType() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack, g_plugin->m_validationFailureSubType);
-
-    return stack;
+    return Services::Events::Arguments(g_plugin->m_validationFailureSubType);
 }
 
 
@@ -1912,11 +1899,7 @@ ArgumentStack ELC::GetValidationFailureMessageStrRef(ArgumentStack&&)
         throw std::runtime_error("Called GetValidationFailureMessageStrRef() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack, g_plugin->m_validationFailureMessageStrRef);
-
-    return stack;
+    return Services::Events::Arguments(g_plugin->m_validationFailureMessageStrRef);
 }
 
 ArgumentStack ELC::SetValidationFailureMessageStrRef(ArgumentStack&& args)
@@ -1926,14 +1909,12 @@ ArgumentStack ELC::SetValidationFailureMessageStrRef(ArgumentStack&& args)
         throw std::runtime_error("Called SetValidationFailureMessageStrRef() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
     auto messageStrRef = Services::Events::ExtractArgument<int32_t>(args);
       ASSERT_OR_THROW(messageStrRef > 0);
 
     g_plugin->m_validationFailureMessageStrRef = messageStrRef;
 
-    return stack;
+    return Services::Events::Arguments();
 }
 
 ArgumentStack ELC::GetValidationFailureItem(ArgumentStack&&)
@@ -1943,11 +1924,7 @@ ArgumentStack ELC::GetValidationFailureItem(ArgumentStack&&)
         throw std::runtime_error("Called GetILRValidationFailureItem() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack, g_plugin->m_ILRItemOID);
-
-    return stack;
+    return Services::Events::Arguments(g_plugin->m_ILRItemOID);
 }
 
 ArgumentStack ELC::GetValidationFailureLevel(ArgumentStack&&)
@@ -1957,11 +1934,7 @@ ArgumentStack ELC::GetValidationFailureLevel(ArgumentStack&&)
         throw std::runtime_error("Called GetValidationFailureLevel() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack, g_plugin->m_ELCLevel);
-
-    return stack;
+    return Services::Events::Arguments(g_plugin->m_ELCLevel);
 }
 
 ArgumentStack ELC::GetValidationFailureSkillID(ArgumentStack&&)
@@ -1971,11 +1944,7 @@ ArgumentStack ELC::GetValidationFailureSkillID(ArgumentStack&&)
         throw std::runtime_error("Called GetValidationFailureSkillID() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack, g_plugin->m_ELCSkillID);
-
-    return stack;
+    return Services::Events::Arguments(g_plugin->m_ELCSkillID);
 }
 
 ArgumentStack ELC::GetValidationFailureFeatID(ArgumentStack&&)
@@ -1985,11 +1954,7 @@ ArgumentStack ELC::GetValidationFailureFeatID(ArgumentStack&&)
         throw std::runtime_error("Called GetValidationFailureFeatID() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack, g_plugin->m_ELCFeatID);
-
-    return stack;
+    return Services::Events::Arguments(g_plugin->m_ELCFeatID);
 }
 
 ArgumentStack ELC::GetValidationFailureSpellID(ArgumentStack&&)
@@ -1999,11 +1964,7 @@ ArgumentStack ELC::GetValidationFailureSpellID(ArgumentStack&&)
         throw std::runtime_error("Called GetValidationFailureSpellID() in an invalid context.");
     }
 
-    ArgumentStack stack;
-
-    Services::Events::InsertArgument(stack, g_plugin->m_ELCSpellID);
-
-    return stack;
+    return Services::Events::Arguments(g_plugin->m_ELCSpellID);
 }
 
 }

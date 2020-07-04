@@ -1,36 +1,36 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CNWSCreatureStats_ClassInfo.hpp"
 #include "CExoArrayList.hpp"
-#include "CResRef.hpp"
-#include "CNWSStats_SpellLikeAbility.hpp"
-#include "CExoString.hpp"
 #include "CExoLocString.hpp"
+#include "CExoString.hpp"
+#include "CNWSCreatureStats_ClassInfo.hpp"
+#include "CNWSStats_SpellLikeAbility.hpp"
+#include "CResRef.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSCreatureStats)
 #endif
 
-struct CResGFF;
-struct CNWSCreature;
-struct CNWSCreatureAppearanceInfo;
-struct CNWLevelStats;
-struct CNWSObject;
-struct CNWClass;
-struct CNWSItem;
-struct CNWCreatureStatsUpdate;
-struct CNWSpell;
-struct CNWLevelStats;
 struct CCombatInformation;
 struct CFeatUseListEntry;
+struct CNWClass;
+struct CNWCreatureStatsUpdate;
+struct CNWLevelStats;
+struct CNWLevelStats;
+struct CNWSCreature;
+struct CNWSCreatureAppearanceInfo;
+struct CNWSItem;
+struct CNWSObject;
+struct CNWSpell;
+struct CResGFF;
 struct CResStruct;
 
 
-typedef uint32_t STRREF;
 typedef int BOOL;
 typedef uint32_t OBJECT_ID;
+typedef uint32_t STRREF;
 
 
 struct CNWSCreatureStats
@@ -215,7 +215,9 @@ struct CNWSCreatureStats
     char GetBaseWillSavingThrow();
     char GetReflexSavingThrow(BOOL bExcludeEffectBonus = false);
     char GetBaseReflexSavingThrow();
+    char GetAbilityMod(uint8_t nAbility);
     char GetPrimaryMod(uint8_t nMultiClass);
+    char GetSpellcastingMod(uint8_t nMultiClass);
     uint8_t GetSTRStat();
     char GetTotalSTRBonus();
     uint8_t GetDEXStat();
@@ -237,6 +239,7 @@ struct CNWSCreatureStats
     void SetWISBase(uint8_t nValue);
     void SetCHABase(uint8_t nValue);
     char CalcStatModifier(uint8_t nValue);
+    void GetAbilityInfo(uint8_t nAbilityId, uint8_t * pStat, char * pMod = nullptr, uint8_t * pBase = nullptr, char * pTotalBonus = nullptr);
     char GetSkillRank(uint8_t nSkill, CNWSObject * pVersus, BOOL bBaseOnly = false);
     BOOL GetCanUseSkill(uint8_t nSkill);
     BOOL GetCanUseSkillAfterLevelUp(uint16_t nSkill, CNWLevelStats * pLevelUpStats);

@@ -1,23 +1,23 @@
 #pragma once
 #include "nwn_api.hpp"
 
-#include "CResRef.hpp"
 #include "CExoArrayList.hpp"
-#include "CNWSObject.hpp"
-#include "CExoString.hpp"
-#include "Vector.hpp"
 #include "CExoLocString.hpp"
+#include "CExoString.hpp"
+#include "CNWSObject.hpp"
+#include "CResRef.hpp"
+#include "Vector.hpp"
 
 
 #ifdef NWN_API_PROLOGUE
 NWN_API_PROLOGUE(CNWSPlaceable)
 #endif
 
-struct CResGFF;
-struct CNWSArea;
-struct CNWSObjectActionNode;
 struct CItemRepository;
+struct CNWSArea;
 struct CNWSItem;
+struct CNWSObjectActionNode;
+struct CResGFF;
 struct CResStruct;
 
 
