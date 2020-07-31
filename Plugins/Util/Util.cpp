@@ -18,6 +18,11 @@
 #include "API/CGameObjectArray.hpp"
 #include "API/CScriptCompiler.hpp"
 #include "API/CExoFile.hpp"
+#include "API/CNWSDoor.hpp"
+#include "API/CResStruct.hpp"
+#include "API/CResGFF.hpp"
+#include "API/CNWSArea.hpp"
+#include "API/CNWSModule.hpp"
 #include "API/Functions.hpp"
 #include "Utils.hpp"
 #include "Services/Config/Config.hpp"
@@ -35,30 +40,17 @@ using namespace NWNXLib::API;
 
 static Util::Util* g_plugin;
 
-NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
+NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
-    return new Plugin::Info
-    {
-        "Util",
-        "Miscellaneous utility functions",
-        "sherincall",
-        "sherincall@gmail.com",
-        1,
-        true
-    };
-}
-
-NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Plugin::CreateParams params)
-{
-    g_plugin = new Util::Util(params);
+    g_plugin = new Util::Util(services);
     return g_plugin;
 }
 
 
 namespace Util {
 
-Util::Util(const Plugin::CreateParams& params)
-    : Plugin(params),
+Util::Util(Services::ProxyServiceList* services)
+    : Plugin(services),
       m_scriptCompiler(nullptr)
 {
 #define REGISTER(func) \
@@ -91,6 +83,7 @@ Util::Util(const Plugin::CreateParams& params)
     REGISTER(PluginExists);
     REGISTER(GetUserDirectory);
     REGISTER(GetScriptReturnValue);
+    REGISTER(CreateDoor);
 
 #undef REGISTER
 
@@ -358,7 +351,7 @@ ArgumentStack Util::GetServerTicksPerSecond(ArgumentStack&&)
 
 ArgumentStack Util::GetLastCreatedObject(ArgumentStack&& args)
 {
-    Types::ObjectID retVal = Constants::OBJECT_INVALID;
+    ObjectID retVal = Constants::OBJECT_INVALID;
 
     const auto objectType = Services::Events::ExtractArgument<int32_t>(args);
       ASSERT_OR_THROW(objectType >= 0);
@@ -573,15 +566,72 @@ ArgumentStack Util::UnregisterServerConsoleCommand(ArgumentStack&& args)
 
 ArgumentStack Util::PluginExists(ArgumentStack&& args)
 {
-    std::string pluginName = Services::Events::ExtractArgument<std::string>(args);
-    std::string pluginNameWithoutPrefix = pluginName.substr(5, pluginName.length() - 5);
+    auto pluginName = Services::Events::ExtractArgument<std::string>(args);
 
-    return GetServices()->m_plugins->FindPluginByName(pluginNameWithoutPrefix) ? Services::Events::Arguments(1) : Services::Events::Arguments(0);
+    return GetServices()->m_plugins->FindPluginByName(pluginName) ? Services::Events::Arguments(1) : Services::Events::Arguments(0);
 }
 
 ArgumentStack Util::GetUserDirectory(ArgumentStack&&)
 {
     return Services::Events::Arguments(Globals::ExoBase()->m_sUserDirectory.CStr());
+}
+
+ArgumentStack Util::CreateDoor(ArgumentStack&& args)
+{
+    ObjectID retVal = Constants::OBJECT_INVALID;
+
+    const auto strResRef = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!strResRef.empty());
+    const auto oidArea = Services::Events::ExtractArgument<ObjectID>(args);
+      ASSERT_OR_THROW(oidArea != Constants::OBJECT_INVALID);
+    const auto posX = Services::Events::ExtractArgument<float>(args);
+    const auto posY = Services::Events::ExtractArgument<float>(args);
+    const auto posZ = Services::Events::ExtractArgument<float>(args);
+    const auto facing = Services::Events::ExtractArgument<float>(args);
+    const auto tag = Services::Events::ExtractArgument<std::string>(args);
+
+    auto resRef = CResRef(strResRef);
+    Vector position = {posX, posY, posZ};
+
+    if (!Globals::ExoResMan()->Exists(resRef, Constants::ResRefType::UTD, nullptr))
+    {
+        LOG_WARNING("CreateDoor: ResRef '%s' does not exist", resRef.GetResRefStr());
+        return Services::Events::Arguments(Constants::OBJECT_INVALID);
+    }
+
+    if (auto *pArea = Utils::AsNWSArea(Utils::GetGameObject(oidArea)))
+    {
+        CResStruct resStruct{};
+        CResGFF gff(Constants::ResRefType::UTD, "UTD ", resRef);
+
+        if (gff.m_bLoaded)
+        {
+            auto *pDoor = new CNWSDoor();
+            gff.GetTopLevelStruct(&resStruct);
+
+            pDoor->m_sTemplate = resRef.GetResRefStr();
+            pDoor->LoadDoor(&gff, &resStruct);
+            pDoor->LoadVarTable(&gff, &resStruct);
+            pDoor->SetPosition(position);
+            Utils::SetOrientation(pDoor, facing);
+
+            if (!tag.empty())
+            {
+                pDoor->m_sTag = CExoString(tag.c_str());
+                Utils::GetModule()->AddObjectToLookupTable(pDoor->m_sTag, pDoor->m_idSelf);
+            }
+
+            pDoor->AddToArea(pArea, posX, posY, pArea->ComputeHeight(position));
+
+            retVal = pDoor->m_idSelf;
+        }
+        else
+            LOG_WARNING("CreateDoor: Unable to load ResRef: %s", resRef.GetResRefStr());
+    }
+    else
+        LOG_WARNING("CreateDoor: Invalid Area");
+
+    return Services::Events::Arguments(retVal);
 }
 
 }

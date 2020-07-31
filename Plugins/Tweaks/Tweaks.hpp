@@ -23,11 +23,13 @@ class FixGreaterSanctuaryBug;
 class ItemChargesCost;
 class FixDispelEffectLevels;
 class AddPrestigeclassCasterLevels;
+class FixUnlimitedPotionsBug;
+class UnhardcodeShields;
 
 class Tweaks : public NWNXLib::Plugin
 {
 public:
-    Tweaks(const Plugin::CreateParams& params);
+    Tweaks(NWNXLib::Services::ProxyServiceList* services);
     virtual ~Tweaks();
 
 private:
@@ -49,6 +51,8 @@ private:
     std::unique_ptr<ItemChargesCost> m_ItemChargesCost;
     std::unique_ptr<FixDispelEffectLevels> m_FixDispelEffectLevels;
     std::unique_ptr<AddPrestigeclassCasterLevels> m_AddPrestigeclassCasterLevels;
+    std::unique_ptr<FixUnlimitedPotionsBug> m_FixUnlimitedPotionsBug;
+    std::unique_ptr<UnhardcodeShields> m_UnhardcodeShields;
 };
 
 }

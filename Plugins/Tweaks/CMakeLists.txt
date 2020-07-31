@@ -18,4 +18,6 @@ add_plugin(Tweaks
     "Tweaks/ItemChargesCost.cpp"
     "Tweaks/FixDispelEffectLevels.cpp"
     "Tweaks/AddPrestigeclassCasterLevels.cpp"
+    "Tweaks/FixUnlimitedPotionsBug.cpp"
+    "Tweaks/UnhardcodeShields.cpp"
 )
