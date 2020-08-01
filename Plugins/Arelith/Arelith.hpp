@@ -32,19 +32,21 @@ public: // Structures
     };
 
 public:
-    Arelith(const Plugin::CreateParams& params);
+    Arelith(NWNXLib::Services::ProxyServiceList* services);
     virtual ~Arelith();
 
     // Pushes event data to the stack - won't do anything until SignalEvent is called.
-    static void PushEventData(const std::string tag, const std::string data);
+    static void PushEventData(const std::string& tag, const std::string& data);
 
     // Get event data
-    static std::string GetEventData(const std::string tag);
+    static std::string GetEventData(const std::string& tag);
 
     // Returns true if the event can proceed, or false if the event has been skipped.
-    static bool SignalEvent(const std::string& eventName, const NWNXLib::API::Types::ObjectID target, std::string *result=nullptr);
+    static bool SignalEvent(const std::string& eventName, const ObjectID target, std::string *result=nullptr);
 
     static void InitOnFirstSubscribe(const std::string& eventName, std::function<void(void)> init);
+
+    
 
 private: // Structures
     using EventMapType = std::unordered_map<std::string, std::vector<std::string>>;
@@ -57,7 +59,10 @@ private:
     NWNXLib::Services::Events::ArgumentStack OnSkipEvent(NWNXLib::Services::Events::ArgumentStack&& args);
     NWNXLib::Services::Events::ArgumentStack OnEventResult(NWNXLib::Services::Events::ArgumentStack&& args);
     NWNXLib::Services::Events::ArgumentStack OnGetCurrentEvent(NWNXLib::Services::Events::ArgumentStack&& args);
-    ArgumentStack BaseTouchAttack(ArgumentStack&& args);
+    ArgumentStack GetWeaponPower(ArgumentStack&& args);
+    ArgumentStack GetAttackModifierVersus(ArgumentStack&& args);
+    ArgumentStack GetArmorClassVersus(ArgumentStack&& args);
+    CNWSCreature *creature(ArgumentStack& args);
 
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.
     // Only does it if needed though, based on the current event depth!

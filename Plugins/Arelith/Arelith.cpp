@@ -6,7 +6,6 @@
 #include "API/CNWSCreature.hpp"
 #include "API/CNWSCreatureStats.hpp"
 #include "API/Globals.hpp"
-#include "API/Version.hpp"
 #include "Source/ArelithEvents.hpp"
 #include "Services/Config/Config.hpp"
 #include "Services/Messaging/Messaging.hpp"
@@ -27,29 +26,16 @@ using namespace NWNXLib::API::Constants;
 
 static Arelith::Arelith* g_plugin;
 
-NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
+NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
-    return new Plugin::Info
-    {
-        "Arelith",
-        "Plugin dedicated to assorted Arelith-specific functionality, including implementation dependent functions and custom events.",
-        "Silvard",
-        "jusenkyo@gmail.com",
-        1,
-        true
-    };
-}
-
-NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Plugin::CreateParams params)
-{
-    g_plugin = new Arelith::Arelith(params);
+    g_plugin = new Arelith::Arelith(services);
     return g_plugin;
 }
 
 namespace Arelith {
 
-Arelith::Arelith(const Plugin::CreateParams& params)
-    : Plugin(params), m_eventDepth(0)
+Arelith::Arelith(Services::ProxyServiceList* services)
+    : Plugin(services), m_eventDepth(0)
 {
     if (g_plugin == nullptr) // :(
         g_plugin = this;
@@ -65,6 +51,9 @@ Arelith::Arelith(const Plugin::CreateParams& params)
     REGISTER(OnEventResult);
     REGISTER(OnGetCurrentEvent);
     REGISTER(BaseTouchAttack);
+    REGISTER(GetWeaponPower);
+    REGISTER(GetArmorClassVersus);
+    REGISTER(GetAttackModifierVersus);
 #undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
@@ -89,7 +78,7 @@ Arelith::~Arelith()
 {
 }
 
-void Arelith::PushEventData(const std::string tag, const std::string data)
+void Arelith::PushEventData(const std::string& tag, const std::string& data)
 {
     LOG_DEBUG("Pushing event data: '%s' -> '%s'.", tag, data);
     g_plugin->CreateNewEventDataIfNeeded();
@@ -97,7 +86,7 @@ void Arelith::PushEventData(const std::string tag, const std::string data)
 }
 
 
-std::string Arelith::GetEventData(const std::string tag)
+std::string Arelith::GetEventData(const std::string& tag)
 {
     std::string retVal;
     if (g_plugin->m_eventDepth == 0 || g_plugin->m_eventData.empty())
@@ -120,7 +109,7 @@ std::string Arelith::GetEventData(const std::string tag)
     return retVal;
 }
 
-bool Arelith::SignalEvent(const std::string& eventName, const API::Types::ObjectID target, std::string *result)
+bool Arelith::SignalEvent(const std::string& eventName, const ObjectID target, std::string *result)
 {
     bool skipped = false;
 
@@ -208,7 +197,7 @@ Services::Events::ArgumentStack Arelith::OnPushEventData(Services::Events::Argum
 Services::Events::ArgumentStack Arelith::OnSignalEvent(Services::Events::ArgumentStack&& args)
 {
     const auto event = Services::Events::ExtractArgument<std::string>(args);
-    const auto object = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    const auto object = Services::Events::ExtractArgument<ObjectID>(args);
     bool signalled = SignalEvent(event, object);
     return Services::Events::Arguments(signalled ? 1 : 0);
 }
@@ -270,91 +259,62 @@ void Arelith::CreateNewEventDataIfNeeded()
     }
 }
 
-ArgumentStack Arelith::BaseTouchAttack(ArgumentStack&& args)
+CNWSCreature *Arelith::creature(ArgumentStack& args)
 {
+    const auto creatureId = Services::Events::ExtractArgument<ObjectID>(args);
 
-    auto creatureID = Services::Events::ExtractArgument<Types::ObjectID>(args);
-    auto targetID = Services::Events::ExtractArgument<Types::ObjectID>(args);
-
-    if (creatureID == Constants::OBJECT_INVALID || targetID == Constants::OBJECT_INVALID)
-      return Services::Events::Arguments(0);
-
-    CNWSCreature *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(creatureID);
-    CNWSCreature *pTarget = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(targetID);
-    auto bOffhand = Services::Events::ExtractArgument<int32_t>(args);
-    auto bFeedback = Services::Events::ExtractArgument<int32_t>(args);
-    auto bRanged = Services::Events::ExtractArgument<int32_t>(args);
-    int32_t retVal = 0;
-    int32_t nAttackBonus = 0;
-    int16_t nAC = 0;
-    uint16_t nRoll = 0;
-    uint8_t nConcealment = 0, nAttackResult = 0;
-
-    if (bRanged)
-        nAttackBonus = pCreature->m_pStats->GetRangedAttackBonus(1, 1);
-    else
-        nAttackBonus = pCreature->m_pStats->GetMeleeAttackBonus(bOffhand, 1, 1);
-
-    nAC = pTarget->m_pStats->GetArmorClassVersus(pCreature, 1);
-    nRoll = Globals::Rules()->RollDice(1, 20);
-    if( pTarget->m_nObjectType == Constants::ObjectType::Placeable || pTarget->m_nObjectType == Constants::ObjectType::Door)
-        retVal = 1;
-    else if (!pCreature->ResolveDefensiveEffects(pTarget, 1))
+    if (creatureId == Constants::OBJECT_INVALID)
     {
-        if (nRoll == 20)
-        {
-           retVal = (20 + nAttackBonus >= nAC) ? 2 : 1;
-        }
-        else if (nRoll > 1 && nRoll + nAttackBonus >= nAC)
-        {
-            retVal = 1;
-        }
-    }
-    else
-    {
-        auto* pAttack = pCreature->m_pcCombatRound->GetAttack(pCreature->m_pcCombatRound->m_nCurrentAttack);
-        nConcealment = pAttack->m_nConcealment;
-        nAttackResult = pAttack->m_nAttackResult;
+        LOG_NOTICE("NWNX_Creature function called on OBJECT_INVALID");
+        return nullptr;
     }
 
-    if (bFeedback)
-    {
-        CNWCCMessageData* pMessage = new CNWCCMessageData();
-        pMessage->SetObjectID(0, pCreature->m_idSelf);
-        pMessage->SetInteger(0, nAttackBonus);
-        pMessage->SetInteger(1, nRoll);
-
-        if (retVal > 0)
-        {
-            if (retVal == 2)
-                pMessage->SetInteger(2, 3);
-            else
-                pMessage->SetInteger(2, 1);
-        }
-        else
-        {
-            if (!nAttackResult)
-                pMessage->SetInteger(2, 4);
-            else
-            {
-                pMessage->SetInteger(2, nAttackResult);
-                pMessage->SetInteger(4, nConcealment);
-            }
-        }
-
-        if (bRanged)
-            pMessage->SetInteger(3, 1);
-
-        CNWSMessage* pNWSMessage = static_cast<CNWSMessage*>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
-        if (auto* pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(pCreature->m_idSelf))
-            pNWSMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID, 0xd, pMessage, nullptr);
-
-        if (auto* pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(pTarget->m_idSelf))
-            pNWSMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID, 0xd, pMessage, nullptr);
-
-        delete pMessage;
-    }
-    return Services::Events::Arguments(retVal);
+    return Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(creatureId);
 }
+ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pCreature = creature(args))
+    {
+        CNWSObject *versus = NULL;
+        const auto versus_id = Services::Events::ExtractArgument<ObjectID>(args);
 
+        if (versus_id != Constants::OBJECT_INVALID)
+        {
+            CGameObject *pObject = API::Globals::AppManager()->m_pServerExoApp->GetGameObject(versus_id);
+            versus = Utils::AsNWSObject(pObject);
+
+            const auto isOffhand = Services::Events::ExtractArgument<int32_t>(args);
+            retVal = pCreature->GetWeaponPower(versus, isOffhand);
+        }
+        
+
+    }
+    return Services::Events::Arguments(retVal);    
+}
+ArgumentStack Arelith::GetArmorClassVersus(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pCreature = creature(args))
+    {
+        auto *versus = creature(args);
+
+        const auto isTouchAttack = Services::Events::ExtractArgument<int32_t>(args);
+        retVal = pCreature->m_pStats->GetArmorClassVersus(versus, isTouchAttack);
+
+    }
+    return Services::Events::Arguments(retVal);    
+}
+ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pCreature = creature(args))
+    {
+        auto *versus = creature(args);
+
+        retVal = pCreature->m_pStats->GetAttackModifierVersus(versus);
+
+    }
+    return Services::Events::Arguments(retVal);    
+}
 }
