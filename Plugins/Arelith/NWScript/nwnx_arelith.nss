@@ -50,7 +50,12 @@ int NWNX_Arelith_GetAttackModifierVersus(object attacker, object versus=OBJECT_I
 int NWNX_Arelith_GetArmorClassVersus(object attacked, int touchAttack=FALSE, object versus=OBJECT_INVALID);
 
 // Gets attacker's weapon power against versus. AKA the AB/enhancement on the weapon.
-int NWNX_Arelith_GeWeaponPower(object attacker, int offHand=FALSE, object versus=OBJECT_INVALID);
+int NWNX_Arelith_GetWeaponPower(object attacker, object versus, int offHand=FALSE);
+
+
+// Handles concealment and miss chance resolution
+// 0/FALSE if the attack hits 1/TRUE if the attack misses
+int NWNX_Arelith_ResolveDefensiveEffects(object attacker, object versus, int attackHit=TRUE);
 
 void NWNX_Arelith_SubscribeEvent(string evt, string script)
 {
@@ -121,7 +126,7 @@ int NWNX_Arelith_GetArmorClassVersus(object attacked, int touchAttack=FALSE, obj
     return NWNX_GetReturnValueInt("NWNX_Arelith", "GetArmorClassVersus");
 }
 
-int NWNX_Arelith_GeWeaponPower(object attacker, int offHand=FALSE, object versus=OBJECT_INVALID)
+int NWNX_Arelith_GetWeaponPower(object attacker, object versus, int offHand=FALSE)
 {
     NWNX_PushArgumentInt("NWNX_Arelith", "GetWeaponPower", offHand);
     NWNX_PushArgumentObject("NWNX_Arelith", "GetWeaponPower", versus);
@@ -129,4 +134,14 @@ int NWNX_Arelith_GeWeaponPower(object attacker, int offHand=FALSE, object versus
     NWNX_CallFunction("NWNX_Arelith", "GetWeaponPower");
 
     return NWNX_GetReturnValueInt("NWNX_Arelith", "GetWeaponPower");
+}
+
+int NWNX_Arelith_ResolveDefensiveEffects(object attacker, object versus, int attackHit=TRUE)
+{
+    NWNX_PushArgumentInt("NWNX_Arelith", "ResolveDefensiveEffects", attackHit);
+    NWNX_PushArgumentObject("NWNX_Arelith", "ResolveDefensiveEffects", versus);
+    NWNX_PushArgumentObject("NWNX_Arelith", "ResolveDefensiveEffects", attacker);
+    NWNX_CallFunction("NWNX_Arelith", "ResolveDefensiveEffects");
+
+    return NWNX_GetReturnValueInt("NWNX_Arelith", "ResolveDefensiveEffects");
 }

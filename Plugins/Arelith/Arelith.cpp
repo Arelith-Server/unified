@@ -50,10 +50,10 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(OnSkipEvent);
     REGISTER(OnEventResult);
     REGISTER(OnGetCurrentEvent);
-    REGISTER(BaseTouchAttack);
     REGISTER(GetWeaponPower);
     REGISTER(GetArmorClassVersus);
     REGISTER(GetAttackModifierVersus);
+    REGISTER(ResolveDefensiveEffects);
 #undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
@@ -316,5 +316,24 @@ ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
 
     }
     return Services::Events::Arguments(retVal);    
+}
+ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
+{
+    int32_t retVal = 0;
+    if (auto *pCreature = creature(args))
+    {
+        CNWSObject *versus = NULL;
+        const auto versus_id = Services::Events::ExtractArgument<ObjectID>(args);
+    
+        if (versus_id != Constants::OBJECT_INVALID)
+        {
+            CGameObject *pObject = API::Globals::AppManager()->m_pServerExoApp->GetGameObject(versus_id);
+            versus = Utils::AsNWSObject(pObject);
+
+            const auto isAttackHit = Services::Events::ExtractArgument<int32_t>(args);
+            retVal = pCreature->ResolveDefensiveEffects(versus, isAttackHit);
+        }
+    }    
+    return Services::Events::Arguments(retVal); 
 }
 }
