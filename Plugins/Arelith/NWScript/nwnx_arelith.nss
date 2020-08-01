@@ -41,7 +41,16 @@ void NWNX_Arelith_SetEventResult(string data);
 // THIS SHOULD ONLY BE CALLED FROM WITHIN AN EVENT HANDLER.
 string NWNX_Arelith_GetCurrentEvent();
 
+// Gets the attackers attack modifier versus versus.
+// Seems to be 10 + Ability + Feats + Effects + Item Properties.
+int NWNX_Arelith_GetAttackModifierVersus(object attacker, object versus=OBJECT_INVALID);
 
+// Gets the Armor classed of attacked against versus
+// Touch attack should be true if you want touch attack AC.
+int NWNX_Arelith_GetArmorClassVersus(object attacked, int touchAttack=FALSE, object versus=OBJECT_INVALID);
+
+// Gets attacker's weapon power against versus. AKA the AB/enhancement on the weapon.
+int NWNX_Arelith_GeWeaponPower(object attacker, int offHand=FALSE, object versus=OBJECT_INVALID);
 
 void NWNX_Arelith_SubscribeEvent(string evt, string script)
 {
@@ -91,4 +100,33 @@ string NWNX_Arelith_GetCurrentEvent()
 {
     NWNX_CallFunction("NWNX_Arelith", "OnGetCurrentEvent");
     return NWNX_GetReturnValueString("NWNX_Arelith", "OnGetCurrentEvent");
+}
+
+int NWNX_Arelith_GetAttackModifierVersus(object attacker, object versus=OBJECT_INVALID)
+{
+    NWNX_PushArgumentObject("NWNX_Arelith", "GetAttackModifierVersus", versus);
+    NWNX_PushArgumentObject("NWNX_Arelith", "GetAttackModifierVersus", attacker);
+    NWNX_CallFunction("NWNX_Arelith", "GetAttackModifierVersus");
+
+    return NWNX_GetReturnValueInt("NWNX_Arelith", "GetAttackModifierVersus");
+}
+
+int NWNX_Arelith_GetArmorClassVersus(object attacked, int touchAttack=FALSE, object versus=OBJECT_INVALID)
+{
+    NWNX_PushArgumentInt("NWNX_Arelith", "GetArmorClassVersus", touchAttack);
+    NWNX_PushArgumentObject("NWNX_Arelith", "GetArmorClassVersus", versus);
+    NWNX_PushArgumentObject("NWNX_Arelith", "GetArmorClassVersus", attacked);
+    NWNX_CallFunction("NWNX_Arelith", "GetArmorClassVersus");
+
+    return NWNX_GetReturnValueInt("NWNX_Arelith", "GetArmorClassVersus");
+}
+
+int NWNX_Arelith_GeWeaponPower(object attacker, int offHand=FALSE, object versus=OBJECT_INVALID)
+{
+    NWNX_PushArgumentInt("NWNX_Arelith", "GetWeaponPower", offHand);
+    NWNX_PushArgumentObject("NWNX_Arelith", "GetWeaponPower", versus);
+    NWNX_PushArgumentObject("NWNX_Arelith", "GetWeaponPower", attacker);
+    NWNX_CallFunction("NWNX_Arelith", "GetWeaponPower");
+
+    return NWNX_GetReturnValueInt("NWNX_Arelith", "GetWeaponPower");
 }
