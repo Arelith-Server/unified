@@ -882,6 +882,11 @@ int32_t Weapon::GetAttackModifierVersus(CNWSCreatureStats* pStats, CNWSCreature*
         nMod += plugin.m_GreaterFocusAttackBonus;
     }
 
+    if(nBaseItem == Constants::BaseItem::Sling && pStats->m_nRace != Constants::RacialType::Halfling && pStats->HasFeat(Constants::Feat::GoodAim))
+    {
+        nMod += 1;
+    }
+
     return nMod;
 }
 
@@ -982,9 +987,13 @@ int32_t Weapon::GetRangedAttackBonus(CNWSCreatureStats* pStats, int32_t bInclude
 
     if (bApplicableFeatExists && bHasApplicableFeat)
     {
-        return nBonus + plugin.m_GreaterFocusAttackBonus;
+        nBonus += plugin.m_GreaterFocusAttackBonus;
     }
 
+    if(nBaseItem == Constants::BaseItem::Sling && pStats->m_nRace != Constants::RacialType::Halfling && pStats->HasFeat(Constants::Feat::GoodAim))
+    {
+        nBonus += 1;
+    }
     return nBonus;
 }
 
