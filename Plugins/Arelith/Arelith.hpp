@@ -64,6 +64,13 @@ private:
     ArgumentStack GetArmorClassVersus(ArgumentStack&& args);
     ArgumentStack ResolveDefensiveEffects(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
+    static void ReportError(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
+    static void WriteToLogFileHook(bool, CExoDebugInternal*, CExoString*);
+    static bool s_bSendError;
+    static void SendWebHookHTTPS(const char* message);
+    static std::string s_sHost;
+    static std::string s_sOrigPath;
+    ArgumentStack SetWebhook(ArgumentStack&& args);
 
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.
     // Only does it if needed though, based on the current event depth!
