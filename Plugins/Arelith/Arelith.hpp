@@ -46,7 +46,7 @@ public:
 
     static void InitOnFirstSubscribe(const std::string& eventName, std::function<void(void)> init);
 
-    
+
 
 private: // Structures
     using EventMapType = std::unordered_map<std::string, std::vector<std::string>>;
@@ -64,12 +64,13 @@ private:
     ArgumentStack GetArmorClassVersus(ArgumentStack&& args);
     ArgumentStack ResolveDefensiveEffects(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
-    static void ReportError(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
+    static void ReportErrorHook(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
     static void WriteToLogFileHook(bool, CExoDebugInternal*, CExoString*);
     static bool s_bSendError;
     static void SendWebHookHTTPS(const char* message);
     static std::string s_sHost;
     static std::string s_sOrigPath;
+    static std::string s_sAdden;
     ArgumentStack SetWebhook(ArgumentStack&& args);
 
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.

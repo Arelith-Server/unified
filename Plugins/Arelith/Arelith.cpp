@@ -50,6 +50,7 @@ namespace Arelith {
 bool Arelith::s_bSendError = false;
 std::string Arelith::s_sHost;
 std::string Arelith::s_sOrigPath;
+std::string Arelith::s_sAdden;
 
 Arelith::Arelith(Services::ProxyServiceList* services)
     : Plugin(services), m_eventDepth(0)
@@ -90,13 +91,16 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     auto hooker = GetServices()->m_hooks.get();
 
     m_arelithEvents   = std::make_unique<ArelithEvents>(hooker);
-    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN25CNWVirtualMachineCommands11ReportErrorER10CExoStringi, int32_t>(&ReportError);
+
+    
+    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN25CNWVirtualMachineCommands11ReportErrorER10CExoStringi, int32_t>(&ReportErrorHook);
 
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
         void, CExoDebugInternal*, CExoString*>(&WriteToLogFileHook);
 
-    s_sHost = GetServices()->m_config->Get<std::string>("HOST", ""); 
-    s_sOrigPath = GetServices()->m_config->Get<std::string>("PATH", "");    
+    s_sHost = GetServices()->m_config->Get<std::string>("HOST", "");
+    s_sOrigPath = GetServices()->m_config->Get<std::string>("PATH", "");
+    s_sAdden = GetServices()->m_config->Get<std::string>("ROLE", "");
 }
 
 Arelith::~Arelith()
@@ -312,10 +316,10 @@ ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
             const auto isOffhand = Services::Events::ExtractArgument<int32_t>(args);
             retVal = pCreature->GetWeaponPower(versus, isOffhand);
         }
-        
+
 
     }
-    return Services::Events::Arguments(retVal);    
+    return Services::Events::Arguments(retVal);
 }
 ArgumentStack Arelith::GetArmorClassVersus(ArgumentStack&& args)
 {
@@ -328,7 +332,7 @@ ArgumentStack Arelith::GetArmorClassVersus(ArgumentStack&& args)
         retVal = pCreature->m_pStats->GetArmorClassVersus(versus, isTouchAttack);
 
     }
-    return Services::Events::Arguments(retVal);    
+    return Services::Events::Arguments(retVal);
 }
 ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
 {
@@ -340,7 +344,7 @@ ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
         retVal = pCreature->m_pStats->GetAttackModifierVersus(versus);
 
     }
-    return Services::Events::Arguments(retVal);    
+    return Services::Events::Arguments(retVal);
 }
 ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 {
@@ -358,11 +362,13 @@ ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
             const auto isAttackHit = Services::Events::ExtractArgument<int32_t>(args);
             retVal = pCreature->ResolveDefensiveEffects(versus, isAttackHit);
         }
-    }    
-    return Services::Events::Arguments(retVal); 
+    }
+    return Services::Events::Arguments(retVal);
 }
 
-void Arelith::ReportError(bool before, CNWVirtualMachineCommands*, CExoString, int32_t)
+}
+
+void Arelith::ReportErrorHook(bool before, CNWVirtualMachineCommands*, CExoString, int32_t)
 {
     if(s_sHost.empty() || s_sOrigPath.empty())
     {
@@ -397,11 +403,12 @@ std::string escape_json(const std::string &s) {
 
 void Arelith::SendWebHookHTTPS(const char* messagec)
 {
-    
+
     std::string host = s_sHost;
     std::string origPath = s_sOrigPath;
     std::string message(messagec);
     message = Utils::trim(message);
+    message = message + " " + s_sAdden;
     message = R"({"text": ")" + message + "\"";
     message = message +  R"(, "mrkdwn": false)";
     message = message + "}";
@@ -503,6 +510,7 @@ void Arelith::SendWebHookHTTPS(const char* messagec)
 }
 ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
 {
+    s_sAdden = Services::Events::ExtractArgument<std::string>(args);
     s_sHost = Services::Events::ExtractArgument<std::string>(args);
     s_sOrigPath = Services::Events::ExtractArgument<std::string>(args);
     return Services::Events::Arguments();

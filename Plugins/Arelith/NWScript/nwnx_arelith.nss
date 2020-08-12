@@ -53,7 +53,7 @@ int NWNX_Arelith_GetArmorClassVersus(object attacked, int touchAttack=FALSE, obj
 int NWNX_Arelith_GetWeaponPower(object attacker, object versus, int offHand=FALSE);
 
 //Sets host and path for webhook events
-void NWNX_Arelith_SetWebhook(string host, string path);
+void NWNX_Arelith_SetWebhook(string host, string path, string addendum="");
 
 // Handles concealment and miss chance resolution
 // 0/FALSE if the attack hits 1/TRUE if the attack misses
@@ -150,10 +150,11 @@ int NWNX_Arelith_ResolveDefensiveEffects(object attacker, object versus, int att
     return NWNX_GetReturnValueInt("NWNX_Arelith", "ResolveDefensiveEffects");
 }
 
-void NWNX_Arelith_SetWebhook(string host, string path)
+void NWNX_Arelith_SetWebhook(string host, string path, string addendum="")
 {
     string sFunc = "SetWebhook";
     NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, path);
     NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, host);
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, addendum)
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }
