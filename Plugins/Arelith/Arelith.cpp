@@ -366,7 +366,6 @@ ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
     return Services::Events::Arguments(retVal);
 }
 
-}
 
 void Arelith::ReportErrorHook(bool before, CNWVirtualMachineCommands*, CExoString, int32_t)
 {
