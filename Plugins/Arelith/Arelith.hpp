@@ -63,6 +63,9 @@ private:
     ArgumentStack GetAttackModifierVersus(ArgumentStack&& args);
     ArgumentStack GetArmorClassVersus(ArgumentStack&& args);
     ArgumentStack ResolveDefensiveEffects(ArgumentStack&& args);
+    ArgumentStack GetActiveProperty(ArgumentStack&& args);
+    ArgumentStack SetLastItemCasterLevel(ArgumentStack&& args);
+    ArgumentStack GetLastItemCasterLevel(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     static void ReportErrorHook(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
     static void WriteToLogFileHook(bool, CExoDebugInternal*, CExoString*);

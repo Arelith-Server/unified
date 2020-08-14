@@ -59,6 +59,29 @@ void NWNX_Arelith_SetWebhook(string host, string path, string addendum="");
 // 0/FALSE if the attack hits 1/TRUE if the attack misses
 int NWNX_Arelith_ResolveDefensiveEffects(object attacker, object versus, int attackHit=TRUE);
 
+// Gets the caster level of last item used
+int NWNX_Arelith_GetLastItemCasterLevel(object creature);
+
+//Sets caster level for the last item used, use in Events spellhook before to set item caster level.
+int NWNX_Arelith_SetLastItemCasterLevel(object creature, int casterLvl);
+
+/// @brief An unpacked itemproperty.
+struct NWNX_RAWIP
+{
+    int nProperty; ///< @todo Describe
+    int nSubType; ///< @todo Describe
+    int nCostTable; ///< @todo Describe
+    int nCostTableValue; ///< @todo Describe
+    int nParam1; ///< @todo Describe
+    int nParam1Value; ///< @todo Describe
+    int nUsesPerDay; ///< @todo Describe
+    int nChanceToAppear; ///< @todo Describe
+    int bUsable; ///< @todo Describe
+    string sTag; ///< @todo Describe
+};
+
+struct NWNX_RAWIP NWNX_Arelith_GetActiveProperty(object item, int index);
+
 const string ARELITH_PLUGIN = "NWNX_Arelith";
 
 void NWNX_Arelith_SubscribeEvent(string evt, string script)
@@ -155,6 +178,46 @@ void NWNX_Arelith_SetWebhook(string host, string path, string addendum="")
     string sFunc = "SetWebhook";
     NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, path);
     NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, host);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, addendum)
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, addendum);
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+}
+
+int NWNX_Arelith_GetLastItemCasterLevel(object creature)
+{
+    string sFunc = "GetLastItemCasterLevel";
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, creature);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+
+    return NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+}
+
+void NWNX_Arelith_SetLastItemCasterLevel(object creature, int casterLvl)
+{
+    string sFunc = "SetLastItemCasterLevel";
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, casterLvl);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, creature);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+}
+
+struct NWNX_RAWIP NWNX_Arelith_GetActiveProperty(object item, int index)
+{
+    string sFunc = "GetActiveProperty";
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, index);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, item);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+
+    struct NWNX_RAWIP n;
+
+    n.sTag=NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+    n.bUsable=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+    n.nChanceToAppear=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+    n.nUsesPerDay=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+    n.nParam1Value=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+    n.nParam1=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+    n.nCostTableValue=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+    n.nCostTable=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+    n.nSubType=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+    n.nProperty=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+
+    return n;
 }

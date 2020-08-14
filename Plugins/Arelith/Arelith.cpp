@@ -4,6 +4,7 @@
 #include "API/CExoString.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CNWSCreature.hpp"
+#include "API/CNWSItem.hpp"
 #include "API/CNWSCreatureStats.hpp"
 #include "API/Globals.hpp"
 #include "Source/ArelithEvents.hpp"
@@ -73,6 +74,9 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(GetAttackModifierVersus);
     REGISTER(ResolveDefensiveEffects);
     REGISTER(SetWebhook);
+    REGISTER(GetActiveProperty);
+    REGISTER(SetLastItemCasterLevel);
+    REGISTER(GetLastItemCasterLevel);
 #undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
@@ -353,7 +357,7 @@ ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
     {
         CNWSObject *versus = NULL;
         const auto versus_id = Services::Events::ExtractArgument<ObjectID>(args);
-    
+
         if (versus_id != Constants::OBJECT_INVALID)
         {
             CGameObject *pObject = API::Globals::AppManager()->m_pServerExoApp->GetGameObject(versus_id);
@@ -512,6 +516,62 @@ ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
     s_sAdden = Services::Events::ExtractArgument<std::string>(args);
     s_sHost = Services::Events::ExtractArgument<std::string>(args);
     s_sOrigPath = Services::Events::ExtractArgument<std::string>(args);
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Arelith::GetActiveProperty(ArgumentStack&& args)
+{
+    const auto objectId = Services::Events::ExtractArgument<ObjectID>(args);
+
+    if (objectId == Constants::OBJECT_INVALID)
+    {
+        LOG_NOTICE("NWNX_Arelith function called on OBJECT_INVALID");
+        return Services::Events::Arguments();
+    }
+
+    auto *pGameObject = Globals::AppManager()->m_pServerExoApp->GetGameObject(objectId);
+    auto *pItem = Utils::AsNWSItem(pGameObject);
+    if (!pItem)
+    {
+        LOG_NOTICE("NWNX_Arelith did not find an item.");
+        return Services::Events::Arguments();
+    }
+    auto index = Services::Events::ExtractArgument<int32_t>(args);
+    auto ip = pItem->GetActiveProperty(index);
+    ArgumentStack stack;
+    Services::Events::InsertArgument(stack, ip->m_nDurationType);
+   // Services::Events::InsertArgument(stack, ip->m_nID);
+    Services::Events::InsertArgument(stack, ip->m_nPropertyName);
+    Services::Events::InsertArgument(stack, ip->m_nSubType);
+    Services::Events::InsertArgument(stack, ip->m_nCostTable);
+    Services::Events::InsertArgument(stack, ip->m_nCostTableValue);
+    Services::Events::InsertArgument(stack, ip->m_nParam1);
+    Services::Events::InsertArgument(stack, ip->m_nParam1Value);
+    Services::Events::InsertArgument(stack, ip->m_nUsesPerDay);
+    Services::Events::InsertArgument(stack, ip->m_nChanceOfAppearing);
+    Services::Events::InsertArgument(stack, ip->m_bUseable);
+    Services::Events::InsertArgument(stack, ip->m_sCustomTag.CStr());
+
+    return stack;
+}
+
+ArgumentStack Arelith::GetLastItemCasterLevel(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->m_nLastItemCastSpellLevel;
+    }
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Arelith::SetLastItemCasterLevel(ArgumentStack&& args)
+{
+    if (auto *pCreature = creature(args))
+    {
+        auto casterLvl = Services::Events::ExtractArgument<int32_t>(args);
+        pCreature->m_nLastItemCastSpellLevel = casterLvl;
+    }
     return Services::Events::Arguments();
 }
 }
