@@ -11,6 +11,7 @@
 #include "API/CNWRules.hpp"
 #include "Utils.hpp"
 #include "Services/Messaging/Messaging.hpp"
+#include "Services/PerObjectStorage/PerObjectStorage.hpp"
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
@@ -50,7 +51,7 @@ Weapon::Weapon(Services::ProxyServiceList* services)
     REGISTER(SetDevastatingCriticalEventScript);
     REGISTER(GetEventData);
     REGISTER(SetEventData);
-
+    REGISTER(SetWeaponTwoHand);
 #undef REGISTER
 
     m_GetWeaponFocusHook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats14GetWeaponFocusEP8CNWSItem>(&Weapon::GetWeaponFocus);
@@ -719,7 +720,12 @@ int32_t Weapon::GetMeleeDamageBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
     {
         nBaseItem = pWeapon->m_nBaseItem;
     }
-
+    auto nOverride = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS");
+    if(nOverride)
+    {
+      if(nOverride.value())
+       nBonus += pStats->m_nStrengthModifier/2;
+    }
     auto w = plugin.m_GreaterWeaponSpecializationMap.find(nBaseItem);
 
     bApplicableFeatExists = w != plugin.m_GreaterWeaponSpecializationMap.end();
@@ -769,7 +775,12 @@ int32_t Weapon::GetDamageBonus(CNWSCreatureStats* pStats, CNWSCreature *pCreatur
     {
         nBaseItem = pWeapon->m_nBaseItem;
     }
-
+    auto nOverride = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS");
+    if(nOverride)
+    {
+      if(nOverride.value())
+       nBonus += pStats->m_nStrengthModifier/2;
+    }
     auto w = plugin.m_GreaterWeaponSpecializationMap.find(nBaseItem);
 
     bApplicableFeatExists = w != plugin.m_GreaterWeaponSpecializationMap.end();
@@ -1130,4 +1141,22 @@ int Weapon::GetLevelByClass(CNWSCreatureStats *pStats, uint32_t nClassType)
     return 0;
 }
 
+ArgumentStack Weapon::SetWeaponTwoHand(ArgumentStack&& args)
+{
+   auto pItem = Services::Events::ExtractArgument<ObjectID>(args);
+
+   if(pItem == Constants::OBJECT_INVALID)
+   {
+       LOG_INFO("that's not an object");
+       return Services::Events::Arguments();
+   }
+
+   auto twoHand = Services::Events::ExtractArgument<int32_t>(args);
+   if(twoHand)
+    g_plugin->GetServices()->m_perObjectStorage->Set(pItem, "TWO_HAND_STATUS", 1);
+   else
+    g_plugin->GetServices()->m_perObjectStorage->Remove(pItem, "TWO_HAND_STATUS");
+
+   return Services::Events::Arguments();
+}
 }

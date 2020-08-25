@@ -53,6 +53,7 @@ private:
     ArgumentStack SetDevastatingCriticalEventScript    (ArgumentStack&& args);
     ArgumentStack GetEventData                         (ArgumentStack&& args);
     ArgumentStack SetEventData                         (ArgumentStack&& args);
+    ArgumentStack SetWeaponTwoHand                     (ArgumentStack&& args);
 
     NWNXLib::Hooking::FunctionHook* m_GetWeaponFocusHook;
     NWNXLib::Hooking::FunctionHook* m_GetEpicWeaponFocusHook;

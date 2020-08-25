@@ -114,6 +114,9 @@ struct NWNX_Weapon_DevastatingCriticalEvent_Data NWNX_Weapon_GetDevastatingCriti
 /// @note This is only for use with the Devastating Critical Event Script.
 void NWNX_Weapon_BypassDevastatingCritical();
 
+// Sets weapon as twohanded
+void NWNX_Weapon_SetTwoHanded(object weapon, int twoHand);
+
 /// @}
 
 void NWNX_Weapon_SetWeaponFocusFeat(int nBaseItem, int nFeat)
@@ -297,4 +300,12 @@ struct NWNX_Weapon_DevastatingCriticalEvent_Data NWNX_Weapon_GetDevastatingCriti
     data.nDamage = NWNX_GetReturnValueInt(NWNX_Weapon, sFunc);
 
     return data;
+}
+
+void NWNX_Weapon_SetTwoHanded(object weapon, int twoHand)
+{
+    string sFunc = "SetWeaponTwoHand";
+    NWNX_PushArgumentInt(NWNX_Weapon, sFunc, twoHand);
+    NWNX_PushArgumentObject(NWNX_Weapon, sFunc, weapon);
+    NWNX_CallFunction(NWNX_Weapon, sFunc);
 }
