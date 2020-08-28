@@ -25,10 +25,12 @@
 #include "Services/Tasks/Tasks.hpp"
 #include "Services/Messaging/Messaging.hpp"
 #include "Encoding.hpp"
+#include "API/CNWItemProperty.hpp"
 #include <cmath>
 #include <sstream>
 #include <iomanip>
 #include "External/httplib.h"
+#include "API/CNWSInventory.hpp"
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
@@ -52,6 +54,8 @@ bool Arelith::s_bSendError = false;
 std::string Arelith::s_sHost;
 std::string Arelith::s_sOrigPath;
 std::string Arelith::s_sAdden;
+uint8_t Arelith::s_iMaterial;
+std::unordered_multimap<int32_t, bypassRed> Arelith::m_bypass;
 
 Arelith::Arelith(Services::ProxyServiceList* services)
     : Plugin(services), m_eventDepth(0)
@@ -77,6 +81,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(GetActiveProperty);
     REGISTER(SetLastItemCasterLevel);
     REGISTER(GetLastItemCasterLevel);
+    REGISTER(SetDamageReductionBypass);
 #undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
@@ -102,6 +107,9 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
         void, CExoDebugInternal*, CExoString*>(&WriteToLogFileHook);
 
+    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN15CServerAIMaster21OnItemPropertyAppliedEP8CNWSItemP15CNWItemPropertyP12CNWSCreatureji, bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL>(&OnItemPropertyAppliedHook);
+    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
+    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN10CNWSObject17DoDamageReductionEP12CNWSCreatureihii, bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL>(&DoDamageReductionHook);
     s_sHost = GetServices()->m_config->Get<std::string>("HOST", "");
     s_sOrigPath = GetServices()->m_config->Get<std::string>("PATH", "");
     s_sAdden = GetServices()->m_config->Get<std::string>("ROLE", "");
@@ -572,6 +580,119 @@ ArgumentStack Arelith::SetLastItemCasterLevel(ArgumentStack&& args)
         auto casterLvl = Services::Events::ExtractArgument<int32_t>(args);
         pCreature->m_nLastItemCastSpellLevel = casterLvl;
     }
+    return Services::Events::Arguments();
+}
+void Arelith::OnItemPropertyAppliedHook(bool before, CServerAIMaster*, CNWSItem*, CNWItemProperty *pItemProperty, CNWSCreature*, uint32_t, BOOL)
+{
+   if(before)
+   {
+       if(pItemProperty->m_nPropertyName==Constants::ItemProperty::DamageReduction && pItemProperty->m_nParam1Value > 0)
+       {
+          s_iMaterial=pItemProperty->m_nParam1Value;
+       }
+   }
+}
+void Arelith::OnApplyDamageReductionHook(bool before, CNWSEffectListHandler*, CNWSObject*, CGameEffect* pEffect, BOOL)
+{
+    if(before && s_iMaterial > 0)
+    {
+        pEffect->SetInteger(3, s_iMaterial);
+        s_iMaterial=0;
+    }
+}
+
+void Arelith::DoDamageReductionHook(bool before, CNWSObject *pObject, CNWSCreature *pCreature, int32_t, uint8_t, BOOL, BOOL)
+{
+    static std::unordered_map<uint64_t, int32_t> s_mEffects;
+    if(before)
+    {
+        CNWSItem* pWeapon = nullptr;
+        pWeapon = pCreature->m_pcCombatRound->GetCurrentAttackWeapon();
+        if(pWeapon == nullptr)
+            return; //no need to continue as there is no material type
+
+        if(pWeapon->m_nBaseItem == Constants::BaseItem::HeavyCrossbow || pWeapon->m_nBaseItem == Constants::BaseItem::LightCrossbow)
+            pWeapon = pCreature->m_pInventory->GetItemInSlot(Constants::EquipmentSlot::Bolts);
+        else if(pWeapon->m_nBaseItem == Constants::BaseItem::Longbow || pWeapon->m_nBaseItem == Constants::BaseItem::Shortbow)
+            pWeapon = pCreature->m_pInventory->GetItemInSlot(Constants::EquipmentSlot::Arrows);
+        else if(pWeapon->m_nBaseItem == Constants::BaseItem::Sling)
+            pWeapon = pCreature->m_pInventory->GetItemInSlot(Constants::EquipmentSlot::Bullets);
+        if(pWeapon == nullptr)
+            return;
+        bool bRemoveDR;
+        for (int i = 0; i < pObject->m_appliedEffects.num; i++)
+        {
+                auto *eff = pObject->m_appliedEffects.element[i];
+                bRemoveDR=false;
+                if(eff->m_nType==Constants::EffectTrueType::DamageReduction && eff->m_nParamInteger[3] > 0)
+                {
+                    auto redType = eff->m_nParamInteger[3];
+                    auto range = m_bypass.equal_range(redType);
+                    for (auto it= range.first; it!= range.second; ++it)
+                    {
+                        auto bypass = it->second;
+                        for (int i = 0; i < pWeapon->m_lstPassiveProperties.num; i++)
+                        {
+                            auto property = pWeapon->GetPassiveProperty(i);
+                            if (property->m_nPropertyName == bypass.m_nPropertyName &&
+                                (property->m_nCostTableValue == bypass.m_nCostTableValue || bypass.m_nCostTableValue==-1) &&
+                                (property->m_nSubType == bypass.m_nSubType || bypass.m_nSubType==-1)  &&
+                                (property->m_nParam1Value == bypass.m_nParam1Value || bypass.m_nParam1Value==-1))
+                            {
+                                if(!bypass.bReverse)
+                                {
+                                   bRemoveDR=true;
+                                }
+                                break; //as long as we found a property, break
+                            }
+                            if(bypass.bReverse && i==pWeapon->m_lstPassiveProperties.num-1) //last property and we still didn't find it, so remove DR
+                                bRemoveDR=true;
+                        }
+                        if(bRemoveDR) break; // no reason to kep checking
+                    }
+
+                }
+
+                if(bRemoveDR)
+                {
+                    s_mEffects[eff->m_nID] = eff->m_nParamInteger[1];
+                    eff->m_nParamInteger[1]=0;
+                }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < pObject->m_appliedEffects.num; i++)
+        {
+                auto *eff = pObject->m_appliedEffects.element[i];
+
+                if(eff->m_nType==Constants::EffectTrueType::DamageReduction)
+                {
+                    auto original = s_mEffects.find(eff->m_nID);
+                    if (original != std::end(s_mEffects))
+                    {
+                        eff->m_nParamInteger[1]=original->second;
+                        s_mEffects.erase(eff->m_nID);
+                    }
+                }
+        }
+    }
+}
+ArgumentStack Arelith::SetDamageReductionBypass(ArgumentStack&& args)
+{
+    auto material = Services::Events::ExtractArgument<int32_t>(args);
+    auto propType = Services::Events::ExtractArgument<int32_t>(args);
+    auto subType =  Services::Events::ExtractArgument<int32_t>(args);
+    auto costValue = Services::Events::ExtractArgument<int32_t>(args);
+    auto param1Value =  Services::Events::ExtractArgument<int32_t>(args);
+    auto reverse =  Services::Events::ExtractArgument<int32_t>(args);
+    bypassRed ip;
+    ip.m_nPropertyName=propType;
+    ip.m_nSubType=subType;
+    ip.m_nParam1Value=param1Value;
+    ip.m_nCostTableValue=costValue;
+    ip.bReverse=reverse;
+    m_bypass.insert(std::make_pair(material, ip));
     return Services::Events::Arguments();
 }
 }

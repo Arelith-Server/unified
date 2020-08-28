@@ -63,7 +63,9 @@ int NWNX_Arelith_ResolveDefensiveEffects(object attacker, object versus, int att
 int NWNX_Arelith_GetLastItemCasterLevel(object creature);
 
 //Sets caster level for the last item used, use in Events spellhook before to set item caster level.
-int NWNX_Arelith_SetLastItemCasterLevel(object creature, int casterLvl);
+void NWNX_Arelith_SetLastItemCasterLevel(object creature, int casterLvl);
+
+void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int subType=-1, int costValue=-1, int paramValue=-1, int reverse=FALSE);
 
 /// @brief An unpacked itemproperty.
 struct NWNX_RAWIP
@@ -220,4 +222,17 @@ struct NWNX_RAWIP NWNX_Arelith_GetActiveProperty(object item, int index)
     n.nProperty=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
 
     return n;
+}
+
+void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int subType=-1, int costValue=-1, int paramValue=-1, int reverse=FALSE)
+{
+    string sFunc = "SetDamageReductionBypass";
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, reverse);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, paramValue);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, costValue);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, subType);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, propertyType);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, material);
+
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }
