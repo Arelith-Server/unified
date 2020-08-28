@@ -82,6 +82,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(SetLastItemCasterLevel);
     REGISTER(GetLastItemCasterLevel);
     REGISTER(SetDamageReductionBypass);
+    REGISTER(SetEffectImmunityBypass);
 #undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
@@ -107,12 +108,16 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
         void, CExoDebugInternal*, CExoString*>(&WriteToLogFileHook);
 
+    m_GetEffectImmunityHook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei>(&GetEffectImmunityHook);
+
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN15CServerAIMaster21OnItemPropertyAppliedEP8CNWSItemP15CNWItemPropertyP12CNWSCreatureji, bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL>(&OnItemPropertyAppliedHook);
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN10CNWSObject17DoDamageReductionEP12CNWSCreatureihii, bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL>(&DoDamageReductionHook);
     s_sHost = GetServices()->m_config->Get<std::string>("HOST", "");
     s_sOrigPath = GetServices()->m_config->Get<std::string>("PATH", "");
     s_sAdden = GetServices()->m_config->Get<std::string>("ROLE", "");
+
+    g_plugin->bypassEffectImm=0;
 }
 
 Arelith::~Arelith()
@@ -693,6 +698,17 @@ ArgumentStack Arelith::SetDamageReductionBypass(ArgumentStack&& args)
     ip.m_nCostTableValue=costValue;
     ip.bReverse=reverse;
     m_bypass.insert(std::make_pair(material, ip));
+    return Services::Events::Arguments();
+}
+BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats)
+{
+    if(g_plugin->bypassEffectImm > 0)
+        return false;
+    return g_plugin->m_GetEffectImmunityHook->CallOriginal<BOOL>(pStats, nType, pVersus, bConsiderFeats);
+}
+ArgumentStack Arelith::SetEffectImmunityBypass(ArgumentStack&& args)
+{
+    g_plugin->bypassEffectImm = Services::Events::ExtractArgument<int32_t>(args);
     return Services::Events::Arguments();
 }
 }
