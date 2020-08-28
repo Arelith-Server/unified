@@ -65,7 +65,15 @@ int NWNX_Arelith_GetLastItemCasterLevel(object creature);
 //Sets caster level for the last item used, use in Events spellhook before to set item caster level.
 void NWNX_Arelith_SetLastItemCasterLevel(object creature, int casterLvl);
 
+//material = the damage reduction penalty
+//all other properties are for the property which bypasses it, fields with -1 are ignored
+//reverese changes it from a vulnerability to a resistance
+//you may set up multiple properties to bypass a material
 void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int subType=-1, int costValue=-1, int paramValue=-1, int reverse=FALSE);
+
+//bypass -> true bypasses all (effect level) immunities
+//false stops bypassing immunities
+void NWNX_Arelith_SetEffectImmunityBypass(int bypass);
 
 /// @brief An unpacked itemproperty.
 struct NWNX_RAWIP
@@ -234,5 +242,12 @@ void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int s
     NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, propertyType);
     NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, material);
 
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+}
+
+void NWNX_Arelith_SetEffectImmunityBypass(int bypass)
+{
+    string sFunc = "SetEffectImmunityBypass";
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, bypass);
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }

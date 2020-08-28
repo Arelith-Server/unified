@@ -2,6 +2,7 @@
 
 #include "Plugin.hpp"
 #include "Services/Events/Events.hpp"
+#include "Services/Hooks/Hooks.hpp"
 #include <memory>
 #include <stack>
 #include <string>
@@ -60,6 +61,7 @@ private: // Structures
     using EventMapType = std::unordered_map<std::string, std::vector<std::string>>;
 
 private:
+    NWNXLib::Hooking::FunctionHook* m_GetEffectImmunityHook;
     NWNXLib::Services::Events::ArgumentStack OnSubscribeEvent(NWNXLib::Services::Events::ArgumentStack&& args);
     NWNXLib::Services::Events::ArgumentStack OnPushEventData(NWNXLib::Services::Events::ArgumentStack&& args);
     NWNXLib::Services::Events::ArgumentStack OnSignalEvent(NWNXLib::Services::Events::ArgumentStack&& args);
@@ -75,6 +77,7 @@ private:
     ArgumentStack SetLastItemCasterLevel(ArgumentStack&& args);
     ArgumentStack GetLastItemCasterLevel(ArgumentStack&& args);
     ArgumentStack SetDamageReductionBypass(ArgumentStack&& args);
+    ArgumentStack SetEffectImmunityBypass(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     static void ReportErrorHook(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
     static void WriteToLogFileHook(bool, CExoDebugInternal*, CExoString*);
@@ -88,7 +91,7 @@ private:
     static void OnItemPropertyAppliedHook(bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL);
     static void OnApplyDamageReductionHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
     static void DoDamageReductionHook(bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL);
-
+    static BOOL GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats = true);
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.
     // Only does it if needed though, based on the current event depth!
     void CreateNewEventDataIfNeeded();
@@ -102,6 +105,7 @@ private:
     std::unordered_map<std::string, std::function<void(void)>> m_initList;
 
     std::unique_ptr<ArelithEvents> m_arelithEvents;
+    int32_t bypassEffectImm;
 
 };
 
