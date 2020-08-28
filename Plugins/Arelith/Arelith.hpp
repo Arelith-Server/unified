@@ -9,6 +9,14 @@
 #include <vector>
 
 using ArgumentStack = NWNXLib::Services::Events::ArgumentStack;
+struct bypassRed
+{
+    uint16_t m_nPropertyName;
+    int32_t m_nSubType;
+    int32_t m_nCostTableValue;
+    int32_t m_nParam1Value;
+    bool bReverse;
+};
 namespace Arelith {
 
 class ArelithEvents;
@@ -66,6 +74,7 @@ private:
     ArgumentStack GetActiveProperty(ArgumentStack&& args);
     ArgumentStack SetLastItemCasterLevel(ArgumentStack&& args);
     ArgumentStack GetLastItemCasterLevel(ArgumentStack&& args);
+    ArgumentStack SetDamageReductionBypass(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     static void ReportErrorHook(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
     static void WriteToLogFileHook(bool, CExoDebugInternal*, CExoString*);
@@ -74,7 +83,11 @@ private:
     static std::string s_sHost;
     static std::string s_sOrigPath;
     static std::string s_sAdden;
+    static uint8_t s_iMaterial;
     ArgumentStack SetWebhook(ArgumentStack&& args);
+    static void OnItemPropertyAppliedHook(bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL);
+    static void OnApplyDamageReductionHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
+    static void DoDamageReductionHook(bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL);
 
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.
     // Only does it if needed though, based on the current event depth!
@@ -85,7 +98,7 @@ private:
     EventMapType m_eventMap; // Event name -> subscribers.
     std::stack<EventParams> m_eventData; // Data tag -> data for currently executing event.
     uint8_t m_eventDepth;
-
+    static std::unordered_multimap<int32_t, bypassRed> m_bypass;
     std::unordered_map<std::string, std::function<void(void)>> m_initList;
 
     std::unique_ptr<ArelithEvents> m_arelithEvents;
