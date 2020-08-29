@@ -734,6 +734,8 @@ ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
         ASSERT_OR_THROW(it < pObject->m_appliedEffects.num);
         eff = pObject->m_appliedEffects.element[it];
     }
+    else
+        eff = new CGameEffect(true);
     Services::Events::InsertArgument(stack, (int32_t)eff->m_nType);
     Services::Events::InsertArgument(stack, (int32_t)eff->m_nSubType);
     Services::Events::InsertArgument(stack, (float)eff->m_fDuration);
