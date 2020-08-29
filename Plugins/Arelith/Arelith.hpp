@@ -78,7 +78,10 @@ private:
     ArgumentStack GetLastItemCasterLevel(ArgumentStack&& args);
     ArgumentStack SetDamageReductionBypass(ArgumentStack&& args);
     ArgumentStack SetEffectImmunityBypass(ArgumentStack&& args);
+    ArgumentStack GetTrueEffectCount(ArgumentStack&& args);
+    ArgumentStack GetTrueEffect(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
+    CNWSObject *object(ArgumentStack& args);
     static void ReportErrorHook(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
     static void WriteToLogFileHook(bool, CExoDebugInternal*, CExoString*);
     static bool s_bSendError;
@@ -91,7 +94,7 @@ private:
     static void OnItemPropertyAppliedHook(bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL);
     static void OnApplyDamageReductionHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
     static void DoDamageReductionHook(bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL);
-    static BOOL GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats = true);
+    static BOOL GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats);
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.
     // Only does it if needed though, based on the current event depth!
     void CreateNewEventDataIfNeeded();
