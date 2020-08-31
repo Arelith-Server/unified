@@ -75,6 +75,7 @@ void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int s
 //false stops bypassing immunities
 void NWNX_Arelith_SetEffectImmunityBypass(int bypass);
 
+
 int NWNX_Arelith_GetTrueEffectCount(object oObject);
 
 
@@ -94,6 +95,7 @@ int NWNX_Arelith_RemoveEffectById(object oObject,  string sID);
 // Replaces effect at array with new effect struct e on object oObject
 void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUnpackedAre e);
 
+
 /// @brief An unpacked itemproperty.
 struct NWNX_RAWIP
 {
@@ -108,6 +110,7 @@ struct NWNX_RAWIP
     int bUsable; ///< @todo Describe
     string sTag; ///< @todo Describe
 };
+
 
 struct NWNX_EffectUnpackedAre
 {
@@ -450,5 +453,4 @@ void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUn
     NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, array);
     NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-
 }

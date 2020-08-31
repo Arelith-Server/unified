@@ -10,6 +10,7 @@
 #include "Tweaks/HideDMsOnCharList.hpp"
 #include "Tweaks/DisableMonkAbilitiesWhenPolymorphed.hpp"
 #include "Tweaks/StringToIntBaseToAuto.hpp"
+#include "Tweaks/StripOVTFromNotVisibleObject.hpp"
 #include "Tweaks/DeadCreatureFiresOnAreaExit.hpp"
 #include "Tweaks/PreserveActionsOnDMPossess.hpp"
 #include "Tweaks/FixGreaterSanctuaryBug.hpp"
@@ -104,6 +105,11 @@ Tweaks::Tweaks(Services::ProxyServiceList* services)
         m_StringToIntBaseToAuto = std::make_unique<StringToIntBaseToAuto>(GetServices()->m_hooks.get());
     }
 
+    if (GetServices()->m_config->Get<bool>("STRIP_OVT_FROM_NOT_VISIBLE_OBJECT", false))
+    {
+        LOG_INFO("Strip the Object Visual Transform flag from objects that aren't visible to the player.");
+        m_StripOVTFromNotVisibleObject = std::make_unique<StripOVTFromNotVisibleObject>(GetServices()->m_hooks.get());
+    }
     if (GetServices()->m_config->Get<bool>("DEAD_CREATURES_TRIGGER_ON_AREA_EXIT", false))
     {
         LOG_INFO("Dead creatures will fire on area exit.");

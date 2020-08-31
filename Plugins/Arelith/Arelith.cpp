@@ -324,7 +324,6 @@ CNWSObject *Arelith::object(ArgumentStack& args)
     auto *pGameObject = Globals::AppManager()->m_pServerExoApp->GetGameObject(objectId);
     return Utils::AsNWSObject(pGameObject);
 }
-
 CNWSCreature *Arelith::creature(ArgumentStack& args)
 {
     const auto creatureId = Services::Events::ExtractArgument<ObjectID>(args);
@@ -342,6 +341,7 @@ ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
+
         if (auto *versus = object(args))
         {
             const auto isOffhand = Services::Events::ExtractArgument<int32_t>(args);
@@ -362,6 +362,7 @@ ArgumentStack Arelith::GetArmorClassVersus(ArgumentStack&& args)
             const auto isTouchAttack = Services::Events::ExtractArgument<int32_t>(args);
             retVal = pCreature->m_pStats->GetArmorClassVersus(versus, isTouchAttack);
         }
+
     }
     return Services::Events::Arguments(retVal);
 }
@@ -372,6 +373,7 @@ ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
     {
         if(auto *versus = creature(args))
             retVal = pCreature->m_pStats->GetAttackModifierVersus(versus);
+
     }
     return Services::Events::Arguments(retVal);
 }
