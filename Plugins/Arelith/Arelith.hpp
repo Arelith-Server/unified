@@ -80,6 +80,10 @@ private:
     ArgumentStack SetEffectImmunityBypass(ArgumentStack&& args);
     ArgumentStack GetTrueEffectCount(ArgumentStack&& args);
     ArgumentStack GetTrueEffect(ArgumentStack&& args);
+    ArgumentStack DoSpellLevelAbsorption(ArgumentStack&& args);
+    ArgumentStack DoSpellImmunity(ArgumentStack&& args);
+    ArgumentStack RemoveEffectById(ArgumentStack&& args);
+    ArgumentStack ReplaceEffect(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     CNWSObject *object(ArgumentStack& args);
     static void ReportErrorHook(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
