@@ -83,6 +83,12 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(GetLastItemCasterLevel);
     REGISTER(SetDamageReductionBypass);
     REGISTER(SetEffectImmunityBypass);
+    REGISTER(GetTrueEffectCount);
+    REGISTER(GetTrueEffect);
+    REGISTER(DoSpellLevelAbsorption);
+    REGISTER(DoSpellImmunity);
+    REGISTER(RemoveEffectById);
+    REGISTER(ReplaceEffect);
 #undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
@@ -305,6 +311,19 @@ void Arelith::CreateNewEventDataIfNeeded()
     }
 }
 
+CNWSObject *Arelith::object(ArgumentStack& args)
+{
+    const auto objectId = Services::Events::ExtractArgument<ObjectID>(args);
+
+    if (objectId == Constants::OBJECT_INVALID)
+    {
+        LOG_NOTICE("NWNX_Object function called on OBJECT_INVALID");
+        return nullptr;
+    }
+
+    auto *pGameObject = Globals::AppManager()->m_pServerExoApp->GetGameObject(objectId);
+    return Utils::AsNWSObject(pGameObject);
+}
 CNWSCreature *Arelith::creature(ArgumentStack& args)
 {
     const auto creatureId = Services::Events::ExtractArgument<ObjectID>(args);
@@ -322,14 +341,9 @@ ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
-        CNWSObject *versus = NULL;
-        const auto versus_id = Services::Events::ExtractArgument<ObjectID>(args);
 
-        if (versus_id != Constants::OBJECT_INVALID)
+        if (auto *versus = object(args))
         {
-            CGameObject *pObject = API::Globals::AppManager()->m_pServerExoApp->GetGameObject(versus_id);
-            versus = Utils::AsNWSObject(pObject);
-
             const auto isOffhand = Services::Events::ExtractArgument<int32_t>(args);
             retVal = pCreature->GetWeaponPower(versus, isOffhand);
         }
@@ -343,10 +357,11 @@ ArgumentStack Arelith::GetArmorClassVersus(ArgumentStack&& args)
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
-        auto *versus = creature(args);
-
-        const auto isTouchAttack = Services::Events::ExtractArgument<int32_t>(args);
-        retVal = pCreature->m_pStats->GetArmorClassVersus(versus, isTouchAttack);
+        if(auto *versus = creature(args))
+        {
+            const auto isTouchAttack = Services::Events::ExtractArgument<int32_t>(args);
+            retVal = pCreature->m_pStats->GetArmorClassVersus(versus, isTouchAttack);
+        }
 
     }
     return Services::Events::Arguments(retVal);
@@ -356,9 +371,8 @@ ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
     {
-        auto *versus = creature(args);
-
-        retVal = pCreature->m_pStats->GetAttackModifierVersus(versus);
+        if(auto *versus = creature(args))
+            retVal = pCreature->m_pStats->GetAttackModifierVersus(versus);
 
     }
     return Services::Events::Arguments(retVal);
@@ -368,14 +382,8 @@ ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
     int32_t retVal = 0;
     if (auto *pCreature = creature(args))
     {
-        CNWSObject *versus = NULL;
-        const auto versus_id = Services::Events::ExtractArgument<ObjectID>(args);
-
-        if (versus_id != Constants::OBJECT_INVALID)
+        if (auto *versus = object(args))
         {
-            CGameObject *pObject = API::Globals::AppManager()->m_pServerExoApp->GetGameObject(versus_id);
-            versus = Utils::AsNWSObject(pObject);
-
             const auto isAttackHit = Services::Events::ExtractArgument<int32_t>(args);
             retVal = pCreature->ResolveDefensiveEffects(versus, isAttackHit);
         }
@@ -709,6 +717,176 @@ BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CN
 ArgumentStack Arelith::SetEffectImmunityBypass(ArgumentStack&& args)
 {
     g_plugin->bypassEffectImm = Services::Events::ExtractArgument<int32_t>(args);
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Arelith::GetTrueEffectCount(ArgumentStack&& args)
+{
+    int32_t ret = 0;
+    if (auto *pObject = object(args))
+    {
+        ret = pObject->m_appliedEffects.num;
+    }
+    return Services::Events::Arguments(ret);
+}
+ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
+{
+    ArgumentStack stack;
+    CGameEffect *eff;
+    if (auto *pObject = object(args))
+    {
+        auto it = Services::Events::ExtractArgument<int32_t>(args);
+        ASSERT_OR_THROW(it >= 0);
+        ASSERT_OR_THROW(it < pObject->m_appliedEffects.num);
+        eff = pObject->m_appliedEffects.element[it];
+    }
+    else
+        eff = new CGameEffect(true);
+
+    Services::Events::InsertArgument(stack, std::to_string(eff->m_nID));
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_nType);
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_nSubType);
+    Services::Events::InsertArgument(stack, (float)eff->m_fDuration);
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_nExpiryCalendarDay);
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_nExpiryTimeOfDay);
+    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidCreator);
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_nSpellId);
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_bExpose);
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_bShowIcon);
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_nCasterLevel);
+
+    // The DestroyGameEffect at the end of this function will delete any linked effects
+    // as well so we make a copy of the linked effects and send those for unpacking
+   /* CGameEffect *leftLinkEff = nullptr;
+    if (eff->m_pLinkLeft != nullptr)
+    {
+        leftLinkEff = new CGameEffect(true);
+        leftLinkEff->CopyEffect(eff->m_pLinkLeft, 0);
+    }
+    Services::Events::InsertArgument(stack, leftLinkEff);
+    Services::Events::InsertArgument(stack, eff->m_pLinkLeft != nullptr);
+
+    CGameEffect *rightLinkEff = nullptr;
+    if (eff->m_pLinkRight != nullptr)
+    {
+        rightLinkEff = new CGameEffect(true);
+        rightLinkEff->CopyEffect(eff->m_pLinkRight, 0);
+    }*/
+    Services::Events::InsertArgument(stack, (int32_t)eff->m_nNumIntegers);
+    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 0 ? eff->m_nParamInteger[0] : -1));
+    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 1 ? eff->m_nParamInteger[1] : -1));
+    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 2 ? eff->m_nParamInteger[2] : -1));
+    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 3 ? eff->m_nParamInteger[3] : -1));
+    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 4 ? eff->m_nParamInteger[4] : -1));
+    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 5 ? eff->m_nParamInteger[5] : -1));
+    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 6 ? eff->m_nParamInteger[6] : -1));
+    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 7 ? eff->m_nParamInteger[7] : -1));
+
+    Services::Events::InsertArgument(stack, (float)eff->m_nParamFloat[0]);
+    Services::Events::InsertArgument(stack, (float)eff->m_nParamFloat[1]);
+    Services::Events::InsertArgument(stack, (float)eff->m_nParamFloat[2]);
+    Services::Events::InsertArgument(stack, (float)eff->m_nParamFloat[3]);
+
+    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[0].CStr()));
+    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[1].CStr()));
+    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[2].CStr()));
+    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[3].CStr()));
+    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[4].CStr()));
+    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[5].CStr()));
+
+    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[0]);
+    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[1]);
+    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[2]);
+    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[3]);
+
+    Services::Events::InsertArgument(stack, std::string(eff->m_sCustomTag.CStr()));
+    return stack;
+}
+ArgumentStack Arelith::DoSpellLevelAbsorption(ArgumentStack&& args)
+{
+    int32_t ret = -1;
+    if (auto *pObject = object(args))
+    {
+        if(auto *pVersus = object(args))
+            ret = pObject->DoSpellLevelAbsorption(pVersus);
+    }
+
+    return Services::Events::Arguments(ret);
+}
+ArgumentStack Arelith::DoSpellImmunity(ArgumentStack&& args)
+{
+    int32_t ret = -1;
+    if (auto *pObject = object(args))
+    {
+        if(auto *pVersus = object(args))
+            ret = pObject->DoSpellImmunity(pVersus);
+    }
+
+    return Services::Events::Arguments(ret);
+}
+
+ArgumentStack Arelith::RemoveEffectById(ArgumentStack&& args)
+{
+   int32_t ret = 0;
+   if (auto *pObject = object(args))
+   {
+        auto id = Services::Events::ExtractArgument<std::string>(args);
+        ret = pObject->RemoveEffectById(std::stoi(id));
+   }
+
+   return Services::Events::Arguments(ret);
+}
+
+ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
+{
+   // auto eff = Services::Events::ExtractArgument<CGameEffect*>(args);
+    if(auto *pObject = object(args))
+    {
+        auto element = Services::Events::ExtractArgument<int32_t>(args);
+        auto eff = pObject->m_appliedEffects.element[element];
+
+
+        eff->m_sCustomTag = Services::Events::ExtractArgument<std::string>(args).c_str();
+
+        eff->m_oidParamObjectID[3] = Services::Events::ExtractArgument<ObjectID>(args);
+        eff->m_oidParamObjectID[2] = Services::Events::ExtractArgument<ObjectID>(args);
+        eff->m_oidParamObjectID[1] = Services::Events::ExtractArgument<ObjectID>(args);
+        eff->m_oidParamObjectID[0] = Services::Events::ExtractArgument<ObjectID>(args);
+
+        eff->m_sParamString[5] = Services::Events::ExtractArgument<std::string>(args).c_str();
+        eff->m_sParamString[4] = Services::Events::ExtractArgument<std::string>(args).c_str();
+        eff->m_sParamString[3] = Services::Events::ExtractArgument<std::string>(args).c_str();
+        eff->m_sParamString[2] = Services::Events::ExtractArgument<std::string>(args).c_str();
+        eff->m_sParamString[1] = Services::Events::ExtractArgument<std::string>(args).c_str();
+        eff->m_sParamString[0] = Services::Events::ExtractArgument<std::string>(args).c_str();
+
+        eff->m_nParamFloat[3] = Services::Events::ExtractArgument<float>(args);
+        eff->m_nParamFloat[2] = Services::Events::ExtractArgument<float>(args);
+        eff->m_nParamFloat[1] = Services::Events::ExtractArgument<float>(args);
+        eff->m_nParamFloat[0] = Services::Events::ExtractArgument<float>(args);
+
+        eff->m_nParamInteger[7] = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nParamInteger[6] = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nParamInteger[5] = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nParamInteger[4] = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nParamInteger[3] = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nParamInteger[2] = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nParamInteger[1] = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nParamInteger[0] = Services::Events::ExtractArgument<int32_t>(args);
+
+        eff->m_nCasterLevel       = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_bShowIcon          = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_bExpose            = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nSpellId           = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_oidCreator         = Services::Events::ExtractArgument<ObjectID>(args);
+        eff->m_nExpiryTimeOfDay   = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nExpiryCalendarDay = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_fDuration          = Services::Events::ExtractArgument<float>(args);
+        eff->m_nSubType           = Services::Events::ExtractArgument<int32_t>(args);
+        eff->m_nType              = Services::Events::ExtractArgument<int32_t>(args);
+    }
+
+
     return Services::Events::Arguments();
 }
 }

@@ -75,6 +75,27 @@ void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int s
 //false stops bypassing immunities
 void NWNX_Arelith_SetEffectImmunityBypass(int bypass);
 
+
+int NWNX_Arelith_GetTrueEffectCount(object oObject);
+
+
+//-1 if defender has no immunity, 2 if the defender is immune
+//Should only be called in spellscripts
+int NWNX_Arelith_DoSpellImmunity(object oDefender, object oCaster);
+
+//Should only be called in spell scripts
+//-1 if defender has no absorption/immunity Returns 2 if defender is immune via absorption effect
+// Returns 3 if the defender is immune and the absorption effect has a limit.
+int NWNX_Arelith_DoSpellLevelAbsorption(object oDefender, object oCaster);
+
+//the id can be gained from unpacking the effect
+//nay only work on spell-based/effects applied through ApplyEffectToObject, test other instances throughly.
+int NWNX_Arelith_RemoveEffectById(object oObject,  string sID);
+
+// Replaces effect at array with new effect struct e on object oObject
+void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUnpackedAre e);
+
+
 /// @brief An unpacked itemproperty.
 struct NWNX_RAWIP
 {
@@ -90,7 +111,53 @@ struct NWNX_RAWIP
     string sTag; ///< @todo Describe
 };
 
+
+struct NWNX_EffectUnpackedAre
+{
+    string sID;
+    int nType; ///< @todo Describe
+    int nSubType; ///< @todo Describe
+
+    float fDuration; ///< @todo Describe
+    int nExpiryCalendarDay; ///< @todo Describe
+    int nExpiryTimeOfDay; ///< @todo Describe
+
+    object oCreator; ///< @todo Describe
+    int nSpellId; ///< @todo Describe
+    int bExpose; ///< @todo Describe
+    int bShowIcon; ///< @todo Describe
+    int nCasterLevel; ///< @todo Describe
+
+    int nNumIntegers; ///< @todo Describe
+    int nParam0; ///< @todo Describe
+    int nParam1; ///< @todo Describe
+    int nParam2; ///< @todo Describe
+    int nParam3; ///< @todo Describe
+    int nParam4; ///< @todo Describe
+    int nParam5; ///< @todo Describe
+    int nParam6; ///< @todo Describe
+    int nParam7; ///< @todo Describe
+    float fParam0; ///< @todo Describe
+    float fParam1; ///< @todo Describe
+    float fParam2; ///< @todo Describe
+    float fParam3; ///< @todo Describe
+    string sParam0; ///< @todo Describe
+    string sParam1; ///< @todo Describe
+    string sParam2; ///< @todo Describe
+    string sParam3; ///< @todo Describe
+    string sParam4; ///< @todo Describe
+    string sParam5; ///< @todo Describe
+    object oParam0; ///< @todo Describe
+    object oParam1; ///< @todo Describe
+    object oParam2; ///< @todo Describe
+    object oParam3; ///< @todo Describe
+
+    string sTag; ///< @todo Describe
+};
+
 struct NWNX_RAWIP NWNX_Arelith_GetActiveProperty(object item, int index);
+
+struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int effectNumber);
 
 const string ARELITH_PLUGIN = "NWNX_Arelith";
 
@@ -249,5 +316,141 @@ void NWNX_Arelith_SetEffectImmunityBypass(int bypass)
 {
     string sFunc = "SetEffectImmunityBypass";
     NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, bypass);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+}
+
+int NWNX_Arelith_GetTrueEffectCount(object oObject)
+{
+    string sFunc = "GetTrueEffectCount";
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+
+    return  NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+}
+
+struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int effectNumber)
+{
+    string sFunc = "GetTrueEffect";
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, effectNumber);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+
+    struct NWNX_EffectUnpackedAre n;
+    n.sTag = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+
+    n.oParam3 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
+    n.oParam2 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
+    n.oParam1 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
+    n.oParam0 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
+    n.sParam5 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+    n.sParam4 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+    n.sParam3 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+    n.sParam2 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+    n.sParam1 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+    n.sParam0 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+    n.fParam3 = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
+    n.fParam2 = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
+    n.fParam1 = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
+    n.fParam0 = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
+    n.nParam7 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nParam6 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nParam5 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nParam4 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nParam3 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nParam2 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nParam1 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nParam0 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nNumIntegers = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+
+
+    n.nCasterLevel = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.bShowIcon = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.bExpose = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nSpellId = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.oCreator = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
+
+    n.nExpiryTimeOfDay = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nExpiryCalendarDay = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.fDuration = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
+
+    n.nSubType = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.nType = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
+    n.sID = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+    return n;
+}
+
+int NWNX_Arelith_DoSpellImmunity(object oDefender, object oCaster)
+{
+    string sFunc = "DoSpellImmunity";
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oCaster);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oDefender);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+
+    return  NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+}
+
+int NWNX_Arelith_DoSpellLevelAbsorption(object oDefender, object oCaster)
+{
+    string sFunc = "DoSpellLevelAbsorption";
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oCaster);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oDefender);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+
+    return  NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+}
+
+int NWNX_Arelith_RemoveEffectById(object oObject,  string sID)
+{
+    string sFunc = "RemoveEffectById";
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, sID);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+
+    return  NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
+}
+
+void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUnpackedAre e)
+{
+    string sFunc = "ReplaceEffect";
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nType);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nSubType);
+
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fDuration);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nExpiryCalendarDay);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nExpiryTimeOfDay);
+
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oCreator);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nSpellId);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.bExpose);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.bShowIcon);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nCasterLevel);
+
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam0);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam1);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam2);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam3);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam4);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam5);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam6);
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam7);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fParam0);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fParam1);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fParam2);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fParam3);
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam0);
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam1);
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam2);
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam3);
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam4);
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam5);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam0);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam1);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam2);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam3);
+
+    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sTag);
+
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, array);
+    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }
