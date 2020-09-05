@@ -746,7 +746,6 @@ int32_t Weapon::GetMeleeDamageBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
     Weapon& plugin = *g_plugin;
     CNWSItem* pWeapon = nullptr;
     uint32_t nBaseItem;
-    int32_t bTwo = 0;
 
     int nBonus = plugin.m_GetMeleeDamageBonusHook->CallOriginal<int32_t>(pStats, bOffHand, nCreatureWeaponIndex);
 
@@ -769,9 +768,9 @@ int32_t Weapon::GetMeleeDamageBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
     else
     {
         nBaseItem = pWeapon->m_nBaseItem;
-        bTwo = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS").value();
+        auto bTwo = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS").value();
         if(bTwo)
-          nBonus += pStats->m_nStrengthModifier/2;
+            nBonus += pStats->m_nStrengthModifier/2;
     }
 
 
@@ -824,8 +823,11 @@ int32_t Weapon::GetDamageBonus(CNWSCreatureStats* pStats, CNWSCreature *pCreatur
     else
     {
         nBaseItem = pWeapon->m_nBaseItem;
+        auto bTwo = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS").value();
+        if(bTwo)
+            nBonus += pStats->m_nStrengthModifier/2;
     }
-    auto nOverride = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS");
+
     if(nOverride)
     auto w = plugin.m_GreaterWeaponSpecializationMap.find(nBaseItem);
 
@@ -871,6 +873,9 @@ int32_t Weapon::GetRangedDamageBonus(CNWSCreatureStats* pStats)
     else
     {
         nBaseItem = pWeapon->m_nBaseItem;
+        auto bTwo = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS").value();
+        if(bTwo)
+            nBonus += pStats->m_nStrengthModifier/2;
     }
 
     auto w = plugin.m_GreaterWeaponSpecializationMap.find(nBaseItem);
@@ -1191,20 +1196,20 @@ int Weapon::GetLevelByClass(CNWSCreatureStats *pStats, uint32_t nClassType)
 
 ArgumentStack Weapon::SetWeaponTwoHand(ArgumentStack&& args)
 {
-   auto pItem = Services::Events::ExtractArgument<ObjectID>(args);
+    auto pItem = Services::Events::ExtractArgument<ObjectID>(args);
 
-   if(pItem == Constants::OBJECT_INVALID)
-   {
-       LOG_INFO("that's not an object");
-       return Services::Events::Arguments();
-   }
+    if(pItem == Constants::OBJECT_INVALID)
+    {
+        LOG_INFO("Invalid Object Passed into SetWeaponTwoHand");
+        return Services::Events::Arguments();
+    }
 
-   auto twoHand = Services::Events::ExtractArgument<int32_t>(args);
-   if(twoHand)
-    g_plugin->GetServices()->m_perObjectStorage->Set(pItem, "TWO_HAND_STATUS", 1);
-   else
-    g_plugin->GetServices()->m_perObjectStorage->Remove(pItem, "TWO_HAND_STATUS");
+    auto twoHand = Services::Events::ExtractArgument<int32_t>(args);
+    if(twoHand)
+        g_plugin->GetServices()->m_perObjectStorage->Set(pItem, "TWO_HAND_STATUS", 1);
+    else
+        g_plugin->GetServices()->m_perObjectStorage->Remove(pItem, "TWO_HAND_STATUS");
 
-   return Services::Events::Arguments();
+    return Services::Events::Arguments();
 }
 }
