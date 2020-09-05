@@ -768,7 +768,7 @@ int32_t Weapon::GetMeleeDamageBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
     else
     {
         nBaseItem = pWeapon->m_nBaseItem;
-        auto bStr = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS").value();
+        auto bStr = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "ONE_HALF_STRENGTH").value();
         if(bStr)
             nBonus += pStats->m_nStrengthModifier/2;
     }
@@ -823,7 +823,7 @@ int32_t Weapon::GetDamageBonus(CNWSCreatureStats* pStats, CNWSCreature *pCreatur
     else
     {
         nBaseItem = pWeapon->m_nBaseItem;
-        auto bStr = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "TWO_HAND_STATUS").value();
+        auto bStr = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "ONE_HALF_STRENGTH").value();
         if(bStr)
             nBonus += pStats->m_nStrengthModifier/2;
     }
