@@ -94,6 +94,10 @@ int NWNX_Arelith_RemoveEffectById(object oObject,  string sID);
 // Replaces effect at array with new effect struct e on object oObject
 void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUnpackedAre e);
 
+// Disables monk abilities under polymorph.
+void NWNX_Arelith_SetDisableMonkAbilitiesPolymorph(int nPolymorphType);
+
+
 /// @brief An unpacked itemproperty.
 struct NWNX_RAWIP
 {
@@ -149,11 +153,15 @@ struct NWNX_EffectUnpackedAre
     object oParam2; ///< @todo Describe
     object oParam3; ///< @todo Describe
 
+    string sItemPropId;
+
     string sTag; ///< @todo Describe
 };
 
+//Gets the active property from the index
 struct NWNX_RAWIP NWNX_Arelith_GetActiveProperty(object item, int index);
 
+//Gets the true effect at array spot effectNumbr, will loop through item proeprties and effects.
 struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int effectNumber);
 
 const string ARELITH_PLUGIN = "NWNX_Arelith";
@@ -335,6 +343,8 @@ struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int eff
     struct NWNX_EffectUnpackedAre n;
     n.sTag = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
 
+    n.sItemPropId = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
+
     n.oParam3 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
     n.oParam2 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
     n.oParam1 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
@@ -451,4 +461,11 @@ void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUn
     NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 
+}
+
+void NWNX_Arelith_SetDisableMonkAbilitiesPolymorph(int nPolymorphType)
+{
+    string sFunc = "SetDisableMonkAbilitiesPolymorph";
+    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, nPolymorphType);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }

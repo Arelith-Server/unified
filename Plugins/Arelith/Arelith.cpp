@@ -89,6 +89,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(DoSpellImmunity);
     REGISTER(RemoveEffectById);
     REGISTER(ReplaceEffect);
+    REGISTER(SetDisableMonkAbilitiesPolymorph);
 #undef REGISTER
 
     GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
@@ -118,7 +119,13 @@ Arelith::Arelith(Services::ProxyServiceList* services)
 
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN15CServerAIMaster21OnItemPropertyAppliedEP8CNWSItemP15CNWItemPropertyP12CNWSCreatureji, bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL>(&OnItemPropertyAppliedHook);
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
+    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler21OnApplyEffectImmunityEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyEffectImmunityHook);
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN10CNWSObject17DoDamageReductionEP12CNWSCreatureihii, bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL>(&DoDamageReductionHook);
+
+    if(GetServices()->m_config->Get<bool>("POLYMORPH", false))
+    {
+        pGetUseMonkAbilities_hook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature19GetUseMonkAbilitiesEv>(&CNWSCreature__GetUseMonkAbilities_hook);
+    }
     s_sHost = GetServices()->m_config->Get<std::string>("HOST", "");
     s_sOrigPath = GetServices()->m_config->Get<std::string>("PATH", "");
     s_sAdden = GetServices()->m_config->Get<std::string>("ROLE", "");
@@ -597,9 +604,12 @@ void Arelith::OnItemPropertyAppliedHook(bool before, CServerAIMaster*, CNWSItem*
 {
    if(before)
    {
-       if(pItemProperty->m_nPropertyName==Constants::ItemProperty::DamageReduction && pItemProperty->m_nParam1Value > 0)
+       if(pItemProperty->m_nParam1Value > 0)
        {
+        if(pItemProperty->m_nPropertyName==Constants::ItemProperty::DamageReduction || pItemProperty->m_nPropertyName==Constants::ItemProperty::ImmunityMiscellaneous)
+        {
           s_iMaterial=pItemProperty->m_nParam1Value;
+        }
        }
    }
 }
@@ -611,7 +621,14 @@ void Arelith::OnApplyDamageReductionHook(bool before, CNWSEffectListHandler*, CN
         s_iMaterial=0;
     }
 }
-
+void Arelith::OnApplyEffectImmunityHook(bool before, CNWSEffectListHandler*, CNWSObject *, CGameEffect * pEffect, BOOL)
+{
+    if(before && s_iMaterial > 0)
+    {
+        pEffect->SetInteger(4, s_iMaterial);
+        s_iMaterial=0;
+    }
+}
 void Arelith::DoDamageReductionHook(bool before, CNWSObject *pObject, CNWSCreature *pCreature, int32_t, uint8_t, BOOL, BOOL)
 {
     static std::unordered_map<uint64_t, int32_t> s_mEffects;
@@ -710,6 +727,40 @@ BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CN
 {
     if(g_plugin->bypassEffectImm > 0)
         return false;
+
+    if(nType == Constants::ImmunityType::CriticalHit || nType == Constants::ImmunityType::SneakAttack)
+    {
+        if(bConsiderFeats && pStats->HasFeat(Constants::Feat::DeathlessMastery))
+            return true;
+
+        auto effectList = pStats->m_pBaseCreature->m_appliedEffects;
+        uint8_t highest = 0;
+        for (int32_t i = 0; i < effectList.num; i++)
+        {
+            auto *eff = effectList.element[i];
+
+            if(eff->m_nType==Constants::EffectTrueType::Immunity && eff->m_nParamInteger[0]==nType)
+            {
+                if((eff->m_nParamInteger[1] == Constants::RacialType::All || (pVersus != nullptr && eff->m_nParamInteger[1] == pVersus->m_pStats->m_nRace)) && //race check
+                   (eff->m_nParamInteger[2] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[2] == pVersus->m_pStats->m_nAlignmentLawChaos)) &&
+                   (eff->m_nParamInteger[3] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[3] == pVersus->m_pStats->m_nAlignmentGoodEvil)))
+                {
+                    if(eff->m_nParamInteger[4] == 0 || eff->m_nParamInteger[4] == 100)
+                        return true;
+
+                    if(eff->m_nParamInteger[4] > highest)
+                        highest = eff->m_nParamInteger[4];
+                }
+
+            }
+
+        }
+
+        if(highest > 0 && Globals::Rules()->RollDice(1, 100) <= highest)
+            return true;
+
+        return false;
+    }
     return g_plugin->m_GetEffectImmunityHook->CallOriginal<BOOL>(pStats, nType, pVersus, bConsiderFeats);
 }
 ArgumentStack Arelith::SetEffectImmunityBypass(ArgumentStack&& args)
@@ -797,7 +848,10 @@ ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
     Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[2]);
     Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[3]);
 
+    Services::Events::InsertArgument(stack, std::to_string(eff->m_nItemPropertySourceId));
+
     Services::Events::InsertArgument(stack, std::string(eff->m_sCustomTag.CStr()));
+
     return stack;
 }
 ArgumentStack Arelith::DoSpellLevelAbsorption(ArgumentStack&& args)
@@ -885,6 +939,36 @@ ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
     }
 
 
+    return Services::Events::Arguments();
+}
+
+int32_t Arelith::CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature *pThis)
+{
+    if ( pThis->m_bIsPolymorphed)
+    {
+        if(g_plugin->polymorph.empty())
+            return false;
+        else
+        {
+            auto effectList = pThis->m_appliedEffects;
+            for (int32_t i = 0; i < effectList.num; i++)
+            {
+                auto *eff = effectList.element[i];
+                if(eff->m_nType == Constants::EffectTrueType::Polymorph)
+                {
+                    auto it = std::find (g_plugin->polymorph.begin(), g_plugin->polymorph.end(), eff->m_nParamInteger[0]);
+                    if(it != g_plugin->polymorph.end())
+                        return false;
+                }
+
+            }
+        }
+    }
+    return g_plugin->pGetUseMonkAbilities_hook->CallOriginal<int32_t>(pThis);
+}
+ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args)
+{
+    g_plugin->polymorph.push_back(Services::Events::ExtractArgument<int32_t>(args));
     return Services::Events::Arguments();
 }
 }
