@@ -101,6 +101,7 @@ private:
     static void OnApplyEffectImmunityHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
     static void DoDamageReductionHook(bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL);
     static BOOL GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats);
+
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.
     // Only does it if needed though, based on the current event depth!
     void CreateNewEventDataIfNeeded();
