@@ -53,7 +53,7 @@ private:
     ArgumentStack SetDevastatingCriticalEventScript    (ArgumentStack&& args);
     ArgumentStack GetEventData                         (ArgumentStack&& args);
     ArgumentStack SetEventData                         (ArgumentStack&& args);
-    ArgumentStack SetWeaponTwoHand                     (ArgumentStack&& args);
+    ArgumentStack SetOneHalfStrength                   (ArgumentStack&& args);
 
     NWNXLib::Hooking::FunctionHook* m_GetWeaponFocusHook;
     NWNXLib::Hooking::FunctionHook* m_GetEpicWeaponFocusHook;
@@ -114,5 +114,6 @@ private:
 
     int m_GreaterFocusAttackBonus = 1;
     int m_GreaterWeaponSpecializationDamageBonus = 2;
+    bool m_GASling = false;
 };
 }
