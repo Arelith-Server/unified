@@ -84,6 +84,7 @@ private:
     ArgumentStack DoSpellImmunity(ArgumentStack&& args);
     ArgumentStack RemoveEffectById(ArgumentStack&& args);
     ArgumentStack ReplaceEffect(ArgumentStack&& args);
+    ArgumentStack SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     CNWSObject *object(ArgumentStack& args);
     static void ReportErrorHook(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
@@ -97,6 +98,7 @@ private:
     ArgumentStack SetWebhook(ArgumentStack&& args);
     static void OnItemPropertyAppliedHook(bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL);
     static void OnApplyDamageReductionHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
+    static void OnApplyEffectImmunityHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
     static void DoDamageReductionHook(bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL);
     static BOOL GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats);
 
@@ -114,6 +116,9 @@ private:
 
     std::unique_ptr<ArelithEvents> m_arelithEvents;
     int32_t bypassEffectImm;
+    std::vector<int32_t> polymorph;
+    static int32_t CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature*);
+    NWNXLib::Hooking::FunctionHook* pGetUseMonkAbilities_hook;
 
 };
 
