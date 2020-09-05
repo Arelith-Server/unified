@@ -114,8 +114,10 @@ struct NWNX_Weapon_DevastatingCriticalEvent_Data NWNX_Weapon_GetDevastatingCriti
 /// @note This is only for use with the Devastating Critical Event Script.
 void NWNX_Weapon_BypassDevastatingCritical();
 
-// Sets weapon as twohanded
-void NWNX_Weapon_SetTwoHanded(object weapon, int twoHand);
+// @brief Sets weapon to gain 1.5 strength bonus.
+// @param oWeapon Should be a melee weapon.
+// @param nEnable TRUE for bonus. FALSE to turn off bonus.
+void NWNX_Weapon_SetOneHalfStrength(object oWeapon, int nEnable);
 
 /// @}
 
@@ -302,10 +304,10 @@ struct NWNX_Weapon_DevastatingCriticalEvent_Data NWNX_Weapon_GetDevastatingCriti
     return data;
 }
 
-void NWNX_Weapon_SetTwoHanded(object weapon, int twoHand)
+void NWNX_Weapon_SetOneHalfStrength(object oWeapon, int nEnable)
 {
-    string sFunc = "SetWeaponTwoHand";
-    NWNX_PushArgumentInt(NWNX_Weapon, sFunc, twoHand);
-    NWNX_PushArgumentObject(NWNX_Weapon, sFunc, weapon);
+    string sFunc = "SetOneHalfStrength";
+    NWNX_PushArgumentInt(NWNX_Weapon, sFunc, nEnable);
+    NWNX_PushArgumentObject(NWNX_Weapon, sFunc, oWeapon);
     NWNX_CallFunction(NWNX_Weapon, sFunc);
 }
