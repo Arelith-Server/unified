@@ -10,6 +10,7 @@
 #include "API/CNWBaseItem.hpp"
 #include "API/CNWRules.hpp"
 #include "Utils.hpp"
+#include "Services/Config/Config.hpp"
 #include "Services/Messaging/Messaging.hpp"
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
 
@@ -75,6 +76,8 @@ Weapon::Weapon(Services::ProxyServiceList* services)
     m_WeaponFinesseSizeMap.insert({Constants::BaseItem::Rapier, (uint8_t) Constants::CreatureSize::Medium});
 
     m_DCScript="";
+
+    m_GASling=GetServices()->m_config->Get<bool>("GOOD_AIM_SLING", false);
 }
 
 Weapon::~Weapon()
@@ -302,7 +305,7 @@ ArgumentStack Weapon::SetWeaponSpecializationFeat(ArgumentStack&& args)
         m_WeaponSpecializationMap.insert({w_bitem, {(uint32_t)feat}});
     }
     auto featName = pFeat->GetNameText();
-    auto baseItemName = pBaeItem->GetNameText();
+    auto baseItemName = pBaseItem->GetNameText();
     LOG_INFO("Weapon Specialization Feat %d [%s] added for Base Item Type %d [%s]", feat, featName, w_bitem, baseItemName);
 
     return Services::Events::Arguments();
@@ -768,8 +771,8 @@ int32_t Weapon::GetMeleeDamageBonus(CNWSCreatureStats* pStats, int32_t bOffHand,
     else
     {
         nBaseItem = pWeapon->m_nBaseItem;
-        auto bStr = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "ONE_HALF_STRENGTH").value();
-        if(bStr)
+        auto bStr = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "ONE_HALF_STRENGTH");
+        if(bStr && bStr.value())
             nBonus += pStats->m_nStrengthModifier/2;
     }
 
@@ -823,12 +826,12 @@ int32_t Weapon::GetDamageBonus(CNWSCreatureStats* pStats, CNWSCreature *pCreatur
     else
     {
         nBaseItem = pWeapon->m_nBaseItem;
-        auto bStr = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "ONE_HALF_STRENGTH").value();
-        if(bStr)
+        auto bStr = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(pWeapon, "ONE_HALF_STRENGTH");
+        if(bStr && bStr.value())
             nBonus += pStats->m_nStrengthModifier/2;
     }
 
-    if(nOverride)
+
     auto w = plugin.m_GreaterWeaponSpecializationMap.find(nBaseItem);
 
     bApplicableFeatExists = w != plugin.m_GreaterWeaponSpecializationMap.end();
@@ -841,8 +844,7 @@ int32_t Weapon::GetDamageBonus(CNWSCreatureStats* pStats, CNWSCreature *pCreatur
 
             if (bHasApplicableFeat) break;
         }
-      if(nOverride.value())
-       nBonus += pStats->m_nStrengthModifier/2;
+
     }
 
     if (bApplicableFeatExists && bHasApplicableFeat)
@@ -943,7 +945,7 @@ int32_t Weapon::GetAttackModifierVersus(CNWSCreatureStats* pStats, CNWSCreature*
         nMod += plugin.m_GreaterFocusAttackBonus;
     }
 
-    if(nBaseItem == Constants::BaseItem::Sling && pStats->m_nRace != Constants::RacialType::Halfling && pStats->HasFeat(Constants::Feat::GoodAim))
+    if(plugin.m_GASling && nBaseItem == Constants::BaseItem::Sling && pStats->m_nRace != Constants::RacialType::Halfling && pStats->HasFeat(Constants::Feat::GoodAim))
     {
         nMod += 1;
     }
@@ -1051,7 +1053,7 @@ int32_t Weapon::GetRangedAttackBonus(CNWSCreatureStats* pStats, int32_t bInclude
         nBonus += plugin.m_GreaterFocusAttackBonus;
     }
 
-    if(nBaseItem == Constants::BaseItem::Sling && pStats->m_nRace != Constants::RacialType::Halfling && pStats->HasFeat(Constants::Feat::GoodAim))
+    if(plugin.m_GASling && nBaseItem == Constants::BaseItem::Sling && pStats->m_nRace != Constants::RacialType::Halfling && pStats->HasFeat(Constants::Feat::GoodAim))
     {
         nBonus += 1;
     }

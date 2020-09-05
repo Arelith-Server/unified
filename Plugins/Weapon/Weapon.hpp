@@ -114,5 +114,6 @@ private:
 
     int m_GreaterFocusAttackBonus = 1;
     int m_GreaterWeaponSpecializationDamageBonus = 2;
+    bool m_GASling = false;
 };
 }
