@@ -26,7 +26,7 @@ class MapEvents;
 class StealthEvents;
 class SpellEvents;
 class PartyEvents;
-class HealerKitEvents;
+class HealingEvents;
 class SkillEvents;
 class PolymorphEvents;
 class EffectEvents;
@@ -42,6 +42,8 @@ class ObjectEvents;
 class UUIDEvents;
 class ResourceEvents;
 class QuickbarEvents;
+class DebugEvents;
+class StoreEvents;
 
 class Events : public NWNXLib::Plugin
 {
@@ -118,7 +120,7 @@ private:
     std::unique_ptr<StealthEvents> m_stealthEvents;
     std::unique_ptr<SpellEvents> m_spellEvents;
     std::unique_ptr<PartyEvents> m_partyEvents;
-    std::unique_ptr<HealerKitEvents> m_healerKitEvents;
+    std::unique_ptr<HealingEvents> m_healingEvents;
     std::unique_ptr<SkillEvents> m_skillEvents;
     std::unique_ptr<PolymorphEvents> m_polymorphEvents;
     std::unique_ptr<EffectEvents> m_effectEvents;
@@ -134,6 +136,8 @@ private:
     std::unique_ptr<UUIDEvents> m_uuidEvents;
     std::unique_ptr<ResourceEvents> m_resourceEvents;
     std::unique_ptr<QuickbarEvents> m_quickbarEvents;
+    std::unique_ptr<DebugEvents> m_debugEvents;
+    std::unique_ptr<StoreEvents> m_storeEvents;
 };
 
 }

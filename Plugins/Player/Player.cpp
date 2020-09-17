@@ -94,6 +94,11 @@ Player::Player(Services::ProxyServiceList* services)
     REGISTER(SetCreatureNameOverride);
     REGISTER(FloatingTextStringOnCreature);
     REGISTER(ToggleDM);
+    REGISTER(SetObjectMouseCursorOverride);
+    REGISTER(SetObjectHiliteColorOverride);
+    REGISTER(RemoveEffectFromTURD);
+    REGISTER(SetSpawnLocation);
+    REGISTER(SendDMAllCreatorLists);
 
 #undef REGISTER
 
@@ -145,6 +150,7 @@ ArgumentStack Player::ForcePlaceableInventoryWindow(ArgumentStack&& args)
 
         if (auto *pPlaceable = Utils::AsNWSPlaceable(Utils::GetGameObject(oidTarget)))
         {
+            pPlaceable->m_bHasInventory = 1;
             pPlaceable->OpenInventory(oidPlayer);
         }
     }
@@ -1464,6 +1470,206 @@ ArgumentStack Player::ToggleDM(ArgumentStack&& args)
                     pPlayerInfo->m_bGameMasterIsPlayerLogin = false;
                 }
             }
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SetObjectMouseCursorOverride(ArgumentStack&& args)
+{
+    static bool bSetObjectMouseCursorOverrideHook;
+
+    if (!bSetObjectMouseCursorOverrideHook)
+    {
+        GetServices()->m_hooks->RequestSharedHook<Functions::_ZN11CNWSMessage32ComputeGameObjectUpdateForObjectEP10CNWSPlayerP10CNWSObjectP16CGameObjectArrayj, int32_t>(
+                +[](bool before, CNWSMessage*, CNWSPlayer *pPlayer, CNWSObject*, CGameObjectArray*, ObjectID oidObjectToUpdate) -> void
+                {
+                    if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidObjectToUpdate)))
+                    {
+                        static std::optional<int32_t> cursorId;
+                        static int32_t swapCursorId;
+
+                        if (before)
+                        {
+                            cursorId = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(oidObjectToUpdate,
+                                "OBJCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject));
+
+                            if (cursorId)
+                            {
+                                swapCursorId = *cursorId;
+                                std::swap(swapCursorId, pObject->m_nMouseCursor);
+                            }
+                        }
+                        else
+                        {
+                            if (cursorId)
+                            {
+                                std::swap(swapCursorId, pObject->m_nMouseCursor);
+                            }
+                        }
+                    }
+                });
+
+        bSetObjectMouseCursorOverrideHook = true;
+    }
+
+    if (auto *pPlayer = player(args))
+    {
+        auto oidTarget = Services::Events::ExtractArgument<ObjectID>(args);
+          ASSERT_OR_THROW(oidTarget != Constants::OBJECT_INVALID);
+        auto cursorId = Services::Events::ExtractArgument<int32_t>(args);
+
+        if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidTarget)))
+        {
+            if (cursorId < 0)
+            {
+                GetServices()->m_perObjectStorage->Remove(pObject->m_idSelf, "OBJCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject));
+            }
+            else
+            {
+                GetServices()->m_perObjectStorage->Set(pObject->m_idSelf, "OBJCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject), cursorId);
+            }
+        }
+    }
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SetObjectHiliteColorOverride(ArgumentStack&& args)
+{
+    static bool bSetObjectHiliteColorHook;
+
+    if (!bSetObjectHiliteColorHook)
+    {
+        GetServices()->m_hooks->RequestSharedHook<Functions::_ZN11CNWSMessage32ComputeGameObjectUpdateForObjectEP10CNWSPlayerP10CNWSObjectP16CGameObjectArrayj, int32_t>(
+                +[](bool before, CNWSMessage*, CNWSPlayer *pPlayer, CNWSObject*, CGameObjectArray*, ObjectID oidObjectToUpdate) -> void
+                {
+                    if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidObjectToUpdate)))
+                    {
+                        static std::optional<int32_t> hiliteColor;
+                        static Vector swapHiliteColor;
+
+                        if (before)
+                        {
+                            hiliteColor = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(oidObjectToUpdate,
+                                "OBJHCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject));
+
+                            if (hiliteColor)
+                            {
+                                float r = (float)((*hiliteColor >> 16) & 0xFF) / 255.0f;
+                                float g = (float)((*hiliteColor >> 8) & 0xFF) / 255.0f;
+                                float b = (float)(*hiliteColor & 0xFF) / 255.0f;
+
+                                swapHiliteColor = {r, g, b};
+                                std::swap(swapHiliteColor, pObject->m_vHiliteColor);
+                            }
+                        }
+                        else
+                        {
+                            if (hiliteColor)
+                            {
+                                std::swap(swapHiliteColor, pObject->m_vHiliteColor);
+                            }
+                        }
+                    }
+                });
+
+        bSetObjectHiliteColorHook = true;
+    }
+
+    if (auto *pPlayer = player(args))
+    {
+        auto oidTarget = Services::Events::ExtractArgument<ObjectID>(args);
+          ASSERT_OR_THROW(oidTarget != Constants::OBJECT_INVALID);
+        auto hiliteColor = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(hiliteColor <= 0xFFFFFF);
+
+        if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidTarget)))
+        {
+            if (hiliteColor < 0)
+            {
+                GetServices()->m_perObjectStorage->Remove(pObject->m_idSelf, "OBJHCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject));
+            }
+            else
+            {
+                GetServices()->m_perObjectStorage->Set(pObject->m_idSelf, "OBJHCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject), hiliteColor);
+            }
+        }
+    }
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::RemoveEffectFromTURD(ArgumentStack&& args)
+{
+    const auto oidPlayer = Services::Events::ExtractArgument<ObjectID>(args);
+      ASSERT_OR_THROW(oidPlayer != Constants::OBJECT_INVALID);
+    const auto effectTag = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!effectTag.empty());
+
+    auto *pTURDList = Utils::GetModule()->m_lstTURDList.m_pcExoLinkedListInternal;
+    for (auto *pNode = pTURDList->pHead; pNode; pNode = pNode->pNext)
+    {
+        auto *pTURD = static_cast<CNWSPlayerTURD*>(pNode->pObject);
+
+        if (pTURD && pTURD->m_oidPlayer == oidPlayer)
+        {
+            for (int i = 0; i < pTURD->m_appliedEffects.num; i++)
+            {
+                auto *pEffect = pTURD->m_appliedEffects.element[i];
+
+                if (pEffect->m_sCustomTag == effectTag)
+                    pTURD->RemoveEffect(pEffect);
+            }
+
+            break;
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SetSpawnLocation(ArgumentStack&& args)
+{
+    if (auto *pPlayer = player(args))
+    {
+        auto oidArea = Services::Events::ExtractArgument<ObjectID>(args);
+          ASSERT_OR_THROW(oidArea != Constants::OBJECT_INVALID);
+          ASSERT_OR_THROW(Utils::AsNWSArea(Utils::GetGameObject(oidArea)));
+        auto x = Services::Events::ExtractArgument<float>(args);
+        auto y = Services::Events::ExtractArgument<float>(args);
+        auto z = Services::Events::ExtractArgument<float>(args);
+        auto facing = Services::Events::ExtractArgument<float>(args);
+
+        if (auto pCreature = Utils::AsNWSCreature(Utils::GetGameObject(pPlayer->m_oidNWSObject)))
+        {
+            pPlayer->m_bFromTURD = true;
+
+            pCreature->m_oidDesiredArea = oidArea;
+            pCreature->m_vDesiredAreaLocation = {x, y, z};
+            pCreature->m_bDesiredAreaUpdateComplete = false;
+            Utils::SetOrientation(pCreature, facing);
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SendDMAllCreatorLists(ArgumentStack&& args)
+{
+    if(auto *pPlayer = player(args))
+    {
+        auto *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pPlayer->m_oidNWSObject);
+
+        if(pCreature && pCreature->m_pStats->GetIsDM())
+        {
+            if (auto* pMessage = Globals::AppManager()->m_pServerExoApp->GetNWSMessage())
+            {
+                auto original = pPlayer->m_bWasSentITP;
+                pPlayer->m_bWasSentITP=false;
+                pMessage->SendServerToPlayerDungeonMasterCreatorLists(pPlayer);
+                pPlayer->m_bWasSentITP=original;
+            }
+
         }
     }
 

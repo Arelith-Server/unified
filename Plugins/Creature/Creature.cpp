@@ -19,6 +19,8 @@
 #include "API/CResGFF.hpp"
 #include "API/CTwoDimArrays.hpp"
 #include "API/C2DA.hpp"
+#include "API/CNWSBarter.hpp"
+#include "API/CEffectIconObject.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "API/Functions.hpp"
@@ -158,6 +160,14 @@ Creature::Creature(Services::ProxyServiceList* services)
     REGISTER(SetCriticalRangeOverride);
     REGISTER(GetCriticalRangeOverride);
     REGISTER(AddAssociate);
+    REGISTER(SetLastItemCasterLevel);
+    REGISTER(GetLastItemCasterLevel);
+    REGISTER(GetArmorClassVersus);
+    REGISTER(SetEffectIconFlashing);
+    REGISTER(OverrideDamageLevel);
+    REGISTER(SetEncounter);
+    REGISTER(GetEncounter);
+    REGISTER(GetIsBartering);
 
 #undef REGISTER
 }
@@ -1037,6 +1047,12 @@ ArgumentStack Creature::SetMovementRate(ArgumentStack&& args)
     if (auto *pCreature = creature(args))
     {
         const auto rate = Services::Events::ExtractArgument<int32_t>(args);
+
+        if (pCreature->m_pStats->m_nMovementRate == Constants::MovementRate::Immobile)
+        {
+            pCreature->m_nAIState |= Constants::AIState::CanUseLegs;
+        }
+
         pCreature->m_pStats->SetMovementRate(rate);
     }
     return Services::Events::Arguments();
@@ -2519,6 +2535,126 @@ ArgumentStack Creature::AddAssociate(ArgumentStack&& args)
     }
 
     return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::SetEffectIconFlashing(ArgumentStack&& args)
+{
+    if (auto* pCreature = creature(args))
+    {
+        auto iconId = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(iconId >= 0);
+          ASSERT_OR_THROW(iconId <= 255);
+        auto flashing = !!Services::Events::ExtractArgument<int32_t>(args);
+
+        for (auto* effectIconObject : pCreature->m_aEffectIcons)
+        {
+            if (effectIconObject->m_nIcon == iconId && effectIconObject->m_nPlayerBar)
+            {
+                effectIconObject->m_bFlashing = flashing;
+            }
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::OverrideDamageLevel(ArgumentStack&& args)
+{
+    static NWNXLib::Hooking::FunctionHook* pGetDamageLevelHook;
+    if (!pGetDamageLevelHook)
+    {
+        pGetDamageLevelHook = g_plugin->GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN10CNWSObject14GetDamageLevelEv>(
+            +[](CNWSObject *thisPtr) -> uint8_t
+            {
+                auto damageLevel = g_plugin->GetServices()->m_perObjectStorage->Get<int>(thisPtr->m_idSelf, "CREATURE_DAMAGE_LEVEL_OVERRIDE");
+                return damageLevel ? *damageLevel : pGetDamageLevelHook->CallOriginal<uint8_t>(thisPtr);
+            });
+    }
+
+    if (auto* pCreature = creature(args))
+    {
+        auto damageLevel = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(damageLevel <= 255);
+
+        if (damageLevel < 0)
+            GetServices()->m_perObjectStorage->Remove(pCreature->m_idSelf, "CREATURE_DAMAGE_LEVEL_OVERRIDE");
+        else
+            GetServices()->m_perObjectStorage->Set(pCreature->m_idSelf, "CREATURE_DAMAGE_LEVEL_OVERRIDE", damageLevel);
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::SetEncounter(ArgumentStack&& args)
+{
+    if (auto* pCreature = creature(args))
+    {
+        auto encounterId = Services::Events::ExtractArgument<ObjectID>(args);
+
+        if (encounterId == Constants::OBJECT_INVALID || (Globals::AppManager()->m_pServerExoApp->GetEncounterByGameObjectID(encounterId)))
+        {
+            pCreature->m_oidEncounter = encounterId;
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::GetEncounter(ArgumentStack&& args)
+{
+    ObjectID retVal = Constants::OBJECT_INVALID;
+
+    if (auto* pCreature = creature(args))
+    {
+        retVal = pCreature->m_oidEncounter;
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::GetIsBartering(ArgumentStack&& args)
+{
+    int32_t retVal = false;
+
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->m_pBarterInfo != nullptr && pCreature->m_pBarterInfo->m_bWindowOpen;
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::SetLastItemCasterLevel(ArgumentStack&& args)
+{
+    if (auto *pCreature = creature(args))
+    {
+        auto casterLvl = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(casterLvl >= 0);
+        pCreature->m_nLastItemCastSpellLevel = casterLvl;
+    }
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::GetLastItemCasterLevel(ArgumentStack&& args)
+{
+    int32_t retVal = 0;
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->m_nLastItemCastSpellLevel;
+    }
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::GetArmorClassVersus(ArgumentStack&& args)
+{
+    int32_t retVal = -255;
+    if (auto *pCreature = creature(args))
+    {
+        auto *pVersus = creature(args);
+        auto bTouchAttack = Services::Events::ExtractArgument<int32_t>(args);
+        retVal = pCreature->m_pStats->GetArmorClassVersus(pVersus, bTouchAttack);
+    }
+    return Services::Events::Arguments(retVal);
 }
 
 }

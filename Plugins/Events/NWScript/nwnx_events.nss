@@ -54,7 +54,11 @@ _______________________________________
     ITEM_OBJECT_ID          | object | Convert to object with StringToObject()|
     BEFORE_RESULT           | int    | TRUE/FALSE, only in _AFTER events|
 
-    @note Setting the result to "0" will cause the item to appear unusable (red) in the inventory.
+    @note The event result should be one of:
+      "0" - Equip denied
+      "1" - Equip okay
+      "2" - Swap currently equipped item
+      "3" - Unequip items in both hands before equipping
     @note Setting the result of this event will NOT prevent the item from being equipped, only used (e.g. scrolls/wands). See the "NWNX_ON_VALIDATE_ITEM_EQUIP_*" events to control equip behaviour.
     @note If the BEFORE event is not skipped, BEFORE_RESULT is the value of running the function normally. Otherwise, this is the set result value.
 
@@ -115,6 +119,7 @@ _______________________________________
     Event Data Tag        | Type   | Notes
     ----------------------|--------|-------
     SCROLL                | object | Convert to object with StringToObject()
+    RESULT                | int    | Returns TRUE in the _AFTER if the learning was successful, FALSE otherwise
 
 _______________________________________
     ## Validate Item Equip Events
@@ -527,6 +532,18 @@ _______________________________________
     ITEM_PROPERTY_INDEX   | int    | |
     MOVE_TO_TARGET        | int    | |
     ACTION_RESULT         | int    | |
+
+_______________________________________
+    ## Healing Events
+    - NWNX_ON_HEAL_BEFORE
+    - NWNX_ON_HEAL_AFTER
+
+    `OBJECT_SELF` = The creature performing the heal
+
+    Event Data Tag        | Type   | Notes |
+    ----------------------|--------|-------|
+    TARGET_OBJECT_ID      | object | Convert to object with StringToObject() |
+    HEAL_AMOUNT           | int    | How many HP the heal will provide |
 
 _______________________________________
     ## Party Action Events
@@ -1108,6 +1125,62 @@ _______________________________________
     FEAT                  | int    | 65535 if a feat wasn't used, otherwise the feat ID |
 
 _______________________________________
+    ## RunScript Debug Event
+    - NWNX_ON_DEBUG_RUN_SCRIPT_BEFORE
+    - NWNX_ON_DEBUG_RUN_SCRIPT_AFTER
+
+    `OBJECT_SELF` = The player executing the RunScript debug command
+
+    Event Data Tag        | Type   | Notes |
+    ----------------------|--------|-------|
+    SCRIPT_NAME           | string | The script to execute |
+    TARGET                | object | The target to run the script on. Convert to object with StringToObject() |
+
+    @note This event also runs for players that do not have permission to execute the command.
+
+_______________________________________
+    ## RunScriptChunk Debug Event
+    - NWNX_ON_DEBUG_RUN_SCRIPT_CHUNK_BEFORE
+    - NWNX_ON_DEBUG_RUN_SCRIPT_CHUNK_AFTER
+
+    `OBJECT_SELF` = The player executing the RunScriptChunk debug command
+
+    Event Data Tag        | Type   | Notes |
+    ----------------------|--------|-------|
+    SCRIPT_CHUNK          | string | The script chunk |
+    TARGET                | object | The target to run the script chunk on. Convert to object with StringToObject() |
+    WRAP_INTO_MAIN        | int    | TRUE if the WrapIntoMain checkbox is checked, otherwise FALSE |
+
+    @note This event also runs for players that do not have permission to execute the command.
+
+_______________________________________
+    ## Buy/Sell Store Events
+    - NWNX_ON_STORE_REQUEST_BUY_BEFORE
+    - NWNX_ON_STORE_REQUEST_BUY_AFTER
+    - NWNX_ON_STORE_REQUEST_SELL_BEFORE
+    - NWNX_ON_STORE_REQUEST_SELL_AFTER
+
+    `OBJECT_SELF` = The creature buying or selling an item
+
+    Event Data Tag        | Type   | Notes |
+    ----------------------|--------|-------|
+    ITEM                  | object | The item being bought or sold. Convert to object with StringToObject()  |
+    STORE                 | object | The store the item is being sold to or bought from. Convert to object with StringToObject() |
+    PRICE                 | int    | The buy or sell price |
+
+_______________________________________
+    ## Server Send Area Events
+    - NWNX_ON_SERVER_SEND_AREA_BEFORE
+    - NWNX_ON_SERVER_SEND_AREA_AFTER
+
+    `OBJECT_SELF` = The player
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    AREA                  | object | The area the server is sending. Convert to object with StringToObject() |
+    PLAYER_NEW_TO_MODULE  | int    | TRUE if it's the player's first time logging into the server since a restart |
+
+_______________________________________
 */
 /*
 const int NWNX_EVENTS_OBJECT_TYPE_CREATURE          = 5;
@@ -1169,7 +1242,7 @@ string NWNX_Events_GetEventData(string tag);
 /// ONLY WORKS WITH THE FOLLOWING EVENTS:
 /// - Feat events
 /// - Item events
-/// - Healer's Kit event
+/// - Healing events
 /// - CombatMode events
 /// - Party events
 /// - Skill events
@@ -1191,6 +1264,8 @@ string NWNX_Events_GetEventData(string tag);
 /// - Object {Lock|Unlock} events
 /// - Quickbar Events
 /// - Input Pause Event
+/// - Debug events
+/// - Store events
 void NWNX_Events_SkipEvent();
 
 /// Set the return value of the event.
@@ -1205,6 +1280,7 @@ void NWNX_Events_SkipEvent();
 /// - Ammo Reload event -> Forced ammunition returned
 /// - Trap events -> "1" or "0"
 /// - Sticky Player Name event -> "1" or "0"
+/// - Heal event -> Amount of HP to heal
 void NWNX_Events_SetEventResult(string data);
 
 /// Returns the current event name

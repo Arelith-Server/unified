@@ -17,7 +17,6 @@ public:
 private:
     ArgumentStack GetLocalVariableCount     (ArgumentStack&& args);
     ArgumentStack GetLocalVariable          (ArgumentStack&& args);
-    ArgumentStack StringToObject            (ArgumentStack&& args);
     ArgumentStack SetPosition               (ArgumentStack&& args);
     ArgumentStack GetCurrentHitPoints       (ArgumentStack&& args);
     ArgumentStack SetCurrentHitPoints       (ArgumentStack&& args);
@@ -59,6 +58,9 @@ private:
     ArgumentStack PeekUUID                  (ArgumentStack&& args);
     ArgumentStack GetDoorHasVisibleModel    (ArgumentStack&& args);
     ArgumentStack GetIsDestroyable          (ArgumentStack&& args);
+    ArgumentStack DoSpellImmunity           (ArgumentStack&& args);
+    ArgumentStack DoSpellLevelAbsorption    (ArgumentStack&& args);
+    ArgumentStack SetHasInventory           (ArgumentStack&& args);
 
     CNWSObject *object(ArgumentStack& args);
 };
