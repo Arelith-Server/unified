@@ -71,17 +71,11 @@ private:
     NWNXLib::Services::Events::ArgumentStack OnGetCurrentEvent(NWNXLib::Services::Events::ArgumentStack&& args);
     ArgumentStack GetWeaponPower(ArgumentStack&& args);
     ArgumentStack GetAttackModifierVersus(ArgumentStack&& args);
-    ArgumentStack GetArmorClassVersus(ArgumentStack&& args);
     ArgumentStack ResolveDefensiveEffects(ArgumentStack&& args);
-    ArgumentStack GetActiveProperty(ArgumentStack&& args);
-    ArgumentStack SetLastItemCasterLevel(ArgumentStack&& args);
-    ArgumentStack GetLastItemCasterLevel(ArgumentStack&& args);
     ArgumentStack SetDamageReductionBypass(ArgumentStack&& args);
     ArgumentStack SetEffectImmunityBypass(ArgumentStack&& args);
     ArgumentStack GetTrueEffectCount(ArgumentStack&& args);
     ArgumentStack GetTrueEffect(ArgumentStack&& args);
-    ArgumentStack DoSpellLevelAbsorption(ArgumentStack&& args);
-    ArgumentStack DoSpellImmunity(ArgumentStack&& args);
     ArgumentStack RemoveEffectById(ArgumentStack&& args);
     ArgumentStack ReplaceEffect(ArgumentStack&& args);
     ArgumentStack SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args);

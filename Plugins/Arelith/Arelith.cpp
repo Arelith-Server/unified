@@ -74,19 +74,13 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(OnEventResult);
     REGISTER(OnGetCurrentEvent);
     REGISTER(GetWeaponPower);
-    REGISTER(GetArmorClassVersus);
     REGISTER(GetAttackModifierVersus);
     REGISTER(ResolveDefensiveEffects);
     REGISTER(SetWebhook);
-    REGISTER(GetActiveProperty);
-    REGISTER(SetLastItemCasterLevel);
-    REGISTER(GetLastItemCasterLevel);
     REGISTER(SetDamageReductionBypass);
     REGISTER(SetEffectImmunityBypass);
     REGISTER(GetTrueEffectCount);
     REGISTER(GetTrueEffect);
-    REGISTER(DoSpellLevelAbsorption);
-    REGISTER(DoSpellImmunity);
     REGISTER(RemoveEffectById);
     REGISTER(ReplaceEffect);
     REGISTER(SetDisableMonkAbilitiesPolymorph);
@@ -109,7 +103,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
 
     m_arelithEvents   = std::make_unique<ArelithEvents>(hooker);
 
-    
+
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN25CNWVirtualMachineCommands11ReportErrorER10CExoStringi, int32_t>(&ReportErrorHook);
 
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
@@ -359,20 +353,7 @@ ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
     }
     return Services::Events::Arguments(retVal);
 }
-ArgumentStack Arelith::GetArmorClassVersus(ArgumentStack&& args)
-{
-    int32_t retVal = -1;
-    if (auto *pCreature = creature(args))
-    {
-        if(auto *versus = creature(args))
-        {
-            const auto isTouchAttack = Services::Events::ExtractArgument<int32_t>(args);
-            retVal = pCreature->m_pStats->GetArmorClassVersus(versus, isTouchAttack);
-        }
 
-    }
-    return Services::Events::Arguments(retVal);
-}
 ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
 {
     int32_t retVal = -1;
@@ -547,61 +528,6 @@ ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
     return Services::Events::Arguments();
 }
 
-ArgumentStack Arelith::GetActiveProperty(ArgumentStack&& args)
-{
-    const auto objectId = Services::Events::ExtractArgument<ObjectID>(args);
-
-    if (objectId == Constants::OBJECT_INVALID)
-    {
-        LOG_NOTICE("NWNX_Arelith function called on OBJECT_INVALID");
-        return Services::Events::Arguments();
-    }
-
-    auto *pGameObject = Globals::AppManager()->m_pServerExoApp->GetGameObject(objectId);
-    auto *pItem = Utils::AsNWSItem(pGameObject);
-    if (!pItem)
-    {
-        LOG_NOTICE("NWNX_Arelith did not find an item.");
-        return Services::Events::Arguments();
-    }
-    auto index = Services::Events::ExtractArgument<int32_t>(args);
-    auto ip = pItem->GetActiveProperty(index);
-    ArgumentStack stack;
-    Services::Events::InsertArgument(stack, ip->m_nDurationType);
-   // Services::Events::InsertArgument(stack, ip->m_nID);
-    Services::Events::InsertArgument(stack, ip->m_nPropertyName);
-    Services::Events::InsertArgument(stack, ip->m_nSubType);
-    Services::Events::InsertArgument(stack, ip->m_nCostTable);
-    Services::Events::InsertArgument(stack, ip->m_nCostTableValue);
-    Services::Events::InsertArgument(stack, ip->m_nParam1);
-    Services::Events::InsertArgument(stack, ip->m_nParam1Value);
-    Services::Events::InsertArgument(stack, ip->m_nUsesPerDay);
-    Services::Events::InsertArgument(stack, ip->m_nChanceOfAppearing);
-    Services::Events::InsertArgument(stack, ip->m_bUseable);
-    Services::Events::InsertArgument(stack, ip->m_sCustomTag.CStr());
-
-    return stack;
-}
-
-ArgumentStack Arelith::GetLastItemCasterLevel(ArgumentStack&& args)
-{
-    int32_t retVal = -1;
-    if (auto *pCreature = creature(args))
-    {
-        retVal = pCreature->m_nLastItemCastSpellLevel;
-    }
-    return Services::Events::Arguments(retVal);
-}
-
-ArgumentStack Arelith::SetLastItemCasterLevel(ArgumentStack&& args)
-{
-    if (auto *pCreature = creature(args))
-    {
-        auto casterLvl = Services::Events::ExtractArgument<int32_t>(args);
-        pCreature->m_nLastItemCastSpellLevel = casterLvl;
-    }
-    return Services::Events::Arguments();
-}
 void Arelith::OnItemPropertyAppliedHook(bool before, CServerAIMaster*, CNWSItem*, CNWItemProperty *pItemProperty, CNWSCreature*, uint32_t, BOOL)
 {
    if(before)
@@ -791,9 +717,9 @@ ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
         ASSERT_OR_THROW(it < pObject->m_appliedEffects.num);
         eff = pObject->m_appliedEffects.element[it];
     }
-    else
-        eff = new CGameEffect(true);
 
+
+    ASSERT_OR_THROW(pObject);
     Services::Events::InsertArgument(stack, std::to_string(eff->m_nID));
     Services::Events::InsertArgument(stack, (int32_t)eff->m_nType);
     Services::Events::InsertArgument(stack, (int32_t)eff->m_nSubType);
@@ -856,28 +782,6 @@ ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
 
     return stack;
 }
-ArgumentStack Arelith::DoSpellLevelAbsorption(ArgumentStack&& args)
-{
-    int32_t ret = -1;
-    if (auto *pObject = object(args))
-    {
-        if(auto *pVersus = object(args))
-            ret = pObject->DoSpellLevelAbsorption(pVersus);
-    }
-
-    return Services::Events::Arguments(ret);
-}
-ArgumentStack Arelith::DoSpellImmunity(ArgumentStack&& args)
-{
-    int32_t ret = -1;
-    if (auto *pObject = object(args))
-    {
-        if(auto *pVersus = object(args))
-            ret = pObject->DoSpellImmunity(pVersus);
-    }
-
-    return Services::Events::Arguments(ret);
-}
 
 ArgumentStack Arelith::RemoveEffectById(ArgumentStack&& args)
 {
@@ -897,10 +801,21 @@ ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
     if(auto *pObject = object(args))
     {
         auto element = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(element >= 0);
+          ASSERT_OR_THROW(element < pObject->m_appliedEffects.num);
         auto eff = pObject->m_appliedEffects.element[element];
 
-
         eff->m_sCustomTag = Services::Events::ExtractArgument<std::string>(args).c_str();
+
+        auto vector1z = Services::Events::ExtractArgument<float>(args);
+        auto vector1y = Services::Events::ExtractArgument<float>(args);
+        auto vector1x = Services::Events::ExtractArgument<float>(args);
+        eff->m_vParamVector[1] = {vector1x, vector1y, vector1z};
+
+        auto vector0z = Services::Events::ExtractArgument<float>(args);
+        auto vector0y = Services::Events::ExtractArgument<float>(args);
+        auto vector0x = Services::Events::ExtractArgument<float>(args);
+        eff->m_vParamVector[0] = {vector0x, vector0y, vector0z};
 
         eff->m_oidParamObjectID[3] = Services::Events::ExtractArgument<ObjectID>(args);
         eff->m_oidParamObjectID[2] = Services::Events::ExtractArgument<ObjectID>(args);
@@ -937,7 +852,6 @@ ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
         eff->m_nExpiryCalendarDay = Services::Events::ExtractArgument<int32_t>(args);
         eff->m_fDuration          = Services::Events::ExtractArgument<float>(args);
         eff->m_nSubType           = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nType              = Services::Events::ExtractArgument<int32_t>(args);
     }
 
 
