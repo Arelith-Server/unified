@@ -45,10 +45,6 @@ string NWNX_Arelith_GetCurrentEvent();
 // Seems to be 10 + Ability + Feats + Effects + Item Properties.
 int NWNX_Arelith_GetAttackModifierVersus(object attacker, object versus=OBJECT_INVALID);
 
-// Gets the Armor classed of attacked against versus
-// Touch attack should be true if you want touch attack AC.
-int NWNX_Arelith_GetArmorClassVersus(object attacked, int touchAttack=FALSE, object versus=OBJECT_INVALID);
-
 // Gets attacker's weapon power against versus. AKA the AB/enhancement on the weapon.
 int NWNX_Arelith_GetWeaponPower(object attacker, object versus, int offHand=FALSE);
 
@@ -58,12 +54,6 @@ void NWNX_Arelith_SetWebhook(string host, string path, string addendum="");
 // Handles concealment and miss chance resolution
 // 0/FALSE if the attack hits 1/TRUE if the attack misses
 int NWNX_Arelith_ResolveDefensiveEffects(object attacker, object versus, int attackHit=TRUE);
-
-// Gets the caster level of last item used
-int NWNX_Arelith_GetLastItemCasterLevel(object creature);
-
-//Sets caster level for the last item used, use in Events spellhook before to set item caster level.
-void NWNX_Arelith_SetLastItemCasterLevel(object creature, int casterLvl);
 
 //material = the damage reduction penalty
 //all other properties are for the property which bypasses it, fields with -1 are ignored
@@ -78,16 +68,6 @@ void NWNX_Arelith_SetEffectImmunityBypass(int bypass);
 
 int NWNX_Arelith_GetTrueEffectCount(object oObject);
 
-
-//-1 if defender has no immunity, 2 if the defender is immune
-//Should only be called in spellscripts
-int NWNX_Arelith_DoSpellImmunity(object oDefender, object oCaster);
-
-//Should only be called in spell scripts
-//-1 if defender has no absorption/immunity Returns 2 if defender is immune via absorption effect
-// Returns 3 if the defender is immune and the absorption effect has a limit.
-int NWNX_Arelith_DoSpellLevelAbsorption(object oDefender, object oCaster);
-
 //the id can be gained from unpacking the effect
 //nay only work on spell-based/effects applied through ApplyEffectToObject, test other instances throughly.
 int NWNX_Arelith_RemoveEffectById(object oObject,  string sID);
@@ -98,22 +78,6 @@ void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUn
 
 // Disables monk abilities under polymorph.
 void NWNX_Arelith_SetDisableMonkAbilitiesPolymorph(int nPolymorphType);
-
-/// @brief An unpacked itemproperty.
-struct NWNX_RAWIP
-{
-    int nProperty; ///< @todo Describe
-    int nSubType; ///< @todo Describe
-    int nCostTable; ///< @todo Describe
-    int nCostTableValue; ///< @todo Describe
-    int nParam1; ///< @todo Describe
-    int nParam1Value; ///< @todo Describe
-    int nUsesPerDay; ///< @todo Describe
-    int nChanceToAppear; ///< @todo Describe
-    int bUsable; ///< @todo Describe
-    string sTag; ///< @todo Describe
-};
-
 
 struct NWNX_EffectUnpackedAre
 {
@@ -154,14 +118,13 @@ struct NWNX_EffectUnpackedAre
     object oParam1; ///< @todo Describe
     object oParam2; ///< @todo Describe
     object oParam3; ///< @todo Describe
+    vector vParam0; ///< @todo Describe
+    vector vParam1; ///< @todo Describe
 
     string sItemPropId;
 
     string sTag; ///< @todo Describe
 };
-
-//Gets the active property from the index
-struct NWNX_RAWIP NWNX_Arelith_GetActiveProperty(object item, int index);
 
 //Gets the true effect at array spot effectNumbr, will loop through item proeprties and effects.
 struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int effectNumber);
@@ -227,16 +190,6 @@ int NWNX_Arelith_GetAttackModifierVersus(object attacker, object versus=OBJECT_I
     return NWNX_GetReturnValueInt("NWNX_Arelith", "GetAttackModifierVersus");
 }
 
-int NWNX_Arelith_GetArmorClassVersus(object attacked, int touchAttack=FALSE, object versus=OBJECT_INVALID)
-{
-    NWNX_PushArgumentInt("NWNX_Arelith", "GetArmorClassVersus", touchAttack);
-    NWNX_PushArgumentObject("NWNX_Arelith", "GetArmorClassVersus", versus);
-    NWNX_PushArgumentObject("NWNX_Arelith", "GetArmorClassVersus", attacked);
-    NWNX_CallFunction("NWNX_Arelith", "GetArmorClassVersus");
-
-    return NWNX_GetReturnValueInt("NWNX_Arelith", "GetArmorClassVersus");
-}
-
 int NWNX_Arelith_GetWeaponPower(object attacker, object versus, int offHand=FALSE)
 {
     NWNX_PushArgumentInt("NWNX_Arelith", "GetWeaponPower", offHand);
@@ -264,46 +217,6 @@ void NWNX_Arelith_SetWebhook(string host, string path, string addendum="")
     NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, host);
     NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, addendum);
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-}
-
-int NWNX_Arelith_GetLastItemCasterLevel(object creature)
-{
-    string sFunc = "GetLastItemCasterLevel";
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, creature);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-
-    return NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-}
-
-void NWNX_Arelith_SetLastItemCasterLevel(object creature, int casterLvl)
-{
-    string sFunc = "SetLastItemCasterLevel";
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, casterLvl);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, creature);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-}
-
-struct NWNX_RAWIP NWNX_Arelith_GetActiveProperty(object item, int index)
-{
-    string sFunc = "GetActiveProperty";
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, index);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, item);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-
-    struct NWNX_RAWIP n;
-
-    n.sTag=NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-    n.bUsable=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-    n.nChanceToAppear=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-    n.nUsesPerDay=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-    n.nParam1Value=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-    n.nParam1=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-    n.nCostTableValue=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-    n.nCostTable=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-    n.nSubType=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-    n.nProperty=NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-
-    return n;
 }
 
 void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int subType=-1, int costValue=-1, int paramValue=-1, int reverse=FALSE)
@@ -388,26 +301,6 @@ struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int eff
     return n;
 }
 
-int NWNX_Arelith_DoSpellImmunity(object oDefender, object oCaster)
-{
-    string sFunc = "DoSpellImmunity";
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oCaster);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oDefender);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-
-    return  NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-}
-
-int NWNX_Arelith_DoSpellLevelAbsorption(object oDefender, object oCaster)
-{
-    string sFunc = "DoSpellLevelAbsorption";
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oCaster);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oDefender);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-
-    return  NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-}
-
 int NWNX_Arelith_RemoveEffectById(object oObject,  string sID)
 {
     string sFunc = "RemoveEffectById";
@@ -456,6 +349,13 @@ void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUn
     NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam1);
     NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam2);
     NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam3);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam0.x);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam0.y);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam0.z);
+
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam1.x);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam1.y);
+    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam1.z);
 
     NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sTag);
 

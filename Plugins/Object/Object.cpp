@@ -55,7 +55,6 @@ Object::Object(Services::ProxyServiceList* services)
 
     REGISTER(GetLocalVariableCount);
     REGISTER(GetLocalVariable);
-    REGISTER(StringToObject);
     REGISTER(SetPosition);
     REGISTER(GetCurrentHitPoints);
     REGISTER(SetCurrentHitPoints);
@@ -97,6 +96,9 @@ Object::Object(Services::ProxyServiceList* services)
     REGISTER(PeekUUID);
     REGISTER(GetDoorHasVisibleModel);
     REGISTER(GetIsDestroyable);
+    REGISTER(DoSpellImmunity);
+    REGISTER(DoSpellLevelAbsorption);
+    REGISTER(SetHasInventory);
 
 #undef REGISTER
 }
@@ -173,26 +175,6 @@ ArgumentStack Object::GetLocalVariable(ArgumentStack&& args)
     return Services::Events::Arguments(type, key);
 }
 
-// NOTE: StringToObject does not receive an object argument.
-ArgumentStack Object::StringToObject(ArgumentStack&& args)
-{
-    ObjectID retVal;
-
-    const auto id = Services::Events::ExtractArgument<std::string>(args);
-
-    if (id.empty())
-        retVal = Constants::OBJECT_INVALID;
-    else
-    {
-        retVal = static_cast<ObjectID>(stoul(id, nullptr, 16));
-
-        if (!Globals::AppManager()->m_pServerExoApp->GetGameObject(retVal))
-            retVal = Constants::OBJECT_INVALID;
-    }
-
-    return Services::Events::Arguments(retVal);
-}
-
 ArgumentStack Object::SetPosition(ArgumentStack&& args)
 {
     if (auto *pObject = object(args))
@@ -201,17 +183,7 @@ ArgumentStack Object::SetPosition(ArgumentStack&& args)
         pos.z = Services::Events::ExtractArgument<float>(args);
         pos.y = Services::Events::ExtractArgument<float>(args);
         pos.x = Services::Events::ExtractArgument<float>(args);
-        int32_t bUpdateSubareas;
-
-        // TODO: Remove this try/catch at some point
-        try
-        {
-            bUpdateSubareas = Services::Events::ExtractArgument<int32_t>(args);
-        }
-        catch (const std::runtime_error& e)
-        {
-            bUpdateSubareas = true;
-        }
+        auto bUpdateSubareas = !!Services::Events::ExtractArgument<int32_t>(args);
 
         pObject->SetPosition(pos, true /*bUpdateInAreaArray*/);
 
@@ -713,7 +685,7 @@ ArgumentStack Object::Export(ArgumentStack&& args)
             case Constants::ObjectType::Item:       ExportObject(Constants::ResRefType::UTI); break;
             case Constants::ObjectType::Placeable:  ExportObject(Constants::ResRefType::UTP); break;
             case Constants::ObjectType::Waypoint:   ExportObject(Constants::ResRefType::UTW); break;
-            case Constants::ObjectType::Store:      ExportObject(Constants::ResRefType::UTS); break;
+            case Constants::ObjectType::Store:      ExportObject(Constants::ResRefType::UTM); break;
             case Constants::ObjectType::Door:       ExportObject(Constants::ResRefType::UTD); break;
             case Constants::ObjectType::Trigger:    ExportObject(Constants::ResRefType::UTT); break;
             default:
@@ -975,4 +947,39 @@ ArgumentStack Object::GetIsDestroyable(ArgumentStack&& args)
     return Services::Events::Arguments(retVal);
 }
 
+ArgumentStack Object::DoSpellImmunity(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pObject = object(args))
+    {
+        if(auto *pVersus = object(args))
+            retVal = pObject->DoSpellImmunity(pVersus);
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Object::DoSpellLevelAbsorption(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pObject = object(args))
+    {
+        if(auto *pVersus = object(args))
+            retVal = pObject->DoSpellLevelAbsorption(pVersus);
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Object::SetHasInventory(ArgumentStack&& args)
+{
+    if (auto *pPlaceable = Utils::AsNWSPlaceable(object(args)))
+    {
+        const auto hasInventory = !!Services::Events::ExtractArgument<int32_t>(args);
+
+        pPlaceable->m_bHasInventory = hasInventory;
+    }
+
+    return Services::Events::Arguments();
+}
 }

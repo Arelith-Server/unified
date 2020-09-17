@@ -29,10 +29,12 @@
 #include "Services/Plugins/Plugins.hpp"
 #include "Services/Commands/Commands.hpp"
 #include "Services/Tasks/Tasks.hpp"
+#include "Services/Messaging/Messaging.hpp"
 
 #include <string>
 #include <cstdio>
 #include <regex>
+#include <cmath>
 
 
 using namespace NWNXLib;
@@ -85,6 +87,9 @@ Util::Util(Services::ProxyServiceList* services)
     REGISTER(GetScriptReturnValue);
     REGISTER(CreateDoor);
     REGISTER(SetItemActivator);
+    REGISTER(GetWorldTime);
+    REGISTER(SetResourceOverride);
+    REGISTER(GetResourceOverride);
 
 #undef REGISTER
 
@@ -111,30 +116,30 @@ Util::Util(Services::ProxyServiceList* services)
                 }
             });
 
-    GetServices()->m_hooks->RequestSharedHook<API::Functions::_ZN10CNWSModule16LoadModuleFinishEv, uint32_t>(
-            +[](bool before, CNWSModule*)
+    GetServices()->m_messaging->SubscribeMessage("NWNX_CORE_SIGNAL",
+        [](const std::vector<std::string>& message)
+        {
+            if (message[0] == "ON_MODULE_LOAD_FINISH")
             {
-                if (before)
+                if (auto startScript = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT"))
                 {
-                    if (auto startScript = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT"))
-                    {
-                        LOG_NOTICE("Running module start script: %s", *startScript);
-                        Utils::ExecuteScript(*startScript, 0);
-                    }
+                    LOG_NOTICE("Running module start script: %s", *startScript);
+                    Utils::ExecuteScript(*startScript, 0);
+                }
 
-                    if (auto startChunk = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT_CHUNK"))
-                    {
-                        LOG_NOTICE("Running module start script chunk: %s", *startChunk);
+                if (auto startChunk = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT_CHUNK"))
+                {
+                    LOG_NOTICE("Running module start script chunk: %s", *startChunk);
 
-                        bool bWrapIntoMain = startChunk->find("void main()") == std::string::npos;
-                        if (Globals::VirtualMachine()->RunScriptChunk(*startChunk, 0, true, bWrapIntoMain))
-                        {
-                            LOG_ERROR("Failed to run module start script chunk with error: %s",
-                                    Globals::VirtualMachine()->m_pJitCompiler->m_sCapturedError.CStr());
-                        }
+                    bool bWrapIntoMain = startChunk->find("void main()") == std::string::npos;
+                    if (Globals::VirtualMachine()->RunScriptChunk(*startChunk, 0, true, bWrapIntoMain))
+                    {
+                        LOG_ERROR("Failed to run module start script chunk with error: %s",
+                            Globals::VirtualMachine()->m_pJitCompiler->m_sCapturedError.CStr());
                     }
                 }
-            });
+            }
+        });
 }
 
 Util::~Util()
@@ -646,6 +651,62 @@ ArgumentStack Util::SetItemActivator(ArgumentStack&& args)
       Utils::GetModule()->m_oidLastItemActivator = Constants::OBJECT_INVALID;
 
     return Services::Events::Arguments();
+}
+
+ArgumentStack Util::GetWorldTime(ArgumentStack&& args)
+{
+    const auto adjustment = Services::Events::ExtractArgument<float>(args);
+
+    auto *pWorldTimer = Globals::AppManager()->m_pServerExoApp->GetWorldTimer();
+    uint32_t adjustmentCalendarDay = pWorldTimer->GetCalendarDayFromSeconds(std::fabs(adjustment));
+    uint32_t adjustmentTimeOfDay = pWorldTimer->GetTimeOfDayFromSeconds(std::fabs(adjustment));
+    uint32_t currentCalendarDay, currentTimeOfDay, retvalCalendarDay, retvalTimeOfDay;
+    pWorldTimer->GetWorldTime(&currentCalendarDay, &currentTimeOfDay);
+
+    if (adjustment > 0.0f)
+        pWorldTimer->AddWorldTimes(currentCalendarDay, currentTimeOfDay, adjustmentCalendarDay, adjustmentTimeOfDay, &retvalCalendarDay, &retvalTimeOfDay);
+    else if (adjustment < 0.0f)
+        pWorldTimer->SubtractWorldTimes(currentCalendarDay, currentTimeOfDay, adjustmentCalendarDay, adjustmentTimeOfDay, &retvalCalendarDay, &retvalTimeOfDay);
+    else
+    {
+        retvalCalendarDay = currentCalendarDay;
+        retvalTimeOfDay = currentTimeOfDay;
+    }
+
+    return Services::Events::Arguments((int32_t)retvalCalendarDay, (int32_t)retvalTimeOfDay);
+}
+
+ArgumentStack Util::SetResourceOverride(ArgumentStack&& args)
+{
+    auto resType = Services::Events::ExtractArgument<int32_t>(args);
+      ASSERT_OR_THROW(resType >= Constants::ResRefType::MIN);
+      ASSERT_OR_THROW(resType <= Constants::ResRefType::MAX);
+    auto oldName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!oldName.empty());
+      ASSERT_OR_THROW(oldName.size() <= 16);
+    auto newName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(newName.size() <= 16);
+
+    if (newName.empty())
+        Globals::ExoResMan()->RemoveOverride(oldName.c_str(), resType);
+    else
+        Globals::ExoResMan()->AddOverride(oldName.c_str(), newName.c_str(), resType);
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Util::GetResourceOverride(ArgumentStack&& args)
+{
+    auto resType = Services::Events::ExtractArgument<int32_t>(args);
+      ASSERT_OR_THROW(resType >= Constants::ResRefType::MIN);
+      ASSERT_OR_THROW(resType <= Constants::ResRefType::MAX);
+    auto resName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!resName.empty());
+      ASSERT_OR_THROW(resName.size() <= 16);
+
+    std::string overrideResName = Globals::ExoResMan()->GetOverride(resName.c_str(), resType).GetResRefStr();
+
+    return overrideResName == resName ? "" : overrideResName;
 }
 
 }

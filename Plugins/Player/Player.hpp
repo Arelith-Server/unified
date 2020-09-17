@@ -54,6 +54,11 @@ private:
     ArgumentStack SetCreatureNameOverride           (ArgumentStack&& args);
     ArgumentStack FloatingTextStringOnCreature      (ArgumentStack&& args);
     ArgumentStack ToggleDM                          (ArgumentStack&& args);
+    ArgumentStack SetObjectMouseCursorOverride      (ArgumentStack&& args);
+    ArgumentStack SetObjectHiliteColorOverride      (ArgumentStack&& args);
+    ArgumentStack RemoveEffectFromTURD              (ArgumentStack&& args);
+    ArgumentStack SetSpawnLocation                  (ArgumentStack&& args);
+    ArgumentStack SendDMAllCreatorLists             (ArgumentStack&& args);
 
     CNWSPlayer *player(ArgumentStack& args);
 
