@@ -710,16 +710,14 @@ ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
 {
     ArgumentStack stack;
     CGameEffect *eff;
-    if (auto *pObject = object(args))
-    {
-        auto it = Services::Events::ExtractArgument<int32_t>(args);
-        ASSERT_OR_THROW(it >= 0);
-        ASSERT_OR_THROW(it < pObject->m_appliedEffects.num);
-        eff = pObject->m_appliedEffects.element[it];
-    }
+    auto *pObject = object(args);
+      ASSERT_OR_THROW(pObject);
+    auto it = Services::Events::ExtractArgument<int32_t>(args);
+      ASSERT_OR_THROW(it >= 0);
+      ASSERT_OR_THROW(it < pObject->m_appliedEffects.num);
+    eff = pObject->m_appliedEffects.element[it];
 
 
-    ASSERT_OR_THROW(pObject);
     Services::Events::InsertArgument(stack, std::to_string(eff->m_nID));
     Services::Events::InsertArgument(stack, (int32_t)eff->m_nType);
     Services::Events::InsertArgument(stack, (int32_t)eff->m_nSubType);
