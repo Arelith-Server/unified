@@ -2,7 +2,6 @@
 
 #include "Plugin.hpp"
 #include "Services/Events/Events.hpp"
-#include "API/Types.hpp"
 #include "API/CNWSCreature.hpp"
 
 using ArgumentStack = NWNXLib::Services::Events::ArgumentStack;
@@ -12,7 +11,7 @@ namespace Creature {
 class Creature : public NWNXLib::Plugin
 {
 public:
-    Creature(const Plugin::CreateParams& params);
+    Creature(NWNXLib::Services::ProxyServiceList* services);
     virtual ~Creature();
 
 private:
@@ -55,6 +54,7 @@ private:
     ArgumentStack SetMovementRate               (ArgumentStack&& args);
     ArgumentStack GetMovementRateFactor         (ArgumentStack&& args);
     ArgumentStack SetMovementRateFactor         (ArgumentStack&& args);
+    ArgumentStack SetMovementRateFactorCap      (ArgumentStack&& args);
     ArgumentStack SetAlignmentGoodEvil          (ArgumentStack&& args);
     ArgumentStack SetAlignmentLawChaos          (ArgumentStack&& args);
     ArgumentStack SetDomain                     (ArgumentStack&& args);
@@ -118,6 +118,14 @@ private:
     ArgumentStack SetCriticalRangeOverride      (ArgumentStack&& args);
     ArgumentStack GetCriticalRangeOverride      (ArgumentStack&& args);
     ArgumentStack AddAssociate                  (ArgumentStack&& args);
+    ArgumentStack SetLastItemCasterLevel        (ArgumentStack&& args);
+    ArgumentStack GetLastItemCasterLevel        (ArgumentStack&& args);
+    ArgumentStack GetArmorClassVersus           (ArgumentStack&& args);
+    ArgumentStack SetEffectIconFlashing         (ArgumentStack&& args);
+    ArgumentStack OverrideDamageLevel           (ArgumentStack&& args);
+    ArgumentStack SetEncounter                  (ArgumentStack&& args);
+    ArgumentStack GetEncounter                  (ArgumentStack&& args);
+    ArgumentStack GetIsBartering                (ArgumentStack&& args);
 
     CNWSCreature *creature(ArgumentStack& args);
 

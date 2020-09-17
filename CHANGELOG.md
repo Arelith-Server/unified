@@ -5,33 +5,117 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
-https://github.com/nwnxee/unified/compare/build8193.13...HEAD
+https://github.com/nwnxee/unified/compare/build8193.16...HEAD
 
 ### Added
-- ServerLogRedirector: added environment variable `NWNX_SERVERLOGREDIRECTOR_HIDE_VALIDATEGFFRESOURCE_MESSAGES` to hide `*** ValidateGFFResource sent by user.` messages from the NWNX log.
-- Events: added BroadcastSpellCast event to SpellEvents
-- Events: added TogglePause to InputEvents
+N/A
 
 ##### New Plugins
 N/A
 
 ##### New NWScript Functions
-- Creature: {Get|Set}CriticalMultiplier{Modifier|Override}() and {Get|Set}CriticalRange{Modifier|Override}()
-- Creature: AddAssociate()
-- Object: GetDoorHasVisibleModel()
-- Object: GetIsDestroyable()
-- Object: GetCurrentHitPoints()
-- Player: SetCustomToken()
+N/A
 
 ### Changed
-- Object: SetPosition() now has a toggle(default true) to update subareas if oObject is a creature, this means any traps/triggers at the new position will fire their events.
-- Profiler: Corrected a typo preventing the retrieval of certain event data (OVERHEAD_COMPENSTION_FORCE -> OVERHEAD_COMPENSATION_FORCE). Note: breaking change.
+N/A
 
 ### Deprecated
 N/A
 
 ### Removed
 N/A
+
+### Fixed
+N/A
+
+## 8193.16
+https://github.com/nwnxee/unified/compare/build8193.13...build8193.16
+
+### Added
+- Core: added environment variable `NWNX_CORE_CUSTOM_RESMAN_DEFINITION` to specify a file with additional resource directories.
+- Events: added skippable PlayerDM Login/Logout events to DMActionEvents
+- Events: added skippable RunScript and RunScriptChunk events to DebugEvents
+- Events: added skippable RequestBuy/Sell events to StoreEvents
+- Events: added skippable Heal events to new HealingEvents
+- Events: added ServerSendArea event to ClientEvents
+- Tweaks: added `NWNX_TWEAKS_BLOCK_DM_SPAWNITEM` to block the usage of dm_spawnitem
+- Weapon: added 'NWNX_WEAPON_GOOD_AIM_SLING' non-halfling sling users with the feat Good Aim gain an additional +1 AB as a halfling currently does. Note: Throwing weapons are already included in the base game
+
+##### New NWScript Functions
+- Area: AddObjectToExclusionList()
+- Area: RemoveObjectFromExclusionList()
+- Area: ExportGIT()
+- Creature: {Get|Set}Encounter()
+- Creature: SetEffectIconFlashing()
+- Creature: OverrideDamageLevel()
+- Creature: GetIsBartering()
+- Creature: {Get|Set}LastItemCasterLeve()
+- Creature: GetArmorClassVersus()
+- Effect: ReplaceEffect()
+- Player: ToggleDM()
+- ItemProperty: GetActiveProperty()
+- Object: DoSpellImmunity()
+- Object: DoSpellLevelAbsorption()
+- Object: SetHasInventory()
+- Player: SetObjectMouseCursorOverride()
+- Player: SetObjectHiliteColorOverride()
+- Player: RemoveEffectFromTURD()
+- Player: SetSpawnLocation()
+- Player: SendDMAllCreatorLists()
+- Util: GetWorldTime()
+- Util: {Get|Set}ResourceOverride()
+- Weapon: {Get|Set}OneHalfStrength()
+
+### Changed
+- Damage: damage event script now also triggered by damage to placeables
+- Effect: (Un)PackEffect now supports vector params
+- Events: added a `RESULT` event data tag to LearnScroll in ItemEvents
+- Weapon: SetWeapon****Feat functions may be called multiple times for the same weapon, associating a new feat each time
+- Weapon: weapon feats defined in the 2da are no longer overridden by SetWeapon***Feat and will be used in addition to any set feats
+
+### Deprecated
+- Object: StringToObject();
+
+### Removed
+- Creature: {Get|Set}{ClericDomain|WizardSpecialization}()
+- Creature: SetAbilityScore()
+- Object: {Get|Set|Delete}Persistent{Int|String|Float}()
+
+### Fixed
+- Administration: DeletePlayerCharacter() now deletes the TURD as well
+- Creature: SetMovementRate() now properly reattaches the creature's legs when switching from NWNX_CREATURE_MOVEMENT_RATE_IMMOBILE to the other constants
+
+## 8193.14
+https://github.com/nwnxee/unified/compare/build8193.13...build8193.14
+
+### Added
+- ServerLogRedirector: added environment variable `NWNX_SERVERLOGREDIRECTOR_HIDE_VALIDATEGFFRESOURCE_MESSAGES` to hide `*** ValidateGFFResource sent by user.` messages from the NWNX log.
+- Events: added BroadcastSpellCast event to SpellEvents
+- Events: added TogglePause to InputEvents
+- Tweaks: added `NWNX_TWEAKS_FIX_UNLIMITED_POTIONS_BUG` to prevent the unlimited potions/scrolls bug.
+- Tweaks: added `NWNX_TWEAKS_UNHARDCODE_SHIELDS` to change shield AC and create new shield-like items using the BaseAC column in baseitems.2da.
+
+##### New NWScript Functions
+- Creature: {Get|Set}CriticalMultiplier{Modifier|Override}() and {Get|Set}CriticalRange{Modifier|Override}()
+- Creature: AddAssociate()
+- Encounter: GetNumberOfSpawnPoints()
+- Encounter: GetSpawnPointByIndex()
+- Encounter: GetMinNumSpawned()
+- Encounter: GetMaxNumSpawned()
+- Encounter: GetCurrentNumSpawned()
+- Object: GetDoorHasVisibleModel()
+- Object: GetIsDestroyable()
+- Object: GetCurrentHitPoints()
+- Player: SetCustomToken()
+- Player: SetCreatureNameOverride()
+- Player: FloatingTextStringOnCreature();
+- Util: CreateDoor()
+- Util: SetItemActivator()
+
+### Changed
+- Object: SetPosition() now has a toggle(default true) to update subareas if oObject is a creature, this means any traps/triggers at the new position will fire their events.
+- Object: `GetLocalVariable()` behavior has changed. See function documentation for details.
+- Profiler: Corrected a typo preventing the retrieval of certain event data (OVERHEAD_COMPENSTION_FORCE -> OVERHEAD_COMPENSATION_FORCE). Note: breaking change.
 
 ### Fixed
 - Core: fixed NWNX ResourceDirectory init crashing on failed module load

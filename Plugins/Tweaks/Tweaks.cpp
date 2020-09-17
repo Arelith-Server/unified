@@ -17,38 +17,27 @@
 #include "Tweaks/ItemChargesCost.hpp"
 #include "Tweaks/FixDispelEffectLevels.hpp"
 #include "Tweaks/AddPrestigeclassCasterLevels.hpp"
+#include "Tweaks/FixUnlimitedPotionsBug.hpp"
+#include "Tweaks/UnhardcodeShields.hpp"
+#include "Tweaks/BlockDMSpawnItem.hpp"
 
 #include "Services/Config/Config.hpp"
 
-#include "API/Version.hpp"
 
 using namespace NWNXLib;
 
 static Tweaks::Tweaks* g_plugin;
 
-NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
+NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
-    return new Plugin::Info
-    {
-        "Tweaks",
-        "Tweaks the behaviour of NWN.",
-        "Liareth",
-        "liarethnwn@gmail.com",
-        1,
-        true
-    };
-}
-
-NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Plugin::CreateParams params)
-{
-    g_plugin = new Tweaks::Tweaks(params);
+    g_plugin = new Tweaks::Tweaks(services);
     return g_plugin;
 }
 
 namespace Tweaks {
 
-Tweaks::Tweaks(const Plugin::CreateParams& params)
-    : Plugin(params)
+Tweaks::Tweaks(Services::ProxyServiceList* services)
+    : Plugin(services)
 {
     if (GetServices()->m_config->Get<bool>("HIDE_CLASSES_ON_CHAR_LIST", false))
     {
@@ -157,6 +146,24 @@ Tweaks::Tweaks(const Plugin::CreateParams& params)
     {
         LOG_INFO("Automatically adding prestige class caster levels using (Div|Arc)SpellLvlMod colums in classes.2da");
         m_AddPrestigeclassCasterLevels = std::make_unique<AddPrestigeclassCasterLevels>(GetServices()->m_hooks.get());
+    }
+
+    if (GetServices()->m_config->Get<bool>("FIX_UNLIMITED_POTIONS_BUG", false))
+    {
+        LOG_INFO("Fixing unlimited potion/scroll uses bug");
+        m_FixUnlimitedPotionsBug = std::make_unique<FixUnlimitedPotionsBug>(GetServices()->m_hooks.get());
+    }
+
+    if (GetServices()->m_config->Get<bool>("UNHARDCODE_SHIELDS", false))
+    {
+        LOG_INFO("Using baseitems.2da to define shield AC and create shield-like items");
+        m_UnhardcodeShields = std::make_unique<UnhardcodeShields>(GetServices()->m_hooks.get());
+    }
+
+    if (GetServices()->m_config->Get<bool>("BLOCK_DM_SPAWNITEM", false))
+    {
+        LOG_INFO("Blocking the dm_spawnitem console command");
+        m_BlockDMSpawnItem = std::make_unique<BlockDMSpawnItem>(GetServices()->m_hooks.get());
     }
 }
 

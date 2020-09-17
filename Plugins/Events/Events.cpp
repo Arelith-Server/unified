@@ -16,7 +16,7 @@
 #include "Events/StealthEvents.hpp"
 #include "Events/SpellEvents.hpp"
 #include "Events/PartyEvents.hpp"
-#include "Events/HealerKitEvents.hpp"
+#include "Events/HealingEvents.hpp"
 #include "Events/SkillEvents.hpp"
 #include "Events/PolymorphEvents.hpp"
 #include "Events/EffectEvents.hpp"
@@ -32,6 +32,8 @@
 #include "Events/UUIDEvents.hpp"
 #include "Events/ResourceEvents.hpp"
 #include "Events/QuickbarEvents.hpp"
+#include "Events/DebugEvents.hpp"
+#include "Events/StoreEvents.hpp"
 #include "Services/Config/Config.hpp"
 #include "Services/Messaging/Messaging.hpp"
 
@@ -45,29 +47,16 @@ using namespace NWNXLib::API::Constants;
 
 static Events::Events* g_plugin;
 
-NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
+NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
-    return new Plugin::Info
-    {
-        "Events",
-        "Provides an interface for plugins to create event-based systems, and exposes some events through that interface.",
-        "Liareth",
-        "liarethnwn@gmail.com",
-        1,
-        true
-    };
-}
-
-NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Plugin::CreateParams params)
-{
-    g_plugin = new Events::Events(params);
+    g_plugin = new Events::Events(services);
     return g_plugin;
 }
 
 namespace Events {
 
-Events::Events(const Plugin::CreateParams& params)
-    : Plugin(params), m_eventDepth(0)
+Events::Events(Services::ProxyServiceList* services)
+    : Plugin(services), m_eventDepth(0)
 {
     if (g_plugin == nullptr) // :(
         g_plugin = this;
@@ -117,7 +106,7 @@ Events::Events(const Plugin::CreateParams& params)
     m_stealthEvents     = std::make_unique<StealthEvents>(hooker);
     m_spellEvents       = std::make_unique<SpellEvents>(hooker);
     m_partyEvents       = std::make_unique<PartyEvents>(hooker);
-    m_healerKitEvents   = std::make_unique<HealerKitEvents>(hooker);
+    m_healingEvents     = std::make_unique<HealingEvents>(hooker);
     m_skillEvents       = std::make_unique<SkillEvents>(hooker);
     m_mapEvents         = std::make_unique<MapEvents>(hooker);
     m_polymorphEvents   = std::make_unique<PolymorphEvents>(hooker);
@@ -134,6 +123,8 @@ Events::Events(const Plugin::CreateParams& params)
     m_uuidEvents        = std::make_unique<UUIDEvents>(hooker);
     m_resourceEvents    = std::make_unique<ResourceEvents>(GetServices()->m_tasks.get());
     m_quickbarEvents    = std::make_unique<QuickbarEvents>(hooker);
+    m_debugEvents       = std::make_unique<DebugEvents>(hooker);
+    m_storeEvents       = std::make_unique<StoreEvents>(hooker);
 }
 
 Events::~Events()
@@ -170,7 +161,7 @@ std::string Events::GetEventData(const std::string& tag)
     return retVal;
 }
 
-bool Events::SignalEvent(const std::string& eventName, const Types::ObjectID target, std::string *result)
+bool Events::SignalEvent(const std::string& eventName, const ObjectID target, std::string *result)
 {
     bool skipped = false;
 
@@ -299,7 +290,7 @@ ArgumentStack Events::PushEventData(ArgumentStack&& args)
 ArgumentStack Events::SignalEvent(ArgumentStack&& args)
 {
     const auto event = Services::Events::ExtractArgument<std::string>(args);
-    const auto object = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    const auto object = Services::Events::ExtractArgument<ObjectID>(args);
     bool signalled = SignalEvent(event, object);
 
     return Services::Events::Arguments(signalled ? 1 : 0);
@@ -378,7 +369,7 @@ ArgumentStack Events::AddObjectToDispatchList(ArgumentStack&& args)
       ASSERT_OR_THROW(!eventName.empty());
     const auto scriptName = Services::Events::ExtractArgument<std::string>(args);
       ASSERT_OR_THROW(!scriptName.empty());
-    const auto oidObject = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    const auto oidObject = Services::Events::ExtractArgument<ObjectID>(args);
       ASSERT_OR_THROW(oidObject != Constants::OBJECT_INVALID);
 
     auto eventDispatchList = g_plugin->m_dispatchList.find(eventName+scriptName);
@@ -396,7 +387,7 @@ ArgumentStack Events::RemoveObjectFromDispatchList(ArgumentStack&& args)
       ASSERT_OR_THROW(!eventName.empty());
     const auto scriptName = Services::Events::ExtractArgument<std::string>(args);
       ASSERT_OR_THROW(!scriptName.empty());
-    const auto oidObject = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    const auto oidObject = Services::Events::ExtractArgument<ObjectID>(args);
       ASSERT_OR_THROW(oidObject != Constants::OBJECT_INVALID);
 
     auto eventDispatchList = g_plugin->m_dispatchList.find(eventName+scriptName);
