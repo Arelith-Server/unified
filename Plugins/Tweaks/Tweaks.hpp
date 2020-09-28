@@ -13,7 +13,7 @@ class CompareVarsForMerge;
 class ParryAllAttacks;
 class SneakAttackCritImmunity;
 class PreserveDepletedItems;
-class HideDMsOnCharList;
+class HidePlayersOnCharList;
 class DisableMonkAbilitiesWhenPolymorphed;
 class StringToIntBaseToAuto;
 class StripOVTFromNotVisibleObject;
@@ -42,7 +42,7 @@ private:
     std::unique_ptr<ParryAllAttacks> m_ParryAllAttacks;
     std::unique_ptr<SneakAttackCritImmunity> m_SneakAttackCritImmunity;
     std::unique_ptr<PreserveDepletedItems> m_PreserveDepletedItems;
-    std::unique_ptr<HideDMsOnCharList> m_HideDMsOnCharList;
+    std::unique_ptr<HidePlayersOnCharList> m_HidePlayersOnCharList;
     std::unique_ptr<DisableMonkAbilitiesWhenPolymorphed> m_DisableMonkAbilitiesWhenPolymorphed;
     std::unique_ptr<StringToIntBaseToAuto> m_StringToIntBaseToAuto;
     std::unique_ptr<StripOVTFromNotVisibleObject> m_StripOVTFromNotVisibleObject;
