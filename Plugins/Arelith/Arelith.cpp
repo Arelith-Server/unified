@@ -689,7 +689,7 @@ BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CN
 
         }
 
-        if(highest > 0 && Globals::Rules()->RollDice(1, 100) <= highest)
+        if(highest > 0 && Globals::Rules()->RollDice(1, 100) <= highest || highest <= 0 || highest >= 100)
             return true;
 
         return false;
