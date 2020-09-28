@@ -535,7 +535,7 @@ void Arelith::OnItemPropertyAppliedHook(bool before, CServerAIMaster*, CNWSItem*
 {
    if(before)
    {
-       if(pItemProperty->m_nParam1Value > 0)
+       if(pItemProperty->m_nParam1Value > 0 && pItemProperty->m_nParam1Value != 255)
        {
         if(pItemProperty->m_nPropertyName==Constants::ItemProperty::DamageReduction || pItemProperty->m_nPropertyName==Constants::ItemProperty::ImmunityMiscellaneous)
         {
@@ -678,7 +678,7 @@ BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CN
                    (eff->m_nParamInteger[2] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[2] == pVersus->m_pStats->m_nAlignmentLawChaos)) &&
                    (eff->m_nParamInteger[3] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[3] == pVersus->m_pStats->m_nAlignmentGoodEvil)))
                 {
-                    if(eff->m_nParamInteger[4] == 0 || eff->m_nParamInteger[4] == 100)
+                    if(eff->m_nParamInteger[4] <= 0 || eff->m_nParamInteger[4] >= 100)
                         return true;
 
                     if(eff->m_nParamInteger[4] > highest)
