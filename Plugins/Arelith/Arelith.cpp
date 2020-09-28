@@ -667,7 +667,7 @@ BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CN
             return true;
 
         auto effectList = pStats->m_pBaseCreature->m_appliedEffects;
-        uint8_t highest = 0;
+        int32_t highest = 0;
         for (int32_t i = 0; i < effectList.num; i++)
         {
             auto *eff = effectList.element[i];
