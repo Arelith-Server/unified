@@ -22,6 +22,8 @@
 #include "API/CTwoDimArrays.hpp"
 #include "API/CNWSModule.hpp"
 #include "API/CNWSJournal.hpp"
+#include "API/CNWSPlayerJournalQuest.hpp"
+#include "API/CNWSPlayerJournalQuestUpdates.hpp"
 #include "API/CNWSWaypoint.hpp"
 #include "API/CNetLayer.hpp"
 #include "API/CNetLayerPlayerInfo.hpp"
@@ -36,6 +38,10 @@
 #include "Services/Events/Events.hpp"
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
 #include "Encoding.hpp"
+#include "API/CExoLocString.hpp"
+#include "Utils.hpp"
+#include "API/CWorldTimer.hpp"
+
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
@@ -94,6 +100,13 @@ Player::Player(Services::ProxyServiceList* services)
     REGISTER(SetCreatureNameOverride);
     REGISTER(FloatingTextStringOnCreature);
     REGISTER(ToggleDM);
+    REGISTER(SetObjectMouseCursorOverride);
+    REGISTER(SetObjectHiliteColorOverride);
+    REGISTER(RemoveEffectFromTURD);
+    REGISTER(SetSpawnLocation);
+    REGISTER(SendDMAllCreatorLists);
+    REGISTER(AddCustomJournalEntry);
+    REGISTER(GetJournalEntry);
 
 #undef REGISTER
 
@@ -145,6 +158,7 @@ ArgumentStack Player::ForcePlaceableInventoryWindow(ArgumentStack&& args)
 
         if (auto *pPlaceable = Utils::AsNWSPlaceable(Utils::GetGameObject(oidTarget)))
         {
+            pPlaceable->m_bHasInventory = 1;
             pPlaceable->OpenInventory(oidPlayer);
         }
     }
@@ -1169,7 +1183,7 @@ ArgumentStack Player::PossessCreature(ArgumentStack&& args)
 
     if (!pUnsummonMyselfHook)
     {
-        // When a PC is logging off we don't want this creature to unsummon themselves
+        // When a PC is logging off we don't want this creature to unsummon themselves (unless crashed in AT)
         pUnsummonMyselfHook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature14UnsummonMyselfEv>(
                 +[](CNWSCreature *pPossessed) -> void
                 {
@@ -1177,16 +1191,34 @@ ArgumentStack Player::PossessCreature(ArgumentStack&& args)
                     auto possessorOidPOS = pPOS->Get<int>(pPossessed->m_idSelf, "possessorOid");
                     auto pServer = Globals::AppManager()->m_pServerExoApp;
                     auto *pPossessor = possessorOidPOS ? pServer->GetCreatureByGameObjectID(*possessorOidPOS) : nullptr;
-                    if (pPossessor)
+
+                    //Possessed, not in limbo
+                    if (pPossessor && pPossessed->m_oidArea != Constants::OBJECT_INVALID)
                     {
                         pPossessor->UnpossessFamiliar();
-                        pPossessor->RemoveAssociate(pPossessed->m_idSelf);
-                        pPOS->Remove(pPossessor->m_idSelf, "possessedOid");
-                        pPOS->Remove(pPossessed->m_idSelf, "possessorOid");
                     }
                     else
                     {
                         pUnsummonMyselfHook->CallOriginal<void>(pPossessed);
+                        // Remove the mind immunity effect from the possessor if they were in limbo
+                        if (pPossessor && pPossessed->m_oidArea == Constants::OBJECT_INVALID)
+                        {
+                            for (int i = 0; i < pPossessor->m_appliedEffects.num; i++)
+                            {
+                                auto *eff = pPossessor->m_appliedEffects.element[i];
+                                if (eff->m_nType == Constants::EffectTrueType::Immunity &&
+                                    eff->m_nSubType == Constants::EffectSubType::Magical &&
+                                    eff->m_oidCreator == pPossessor->m_idSelf &&
+                                    eff->m_fDuration == 4.0f &&
+                                    eff->m_nCasterLevel == -1 &&
+                                    eff->m_nParamInteger[0] == Constants::ImmunityType::MindSpells &&
+                                    eff->m_nParamInteger[1] == Constants::RacialType::Invalid)
+                                {
+                                    pPossessor->RemoveEffectById(eff->m_nID);
+                                    break;
+                                }
+                            }
+                        }
                     }
                 });
 
@@ -1468,6 +1500,352 @@ ArgumentStack Player::ToggleDM(ArgumentStack&& args)
     }
 
     return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SetObjectMouseCursorOverride(ArgumentStack&& args)
+{
+    static bool bSetObjectMouseCursorOverrideHook;
+
+    if (!bSetObjectMouseCursorOverrideHook)
+    {
+        GetServices()->m_hooks->RequestSharedHook<Functions::_ZN11CNWSMessage32ComputeGameObjectUpdateForObjectEP10CNWSPlayerP10CNWSObjectP16CGameObjectArrayj, int32_t>(
+                +[](bool before, CNWSMessage*, CNWSPlayer *pPlayer, CNWSObject*, CGameObjectArray*, ObjectID oidObjectToUpdate) -> void
+                {
+                    if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidObjectToUpdate)))
+                    {
+                        static std::optional<int32_t> cursorId;
+                        static int32_t swapCursorId;
+
+                        if (before)
+                        {
+                            cursorId = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(oidObjectToUpdate,
+                                "OBJCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject));
+
+                            if (cursorId)
+                            {
+                                swapCursorId = *cursorId;
+                                std::swap(swapCursorId, pObject->m_nMouseCursor);
+                            }
+                        }
+                        else
+                        {
+                            if (cursorId)
+                            {
+                                std::swap(swapCursorId, pObject->m_nMouseCursor);
+                            }
+                        }
+                    }
+                });
+
+        bSetObjectMouseCursorOverrideHook = true;
+    }
+
+    if (auto *pPlayer = player(args))
+    {
+        auto oidTarget = Services::Events::ExtractArgument<ObjectID>(args);
+          ASSERT_OR_THROW(oidTarget != Constants::OBJECT_INVALID);
+        auto cursorId = Services::Events::ExtractArgument<int32_t>(args);
+
+        if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidTarget)))
+        {
+            if (cursorId < 0)
+            {
+                GetServices()->m_perObjectStorage->Remove(pObject->m_idSelf, "OBJCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject));
+            }
+            else
+            {
+                GetServices()->m_perObjectStorage->Set(pObject->m_idSelf, "OBJCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject), cursorId);
+            }
+        }
+    }
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SetObjectHiliteColorOverride(ArgumentStack&& args)
+{
+    static bool bSetObjectHiliteColorHook;
+
+    if (!bSetObjectHiliteColorHook)
+    {
+        GetServices()->m_hooks->RequestSharedHook<Functions::_ZN11CNWSMessage32ComputeGameObjectUpdateForObjectEP10CNWSPlayerP10CNWSObjectP16CGameObjectArrayj, int32_t>(
+                +[](bool before, CNWSMessage*, CNWSPlayer *pPlayer, CNWSObject*, CGameObjectArray*, ObjectID oidObjectToUpdate) -> void
+                {
+                    if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidObjectToUpdate)))
+                    {
+                        static std::optional<int32_t> hiliteColor;
+                        static Vector swapHiliteColor;
+
+                        if (before)
+                        {
+                            hiliteColor = g_plugin->GetServices()->m_perObjectStorage->Get<int32_t>(oidObjectToUpdate,
+                                "OBJHCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject));
+
+                            if (hiliteColor)
+                            {
+                                float r = (float)((*hiliteColor >> 16) & 0xFF) / 255.0f;
+                                float g = (float)((*hiliteColor >> 8) & 0xFF) / 255.0f;
+                                float b = (float)(*hiliteColor & 0xFF) / 255.0f;
+
+                                swapHiliteColor = {r, g, b};
+                                std::swap(swapHiliteColor, pObject->m_vHiliteColor);
+                            }
+                        }
+                        else
+                        {
+                            if (hiliteColor)
+                            {
+                                std::swap(swapHiliteColor, pObject->m_vHiliteColor);
+                            }
+                        }
+                    }
+                });
+
+        bSetObjectHiliteColorHook = true;
+    }
+
+    if (auto *pPlayer = player(args))
+    {
+        auto oidTarget = Services::Events::ExtractArgument<ObjectID>(args);
+          ASSERT_OR_THROW(oidTarget != Constants::OBJECT_INVALID);
+        auto hiliteColor = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(hiliteColor <= 0xFFFFFF);
+
+        if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidTarget)))
+        {
+            if (hiliteColor < 0)
+            {
+                GetServices()->m_perObjectStorage->Remove(pObject->m_idSelf, "OBJHCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject));
+            }
+            else
+            {
+                GetServices()->m_perObjectStorage->Set(pObject->m_idSelf, "OBJHCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject), hiliteColor);
+            }
+        }
+    }
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::RemoveEffectFromTURD(ArgumentStack&& args)
+{
+    const auto oidPlayer = Services::Events::ExtractArgument<ObjectID>(args);
+      ASSERT_OR_THROW(oidPlayer != Constants::OBJECT_INVALID);
+    const auto effectTag = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!effectTag.empty());
+
+    auto *pTURDList = Utils::GetModule()->m_lstTURDList.m_pcExoLinkedListInternal;
+    for (auto *pNode = pTURDList->pHead; pNode; pNode = pNode->pNext)
+    {
+        auto *pTURD = static_cast<CNWSPlayerTURD*>(pNode->pObject);
+
+        if (pTURD && pTURD->m_oidPlayer == oidPlayer)
+        {
+            for (int i = 0; i < pTURD->m_appliedEffects.num; i++)
+            {
+                auto *pEffect = pTURD->m_appliedEffects.element[i];
+
+                if (pEffect->m_sCustomTag == effectTag)
+                    pTURD->RemoveEffect(pEffect);
+            }
+
+            break;
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SetSpawnLocation(ArgumentStack&& args)
+{
+    if (auto *pPlayer = player(args))
+    {
+        auto oidArea = Services::Events::ExtractArgument<ObjectID>(args);
+          ASSERT_OR_THROW(oidArea != Constants::OBJECT_INVALID);
+          ASSERT_OR_THROW(Utils::AsNWSArea(Utils::GetGameObject(oidArea)));
+        auto x = Services::Events::ExtractArgument<float>(args);
+        auto y = Services::Events::ExtractArgument<float>(args);
+        auto z = Services::Events::ExtractArgument<float>(args);
+        auto facing = Services::Events::ExtractArgument<float>(args);
+
+        if (auto pCreature = Utils::AsNWSCreature(Utils::GetGameObject(pPlayer->m_oidNWSObject)))
+        {
+            pPlayer->m_bFromTURD = true;
+
+            pCreature->m_oidDesiredArea = oidArea;
+            pCreature->m_vDesiredAreaLocation = {x, y, z};
+            pCreature->m_bDesiredAreaUpdateComplete = false;
+            Utils::SetOrientation(pCreature, facing);
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::SendDMAllCreatorLists(ArgumentStack&& args)
+{
+    if(auto *pPlayer = player(args))
+    {
+        auto *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pPlayer->m_oidNWSObject);
+
+        if(pCreature && pCreature->m_pStats->GetIsDM())
+        {
+            if (auto* pMessage = Globals::AppManager()->m_pServerExoApp->GetNWSMessage())
+            {
+                auto original = pPlayer->m_bWasSentITP;
+                pPlayer->m_bWasSentITP=false;
+                pMessage->SendServerToPlayerDungeonMasterCreatorLists(pPlayer);
+                pPlayer->m_bWasSentITP=original;
+            }
+
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Player::AddCustomJournalEntry(ArgumentStack&& args)
+{
+    int32_t retval = -1;
+    if (auto *pPlayer = player(args))
+    {
+        auto *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pPlayer->m_oidNWSObject);
+
+        if (pCreature && pCreature->m_pJournal)
+        {
+            const auto questName = Services::Events::ExtractArgument<std::string>(args);
+            const auto questText = Services::Events::ExtractArgument<std::string>(args);
+            const auto tag = Services::Events::ExtractArgument<std::string>(args);
+
+            ASSERT_OR_THROW(!tag.empty());
+
+            const auto state = Services::Events::ExtractArgument<int32_t>(args);
+            const auto priority = Services::Events::ExtractArgument<int32_t>(args);
+            const auto completed = Services::Events::ExtractArgument<int32_t>(args);
+            const auto displayed = Services::Events::ExtractArgument<int32_t>(args);
+            const auto updated = Services::Events::ExtractArgument<int32_t>(args);
+
+            auto calDay = Services::Events::ExtractArgument<int32_t>(args);
+            auto timeDay = Services::Events::ExtractArgument<int32_t>(args);
+            auto silentUpdate = Services::Events::ExtractArgument<int32_t>(args);
+
+            ASSERT_OR_THROW(state >= 0);
+            ASSERT_OR_THROW(priority >= 0); 
+            ASSERT_OR_THROW(completed >= 0); 
+            ASSERT_OR_THROW(displayed >= 0);
+            ASSERT_OR_THROW(updated >= 0); 
+            ASSERT_OR_THROW(silentUpdate >= 0);
+
+            // If server owner leaves this 0 - the entry will be added with today's date
+            if (calDay <= 0)
+            {
+                calDay = Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->GetWorldTimeCalendarDay();
+            }
+            //If server owner leaves this 0 - the entry will be added with now() time
+            if (timeDay <= 0)
+            {
+                timeDay = Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->GetWorldTimeTimeOfDay();
+            }
+
+            auto *pMessage = static_cast<CNWSMessage*>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
+            if (pMessage)
+            {
+                auto entries = pCreature->m_pJournal->m_lstEntries;
+                SJournalEntry newJournal; // Only instantiate the struct if the message was created
+                newJournal.szName          = Utils::CreateLocString(questName,0,0);
+                newJournal.szText          = Utils::CreateLocString(questText,0,0);
+                newJournal.nCalendarDay    = calDay;
+                newJournal.nTimeOfDay      = timeDay;
+                newJournal.szPlot_Id       = CExoString(tag.c_str());
+                newJournal.nState          = state;
+                newJournal.nPriority       = priority;
+                newJournal.nPictureIndex   = 0; // Not implemented by bioware/beamdog
+                newJournal.bQuestCompleted = completed;
+                newJournal.bQuestDisplayed = displayed;
+                newJournal.bUpdated        = updated;
+                int overwrite = -1;
+                if (entries.num > 0)
+                {
+                    for (int i = entries.num - 1; i >= 0; i--)
+                    {
+                        auto pEntry = entries.element[i];
+                        if (pEntry.szPlot_Id.CStr() == tag)
+                        {
+                            overwrite = i; 
+                            // Overwrite existing entry
+                            pCreature->m_pJournal->m_lstEntries[i] = newJournal;
+                            break;
+                        }
+                    }
+                }
+                // If we have overwritten an existing entry - we don't need to perform an add -
+                // Instead we perform an update only
+                if(overwrite == -1)
+                {
+                    // New entry added
+                    pCreature->m_pJournal->m_lstEntries.Add(newJournal);
+                }
+                pMessage->SendServerToPlayerJournalAddQuest(pPlayer,
+                                                            newJournal.szPlot_Id,
+                                                            newJournal.nState,
+                                                            newJournal.nPriority,
+                                                            newJournal.nPictureIndex,
+                                                            newJournal.bQuestCompleted,
+                                                            newJournal.nCalendarDay,
+                                                            newJournal.nTimeOfDay,
+                                                            newJournal.szName,
+                                                            newJournal.szText);
+                retval = pCreature->m_pJournal->m_lstEntries.num; // Success
+
+                //If no update message is desired, we can keep it silent.
+                if(!silentUpdate)
+                {
+                    pMessage->SendServerToPlayerJournalUpdated(pPlayer,1,newJournal.bQuestCompleted,newJournal.szName);
+                }
+            }
+            else
+            {
+                LOG_ERROR("Unable to get CNWSMessage");
+            }
+        }
+    }
+    return Services::Events::Arguments(retval);
+}
+
+ArgumentStack Player::GetJournalEntry(ArgumentStack&& args)
+{
+    if (auto *pPlayer = player(args))
+    {
+        auto *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pPlayer->m_oidNWSObject);
+        if (pCreature && pCreature->m_pJournal)
+        {
+            auto entries = pCreature->m_pJournal->m_lstEntries;
+            const auto tag = Services::Events::ExtractArgument<std::string>(args);
+            ASSERT_OR_THROW(!tag.empty());
+            if (entries.num > 0)
+            {
+                for (int i = entries.num - 1; i >= 0; i--)
+                {
+                    auto pEntry = entries.element[i];
+                    if (pEntry.szPlot_Id.CStr() == tag)
+                    {
+                        SJournalEntry lastJournalEntry = entries[i];
+                        return Services::Events::Arguments
+                        (
+                            std::string(Utils::ExtractLocString(lastJournalEntry.szText)),
+                            std::string(Utils::ExtractLocString(lastJournalEntry.szName)),
+                            (int32_t)lastJournalEntry.nCalendarDay,
+                            (int32_t)lastJournalEntry.nTimeOfDay,
+                            (int32_t)lastJournalEntry.nState,
+                            (int32_t)lastJournalEntry.nPriority,
+                            (int32_t)lastJournalEntry.bQuestCompleted,
+                            (int32_t)lastJournalEntry.bQuestDisplayed,
+                            (int32_t)lastJournalEntry.bUpdated 
+                        );
+                    }
+                }
+            }
+        }
+    }
+    return Services::Events::Arguments(-1);
 }
 
 }

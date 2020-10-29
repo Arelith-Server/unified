@@ -29,10 +29,12 @@
 #include "Services/Plugins/Plugins.hpp"
 #include "Services/Commands/Commands.hpp"
 #include "Services/Tasks/Tasks.hpp"
+#include "Services/Messaging/Messaging.hpp"
 
 #include <string>
 #include <cstdio>
 #include <regex>
+#include <cmath>
 
 
 using namespace NWNXLib;
@@ -85,6 +87,10 @@ Util::Util(Services::ProxyServiceList* services)
     REGISTER(GetScriptReturnValue);
     REGISTER(CreateDoor);
     REGISTER(SetItemActivator);
+    REGISTER(GetWorldTime);
+    REGISTER(SetResourceOverride);
+    REGISTER(GetResourceOverride);
+    REGISTER(GetScriptParamIsSet);
 
 #undef REGISTER
 
@@ -111,30 +117,30 @@ Util::Util(Services::ProxyServiceList* services)
                 }
             });
 
-    GetServices()->m_hooks->RequestSharedHook<API::Functions::_ZN10CNWSModule16LoadModuleFinishEv, uint32_t>(
-            +[](bool before, CNWSModule*)
+    GetServices()->m_messaging->SubscribeMessage("NWNX_CORE_SIGNAL",
+        [](const std::vector<std::string>& message)
+        {
+            if (message[0] == "ON_MODULE_LOAD_FINISH")
             {
-                if (before)
+                if (auto startScript = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT"))
                 {
-                    if (auto startScript = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT"))
-                    {
-                        LOG_NOTICE("Running module start script: %s", *startScript);
-                        Utils::ExecuteScript(*startScript, 0);
-                    }
+                    LOG_NOTICE("Running module start script: %s", *startScript);
+                    Utils::ExecuteScript(*startScript, 0);
+                }
 
-                    if (auto startChunk = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT_CHUNK"))
-                    {
-                        LOG_NOTICE("Running module start script chunk: %s", *startChunk);
+                if (auto startChunk = g_plugin->GetServices()->m_config->Get<std::string>("PRE_MODULE_START_SCRIPT_CHUNK"))
+                {
+                    LOG_NOTICE("Running module start script chunk: %s", *startChunk);
 
-                        bool bWrapIntoMain = startChunk->find("void main()") == std::string::npos;
-                        if (Globals::VirtualMachine()->RunScriptChunk(*startChunk, 0, true, bWrapIntoMain))
-                        {
-                            LOG_ERROR("Failed to run module start script chunk with error: %s",
-                                    Globals::VirtualMachine()->m_pJitCompiler->m_sCapturedError.CStr());
-                        }
+                    bool bWrapIntoMain = startChunk->find("void main()") == std::string::npos;
+                    if (Globals::VirtualMachine()->RunScriptChunk(*startChunk, 0, true, bWrapIntoMain))
+                    {
+                        LOG_ERROR("Failed to run module start script chunk with error: %s",
+                            Globals::VirtualMachine()->m_pJitCompiler->m_sCapturedError.CStr());
                     }
                 }
-            });
+            }
+        });
 }
 
 Util::~Util()
@@ -396,6 +402,23 @@ ArgumentStack Util::AddScript(ArgumentStack&& args)
       ASSERT_OR_THROW(!scriptData.empty());
     const auto wrapIntoMain = Services::Events::ExtractArgument<int32_t>(args);
 
+    std::string alias;
+    try
+    {
+        alias = Services::Events::ExtractArgument<std::string>(args);
+    }
+    catch (const std::runtime_error& e)
+    {
+        LOG_WARNING("NWNX_Util_AddScript() called without alias parameter, please update nwnx_util.nss");
+        alias = "NWNX";
+    }
+
+    if (!Utils::IsValidCustomResourceDirectoryAlias(alias))
+    {
+        LOG_WARNING("NWNX_Util_AddScript() called with an invalid alias: %s, defaulting to 'NWNX'", alias);
+        alias = "NWNX";
+    }
+
     if (!m_scriptCompiler)
     {
         m_scriptCompiler = std::make_unique<CScriptCompiler>();
@@ -405,8 +428,9 @@ ArgumentStack Util::AddScript(ArgumentStack&& args)
         m_scriptCompiler->SetOptimizeBinaryCodeLength(true);
         m_scriptCompiler->SetCompileConditionalOrMain(true);
         m_scriptCompiler->SetIdentifierSpecification("nwscript");
-        m_scriptCompiler->SetOutputAlias("NWNX");
     }
+
+    m_scriptCompiler->SetOutputAlias(alias);
 
     if (m_scriptCompiler->CompileScriptChunk(scriptData.c_str(), wrapIntoMain != 0) == 0)
     {
@@ -454,7 +478,24 @@ ArgumentStack Util::AddNSSFile(ArgumentStack&& args)
       ASSERT_OR_THROW(fileName.size() <= 16);
     const auto contents = Services::Events::ExtractArgument<std::string>(args);
 
-    auto file = CExoFile(("NWNX:" + fileName).c_str(), Constants::ResRefType::NSS, "w");
+    std::string alias;
+    try
+    {
+        alias = Services::Events::ExtractArgument<std::string>(args);
+    }
+    catch (const std::runtime_error& e)
+    {
+        LOG_WARNING("NWNX_Util_AddNSSFile() called without alias parameter, please update nwnx_util.nss");
+        alias = "NWNX";
+    }
+
+    if (!Utils::IsValidCustomResourceDirectoryAlias(alias))
+    {
+        LOG_WARNING("NWNX_Util_AddNSSFile() called with an invalid alias: %s, defaulting to 'NWNX'", alias);
+        alias = "NWNX";
+    }
+
+    auto file = CExoFile((alias + ":" + fileName).c_str(), Constants::ResRefType::NSS, "w");
 
     if (file.FileOpened())
     {
@@ -476,7 +517,24 @@ ArgumentStack Util::RemoveNWNXResourceFile(ArgumentStack&& args)
       ASSERT_OR_THROW(fileName.size() <= 16);
     const auto type = Services::Events::ExtractArgument<int32_t>(args);
 
-    CExoString exoFileName = ("NWNX:" + fileName).c_str();
+    std::string alias;
+    try
+    {
+        alias = Services::Events::ExtractArgument<std::string>(args);
+    }
+    catch (const std::runtime_error& e)
+    {
+        LOG_WARNING("NWNX_Util_RemoveNWNXResourceFile() called without alias parameter, please update nwnx_util.nss");
+        alias = "NWNX";
+    }
+
+    if (!Utils::IsValidCustomResourceDirectoryAlias(alias))
+    {
+        LOG_WARNING("NWNX_Util_RemoveNWNXResourceFile() called with an invalid alias: %s, defaulting to 'NWNX'", alias);
+        alias = "NWNX";
+    }
+
+    CExoString exoFileName = (alias + ":" + fileName).c_str();
 
     retVal = Globals::ExoResMan()->RemoveFile(exoFileName, type);
 
@@ -591,6 +649,16 @@ ArgumentStack Util::CreateDoor(ArgumentStack&& args)
     const auto facing = Services::Events::ExtractArgument<float>(args);
     const auto tag = Services::Events::ExtractArgument<std::string>(args);
 
+    int32_t appearance = -1;
+    try
+    {
+        appearance = Services::Events::ExtractArgument<int32_t>(args);
+    }
+    catch (const std::runtime_error& e)
+    {
+        LOG_WARNING("NWNX_Util_CreateDoor() called without appearance parameter, please update nwnx_util.nss");
+    }
+
     auto resRef = CResRef(strResRef);
     Vector position = {posX, posY, posZ};
 
@@ -614,6 +682,8 @@ ArgumentStack Util::CreateDoor(ArgumentStack&& args)
             pDoor->LoadDoor(&gff, &resStruct);
             pDoor->LoadVarTable(&gff, &resStruct);
             pDoor->SetPosition(position);
+            if (appearance >= 0)
+                pDoor->m_nAppearanceType = appearance;
             Utils::SetOrientation(pDoor, facing);
 
             if (!tag.empty())
@@ -646,6 +716,87 @@ ArgumentStack Util::SetItemActivator(ArgumentStack&& args)
       Utils::GetModule()->m_oidLastItemActivator = Constants::OBJECT_INVALID;
 
     return Services::Events::Arguments();
+}
+
+ArgumentStack Util::GetWorldTime(ArgumentStack&& args)
+{
+    const auto adjustment = Services::Events::ExtractArgument<float>(args);
+
+    auto *pWorldTimer = Globals::AppManager()->m_pServerExoApp->GetWorldTimer();
+    uint32_t adjustmentCalendarDay = pWorldTimer->GetCalendarDayFromSeconds(std::fabs(adjustment));
+    uint32_t adjustmentTimeOfDay = pWorldTimer->GetTimeOfDayFromSeconds(std::fabs(adjustment));
+    uint32_t currentCalendarDay, currentTimeOfDay, retvalCalendarDay, retvalTimeOfDay;
+    pWorldTimer->GetWorldTime(&currentCalendarDay, &currentTimeOfDay);
+
+    if (adjustment > 0.0f)
+        pWorldTimer->AddWorldTimes(currentCalendarDay, currentTimeOfDay, adjustmentCalendarDay, adjustmentTimeOfDay, &retvalCalendarDay, &retvalTimeOfDay);
+    else if (adjustment < 0.0f)
+        pWorldTimer->SubtractWorldTimes(currentCalendarDay, currentTimeOfDay, adjustmentCalendarDay, adjustmentTimeOfDay, &retvalCalendarDay, &retvalTimeOfDay);
+    else
+    {
+        retvalCalendarDay = currentCalendarDay;
+        retvalTimeOfDay = currentTimeOfDay;
+    }
+
+    return Services::Events::Arguments((int32_t)retvalCalendarDay, (int32_t)retvalTimeOfDay);
+}
+
+ArgumentStack Util::SetResourceOverride(ArgumentStack&& args)
+{
+    auto resType = Services::Events::ExtractArgument<int32_t>(args);
+      ASSERT_OR_THROW(resType >= Constants::ResRefType::MIN);
+      ASSERT_OR_THROW(resType <= Constants::ResRefType::MAX);
+    auto oldName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!oldName.empty());
+      ASSERT_OR_THROW(oldName.size() <= 16);
+    auto newName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(newName.size() <= 16);
+
+    if (newName.empty())
+        Globals::ExoResMan()->RemoveOverride(oldName.c_str(), resType);
+    else
+        Globals::ExoResMan()->AddOverride(oldName.c_str(), newName.c_str(), resType);
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Util::GetResourceOverride(ArgumentStack&& args)
+{
+    auto resType = Services::Events::ExtractArgument<int32_t>(args);
+      ASSERT_OR_THROW(resType >= Constants::ResRefType::MIN);
+      ASSERT_OR_THROW(resType <= Constants::ResRefType::MAX);
+    auto resName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!resName.empty());
+      ASSERT_OR_THROW(resName.size() <= 16);
+
+    std::string overrideResName = Globals::ExoResMan()->GetOverride(resName.c_str(), resType).GetResRefStr();
+
+    return overrideResName == resName ? "" : overrideResName;
+}
+
+ArgumentStack Util::GetScriptParamIsSet(ArgumentStack&& args)
+{
+    int32_t retVal = false;
+
+    const auto paramName = Services::Events::ExtractArgument<std::string>(args);
+      ASSERT_OR_THROW(!paramName.empty());
+
+    auto *pVirtualMachine = API::Globals::VirtualMachine();
+    if (pVirtualMachine && pVirtualMachine->m_nRecursionLevel >= 0)
+    {
+        auto &scriptParams = pVirtualMachine->m_lScriptParams[pVirtualMachine->m_nRecursionLevel];
+
+        for (const auto& scriptParam : scriptParams)
+        {
+            if (scriptParam.key.CStr() == paramName)
+            {
+                retVal = true;
+                break;
+            }
+        }
+    }
+
+    return Services::Events::Arguments(retVal);
 }
 
 }

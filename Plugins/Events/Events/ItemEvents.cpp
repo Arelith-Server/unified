@@ -30,6 +30,7 @@ static Hooking::FunctionHook* s_UseLoreOnItemHook;
 static Hooking::FunctionHook* s_PayToIdenfifyItemHook;
 static Hooking::FunctionHook* s_SplitItemHook;
 static Hooking::FunctionHook* s_CanUseItemHook;
+static Hooking::FunctionHook* s_AcquireItemHook;
 
 ItemEvents::ItemEvents(Services::HooksProxy* hooker)
 {
@@ -108,6 +109,12 @@ ItemEvents::ItemEvents(Services::HooksProxy* hooker)
             <API::Functions::_ZN12CNWSCreature9SplitItemEP8CNWSItemi>
             (&SplitItemHook);
     });
+
+    Events::InitOnFirstSubscribe("NWNX_ON_ITEM_ACQUIRE_.*", [hooker]() {
+        s_AcquireItemHook = hooker->RequestExclusiveHook
+                <API::Functions::_ZN12CNWSCreature11AcquireItemEPP8CNWSItemjjhhii>
+                (&AcquireItemHook);
+    });
 }
 
 int32_t ItemEvents::CanUseItemHook(CNWSCreature* thisPtr, CNWSItem* pItem, int32_t bIgnoreIdentifiedFlag)
@@ -158,7 +165,7 @@ int32_t ItemEvents::UseItemHook(
 
     if (PushAndSignal("NWNX_ON_USE_ITEM_BEFORE"))
     {
-        retVal = s_UseItemHook->CallOriginal<int32_t>(thisPtr, item, propIndex, subPropIndex, target, targetPosition, area);
+        retVal = s_UseItemHook->CallOriginal<int32_t>(thisPtr, item, propIndex, subPropIndex, target, targetPosition, area, bUseCharges);
     }
     else
     {
@@ -290,9 +297,10 @@ uint32_t ItemEvents::FindItemWithBaseItemIdHook(CItemRepository* thisPtr, uint32
 
 int32_t ItemEvents::LearnScrollHook(CNWSCreature *thisPtr, ObjectID oidScrollToLearn)
 {
-    int32_t retVal;
+    int32_t retVal = false;
 
     auto PushAndSignal = [&](const std::string& ev) -> bool {
+        Events::PushEventData("RESULT", std::to_string(retVal));
         Events::PushEventData("SCROLL", Utils::ObjectIDToString(oidScrollToLearn));
         return Events::SignalEvent(ev, thisPtr->m_idSelf);
     };
@@ -331,7 +339,7 @@ int32_t ItemEvents::CanEquipItemHook(CNWSCreature* thisPtr, CNWSItem* pItem, uin
     Events::PushEventData("BEFORE_RESULT", std::to_string(retVal));
     Events::SignalEvent("NWNX_ON_VALIDATE_ITEM_EQUIP_AFTER", thisPtr->m_idSelf, &sAfterEventResult);
 
-    retVal = sAfterEventResult.empty() ? retVal : sAfterEventResult == "1";
+    retVal = sAfterEventResult.empty() ? retVal : std::stoi(sAfterEventResult);
 
     return retVal;
 }
@@ -482,6 +490,38 @@ void ItemEvents::SplitItemHook(CNWSCreature *thisPtr, CNWSItem *pItem, int32_t n
     }
 
     PushAndSignal("NWNX_ON_ITEM_SPLIT_AFTER");
+}
+
+int32_t ItemEvents::AcquireItemHook(
+        CNWSCreature* thisPtr, CNWSItem* *ppItem,
+        ObjectID oidPossessor, ObjectID oidTargetRepo,
+        uint8_t x, uint8_t y,
+        int32_t bOriginatingFromScript, int32_t bDisplayFeedback)
+{
+    int32_t retVal = false;
+
+    if (!ppItem || !(*ppItem))
+        return s_AcquireItemHook->CallOriginal<int32_t>(thisPtr, ppItem, oidPossessor, oidTargetRepo, x, y, bOriginatingFromScript, bDisplayFeedback);
+
+    auto PushAndSignal = [&](const std::string& ev) -> bool {
+        Events::PushEventData("ITEM", Utils::ObjectIDToString((*ppItem)->m_idSelf));
+        Events::PushEventData("GIVER", Utils::ObjectIDToString(oidPossessor));
+        Events::PushEventData("RESULT", std::to_string(retVal));
+        return Events::SignalEvent(ev, thisPtr->m_idSelf);
+    };
+
+    if (PushAndSignal("NWNX_ON_ITEM_ACQUIRE_BEFORE"))
+    {
+        retVal = s_AcquireItemHook->CallOriginal<int32_t>(thisPtr, ppItem, oidPossessor, oidTargetRepo, x, y, bOriginatingFromScript, bDisplayFeedback);
+    }
+    else
+    {
+        retVal = false;
+    }
+
+    PushAndSignal("NWNX_ON_ITEM_ACQUIRE_AFTER");
+
+    return retVal;
 }
 
 }

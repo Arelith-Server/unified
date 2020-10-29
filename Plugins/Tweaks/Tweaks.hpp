@@ -13,7 +13,7 @@ class CompareVarsForMerge;
 class ParryAllAttacks;
 class SneakAttackCritImmunity;
 class PreserveDepletedItems;
-class HideDMsOnCharList;
+class HidePlayersOnCharList;
 class DisableMonkAbilitiesWhenPolymorphed;
 class StringToIntBaseToAuto;
 class StripOVTFromNotVisibleObject;
@@ -25,6 +25,9 @@ class FixDispelEffectLevels;
 class AddPrestigeclassCasterLevels;
 class FixUnlimitedPotionsBug;
 class UnhardcodeShields;
+class BlockDMSpawnItem;
+class FixArmorDexBonusUnderOne;
+class FixItemNullptrInCItemRepository;
 
 class Tweaks : public NWNXLib::Plugin
 {
@@ -41,7 +44,7 @@ private:
     std::unique_ptr<ParryAllAttacks> m_ParryAllAttacks;
     std::unique_ptr<SneakAttackCritImmunity> m_SneakAttackCritImmunity;
     std::unique_ptr<PreserveDepletedItems> m_PreserveDepletedItems;
-    std::unique_ptr<HideDMsOnCharList> m_HideDMsOnCharList;
+    std::unique_ptr<HidePlayersOnCharList> m_HidePlayersOnCharList;
     std::unique_ptr<DisableMonkAbilitiesWhenPolymorphed> m_DisableMonkAbilitiesWhenPolymorphed;
     std::unique_ptr<StringToIntBaseToAuto> m_StringToIntBaseToAuto;
     std::unique_ptr<StripOVTFromNotVisibleObject> m_StripOVTFromNotVisibleObject;
@@ -53,6 +56,9 @@ private:
     std::unique_ptr<AddPrestigeclassCasterLevels> m_AddPrestigeclassCasterLevels;
     std::unique_ptr<FixUnlimitedPotionsBug> m_FixUnlimitedPotionsBug;
     std::unique_ptr<UnhardcodeShields> m_UnhardcodeShields;
+    std::unique_ptr<BlockDMSpawnItem> m_BlockDMSpawnItem;
+    std::unique_ptr<FixArmorDexBonusUnderOne> m_FixArmorDexBonusUnderOne;
+    std::unique_ptr<FixItemNullptrInCItemRepository> m_FixItemNullptrInCItemRepository;
 };
 
 }

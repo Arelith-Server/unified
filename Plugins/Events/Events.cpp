@@ -16,7 +16,7 @@
 #include "Events/StealthEvents.hpp"
 #include "Events/SpellEvents.hpp"
 #include "Events/PartyEvents.hpp"
-#include "Events/HealerKitEvents.hpp"
+#include "Events/HealingEvents.hpp"
 #include "Events/SkillEvents.hpp"
 #include "Events/PolymorphEvents.hpp"
 #include "Events/EffectEvents.hpp"
@@ -32,6 +32,8 @@
 #include "Events/UUIDEvents.hpp"
 #include "Events/ResourceEvents.hpp"
 #include "Events/QuickbarEvents.hpp"
+#include "Events/DebugEvents.hpp"
+#include "Events/StoreEvents.hpp"
 #include "Services/Config/Config.hpp"
 #include "Services/Messaging/Messaging.hpp"
 
@@ -104,7 +106,7 @@ Events::Events(Services::ProxyServiceList* services)
     m_stealthEvents     = std::make_unique<StealthEvents>(hooker);
     m_spellEvents       = std::make_unique<SpellEvents>(hooker);
     m_partyEvents       = std::make_unique<PartyEvents>(hooker);
-    m_healerKitEvents   = std::make_unique<HealerKitEvents>(hooker);
+    m_healingEvents     = std::make_unique<HealingEvents>(hooker);
     m_skillEvents       = std::make_unique<SkillEvents>(hooker);
     m_mapEvents         = std::make_unique<MapEvents>(hooker);
     m_polymorphEvents   = std::make_unique<PolymorphEvents>(hooker);
@@ -121,6 +123,8 @@ Events::Events(Services::ProxyServiceList* services)
     m_uuidEvents        = std::make_unique<UUIDEvents>(hooker);
     m_resourceEvents    = std::make_unique<ResourceEvents>(GetServices()->m_tasks.get());
     m_quickbarEvents    = std::make_unique<QuickbarEvents>(hooker);
+    m_debugEvents       = std::make_unique<DebugEvents>(hooker);
+    m_storeEvents       = std::make_unique<StoreEvents>(hooker);
 }
 
 Events::~Events()
