@@ -34,8 +34,6 @@ ArelithEvents::ArelithEvents(Services::HooksProxy* hooker)
         m_CanEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer);
         hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem, unsigned char, CNWSCreature*, CNWSItem*>(&CanUnEquipWeaponHook);
         m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem);
-        hooker->RequestExclusiveHook<Functions::_ZN21CNWSEffectListHandler13OnApplyDisarmEP10CNWSObjectP11CGameEffecti, int32_t,CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t>(&OnApplyDisarmHook);
-        m_OnApplyDisarmHook =  hooker->FindHookByAddress(Functions::_ZN21CNWSEffectListHandler13OnApplyDisarmEP10CNWSObjectP11CGameEffecti);
     });
 }
 
@@ -71,39 +69,5 @@ unsigned char ArelithEvents::CanUnEquipWeaponHook( CNWSCreature *pCreature, CNWS
 
     return (sResult == "") ? retVal : (unsigned char)atoi(sResult.c_str());
 }
-
-
-
-
-int32_t ArelithEvents::OnApplyDisarmHook(CNWSEffectListHandler*, CNWSObject *pObject, CGameEffect *pEffect, int32_t bLoadingGame)
-{
-	CNWSCreature *pCreature = Utils::AsNWSCreature(pObject);
-	CNWSCreature *pDisarmingCreature;
-    
-	if ( pCreature )
-	{
-
-		if ( !pCreature->m_bDisarmable ||
-		        pCreature->GetArea() == NULL )
-		{
-			return 1;
-		}
-
-		if ( pObject->GetDead() && !bLoadingGame )
-		{
-			return 1;
-		}
-        //do we need the disarmer?
-		pDisarmingCreature = API::Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pEffect->m_oidCreator);
-		
-        Arelith::PushEventData("TARGET_OBJECT_ID", Utils::ObjectIDToString(pCreature->m_idSelf)); //oidDisarmee
-        Arelith::PushEventData("DISARMER_OBJECT_ID", Utils::ObjectIDToString((pDisarmingCreature) ? pDisarmingCreature->m_idSelf : API::Constants::OBJECT_INVALID)); //oidDisarmer
-
-        Arelith::SignalEvent("NWNX_ARELITH_ONDISARM", pCreature->m_idSelf, NULL);
-	 }
-
-	return 1;
-}
-
 
 }
