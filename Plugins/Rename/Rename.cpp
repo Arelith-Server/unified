@@ -183,8 +183,8 @@ void Rename::SetPlayerNameAsObservedBy(CNWSCreature *targetCreature, ObjectID ob
         auto overrideName = std::get<1>(g_plugin->m_RenamePlayerNames[targetOid][observerOid]);
         if (playerList)
         {
-            targetCreature->m_pStats->m_lsFirstName = g_plugin->ContainString(overrideName.CStr());
-            targetCreature->m_pStats->m_lsLastName = g_plugin->ContainString("");
+            targetCreature->m_pStats->m_lsFirstName = Utils::CreateLocString(overrideName.CStr());
+            targetCreature->m_pStats->m_lsLastName = Utils::CreateLocString("");
         }
         targetCreature->m_sDisplayName = displayName;
         LOG_DEBUG("Observer %x will see %x as %s due to personal override", observerOid, targetOid, overrideName.m_sString);
@@ -195,8 +195,8 @@ void Rename::SetPlayerNameAsObservedBy(CNWSCreature *targetCreature, ObjectID ob
         auto overrideName = std::get<1>(g_plugin->m_RenamePlayerNames[targetOid][Constants::OBJECT_INVALID]);
         if (playerList)
         {
-            targetCreature->m_pStats->m_lsFirstName = g_plugin->ContainString(overrideName.CStr());
-            targetCreature->m_pStats->m_lsLastName = g_plugin->ContainString("");
+            targetCreature->m_pStats->m_lsFirstName = Utils::CreateLocString(overrideName.CStr());
+            targetCreature->m_pStats->m_lsLastName = Utils::CreateLocString("");
         }
         targetCreature->m_sDisplayName = displayName;
         LOG_DEBUG("Observer %x will see %x as %s due to global override", observerOid, targetOid, overrideName.m_sString);
@@ -500,13 +500,6 @@ void Rename::GlobalNameChange(
     }
 }
 
-CExoLocString Rename::ContainString(const std::string& str)
-{
-    CExoLocString locStr;
-    locStr.AddString(0,CExoString(str.c_str()),0);
-    return locStr;
-}
-
 std::string Rename::GenerateRandomPlayerName(size_t length, ObjectID targetOid)
 {
     auto iter = m_ObfuscatedNames.find(targetOid);
@@ -640,6 +633,25 @@ ArgumentStack Rename::SetPCNameOverride(ArgumentStack&& args)
                 targetCreature->m_pStats->m_lsFirstName,
                 targetCreature->m_pStats->m_lsLastName);
 
+        GetServices()->m_messaging->SubscribeMessage("NWNX_CREATURE_ORIGINALNAME_SIGNAL",
+             [](const std::vector<std::string>& message)
+             {
+                 ObjectID objectID = std::strtoul(message[0].c_str(), nullptr, 16);
+                 auto *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(objectID);
+                 auto *pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(objectID);
+                 if (pCreature && pCreature->m_pStats && pPlayer)
+                 {
+                     auto *pPlayerInfo = Globals::AppManager()->m_pServerExoApp->GetNetLayer()->GetPlayerInfo(pPlayer->m_nPlayerID);
+                     if (pPlayerInfo)
+                     {
+                         g_plugin->m_RenameOriginalNames[objectID] = std::make_tuple(
+                                 pPlayerInfo->m_sPlayerName,
+                                 pCreature->m_pStats->m_lsFirstName,
+                                 pCreature->m_pStats->m_lsLastName);
+                         g_plugin->SendNameUpdate(pCreature, Constants::PLAYERID_ALL_CLIENTS);
+                     }
+                 }
+             });
         // If we've ran this before the PC has even been added to the other clients' player list then there's
         // nothing else we need to do, the hooks will take care of doing the renames. If we don't skip this
         // then the SendServerToPlayerPlayerList_All in the SendNameUpdate below runs before the server has even ran a

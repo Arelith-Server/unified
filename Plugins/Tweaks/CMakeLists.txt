@@ -21,4 +21,6 @@ add_plugin(Tweaks
     "Tweaks/FixUnlimitedPotionsBug.cpp"
     "Tweaks/UnhardcodeShields.cpp"
     "Tweaks/BlockDMSpawnItem.cpp"
+    "Tweaks/FixArmorDexBonusUnderOne.cpp"
+    "Tweaks/FixItemNullptrInCItemRepository.cpp"
 )

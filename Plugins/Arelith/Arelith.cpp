@@ -112,6 +112,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     m_GetEffectImmunityHook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei>(&GetEffectImmunityHook);
 
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN15CServerAIMaster21OnItemPropertyAppliedEP8CNWSItemP15CNWItemPropertyP12CNWSCreatureji, bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL>(&OnItemPropertyAppliedHook);
+
     GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler21OnApplyEffectImmunityEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyEffectImmunityHook);
 
     if(GetServices()->m_config->Get<bool>("DMG_RED", false))
@@ -119,6 +120,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN10CNWSObject17DoDamageReductionEP12CNWSCreatureihii, bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL>(&DoDamageReductionHook);
     }
+
     if(GetServices()->m_config->Get<bool>("POLYMORPH", false))
     {
         pGetUseMonkAbilities_hook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature19GetUseMonkAbilitiesEv>(&CNWSCreature__GetUseMonkAbilities_hook);
@@ -563,8 +565,10 @@ void Arelith::OnApplyEffectImmunityHook(bool before, CNWSEffectListHandler*, CNW
 void Arelith::DoDamageReductionHook(bool before, CNWSObject *pObject, CNWSCreature *pCreature, int32_t, uint8_t, BOOL, BOOL)
 {
     static std::unordered_map<uint64_t, int32_t> s_mEffects;
+
     if(pCreature == nullptr)
       return;
+
     if(before)
     {
         CNWSItem* pWeapon = nullptr;
@@ -667,7 +671,9 @@ BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CN
             return true;
 
         auto effectList = pStats->m_pBaseCreature->m_appliedEffects;
+
         int32_t highest = 0;
+
         for (int32_t i = 0; i < effectList.num; i++)
         {
             auto *eff = effectList.element[i];
@@ -678,6 +684,7 @@ BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CN
                    (eff->m_nParamInteger[2] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[2] == pVersus->m_pStats->m_nAlignmentLawChaos)) &&
                    (eff->m_nParamInteger[3] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[3] == pVersus->m_pStats->m_nAlignmentGoodEvil)))
                 {
+
                     if(eff->m_nParamInteger[4] <= 0 || eff->m_nParamInteger[4] >= 100)
                         return true;
 

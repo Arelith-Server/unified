@@ -218,6 +218,7 @@ _______________________________________
     Event Data Tag        | Type   | Notes |
     ----------------------|--------|-------|
     ITEM                  | object | Convert to object with StringToObject()|
+    GIVER                 | object | Convert to object with StringToObject() (will be INVALID if picked up from ground)|
     RESULT                | int    | Returns TRUE in the _AFTER if the acquisition was successful, FALSE otherwise
 
     @note This event currently only works with creatures
@@ -238,6 +239,7 @@ _______________________________________
     TARGET_POSITION_X     | float  | |
     TARGET_POSITION_Y     | float  | |
     TARGET_POSITION_Z     | float  | |
+    ACTION_RESULT         | int    | TRUE/FALSE, only in _AFTER events
 
 _______________________________________
     ## DM Give Events
@@ -482,6 +484,19 @@ _______________________________________
     TARGET_OBJECT_ID      | object | Convert to object with StringToObject()
 
 _______________________________________
+    ## Disarm Events
+    - NWNX_ON_DISARM_BEFORE
+    - NWNX_ON_DISARM_AFTER
+
+    `OBJECT_SELF` = The creature who is being disarmed
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    DISARMER_OBJECT_ID    | object | The object disarming the creature
+    FEAT_ID               | int    | The feat used to perform the disarming (Normal vs Improved Disarm)
+    ACTION_RESULT         | int    | TRUE/FALSE, only in _AFTER events
+
+_______________________________________
     ## Cast Spell Events
     - NWNX_ON_CAST_SPELL_BEFORE
     - NWNX_ON_CAST_SPELL_AFTER
@@ -514,7 +529,6 @@ _______________________________________
     Event Data Tag        | Type   | Notes |
     ----------------------|--------|-------|
     SPELL_MULTICLASS      | int | Index of the spell casting class (0-2) |
-    SPELL_LEVEL           | int | |
     SPELL_SLOT            | int | |
     SPELL_ID              | int | |
     SPELL_DOMAIN          | int | |
@@ -534,6 +548,22 @@ _______________________________________
     SPELL_MULTICLASS      | int    | Index of the spell casting class (0-2) |
     SPELL_LEVEL           | int    | |
     SPELL_SLOT            | int    | |
+
+_______________________________________
+    ## Spell Interrupted Events
+    - NWNX_ON_SPELL_INTERRUPTED_BEFORE
+    - NWNX_ON_SPELL_INTERRUPTED_AFTER
+
+    `OBJECT_SELF` = The creature whose spell was interrupted
+
+    Event Data Tag        | Type   | Notes |
+    ----------------------|--------|-------|
+    SPELL_ID              | int | |
+    SPELL_CLASS           | int | Index of the spell casting class (0-2) |
+    SPELL_DOMAIN          | int | |
+    SPELL_METAMAGIC       | int | |
+    SPELL_FEAT            | int | |
+    SPELL_SPONTANEOUS     | int | |
 
 _______________________________________
     ## Healer Kit Use Events
@@ -627,6 +657,7 @@ _______________________________________
     TARGET_POSITION_X     | float | |
     TARGET_POSITION_Y     | float | |
     TARGET_POSITION_Z     | float | |
+    ACTION_RESULT         | int    | TRUE/FALSE, only in _AFTER events
 
     @note Probably only really works with the following activated skills:
     `SKILL_ANIMAL_EMPATHY`, `SKILL_DISABLE_TRAP`, `SKILL_HEAL`, `SKILL_OPEN_LOCK`,
@@ -1043,6 +1074,7 @@ _______________________________________
     Event Data Tag        | Type   | Notes
     ----------------------|--------|-------
     DOOR                  | object | Convert to object with StringToObject()
+    ACTION_RESULT         | int    | TRUE/FALSE, only in _AFTER events
 
 _______________________________________
     ## Object Unlock Events
@@ -1056,6 +1088,7 @@ _______________________________________
     DOOR                  | object | Convert to object with StringToObject()
     THIEVES_TOOL          | object | Convert to object with StringToObject()
     ACTIVE_PROPERTY_INDEX | int    |
+    ACTION_RESULT         | int    | TRUE/FALSE, only in _AFTER events
 
 _______________________________________
     ## UUID Collision Events
@@ -1081,11 +1114,11 @@ _______________________________________
 
     Event Data Tag        | Type   | Notes
     ----------------------|--------|-------
-    ALIAS                 | string | NWNX for /nwnx, DEVELOPMENT for /development
+    ALIAS                 | string | NWNX for /nwnx, DEVELOPMENT for /development. Also supports valid aliases from the Custom Resman Definition File
     RESREF                | string | The ResRef of the file
     TYPE                  | int    | The type of the file, see NWNX_UTIL_RESREF_TYPE_*
 
-    Note: These events fire when a file gets added/removed/modified in the /nwnx or /development folder
+    Note: These events fire when a file gets added/removed/modified in resource folders like /nwnx, /development and those defined in the Custom Resman Definition File
 
 _______________________________________
     ## ELC Events
@@ -1184,6 +1217,7 @@ _______________________________________
     ITEM                  | object | The item being bought or sold. Convert to object with StringToObject()  |
     STORE                 | object | The store the item is being sold to or bought from. Convert to object with StringToObject() |
     PRICE                 | int    | The buy or sell price |
+    RESULT                | int    | TRUE/FALSE whether the request was successful. Only in *_AFTER events.
 
 _______________________________________
     ## Server Send Area Events
@@ -1283,6 +1317,7 @@ string NWNX_Events_GetEventData(string tag);
 /// - Input Pause Event
 /// - Debug events
 /// - Store events
+/// - Disarm event
 void NWNX_Events_SkipEvent();
 
 /// Set the return value of the event.
