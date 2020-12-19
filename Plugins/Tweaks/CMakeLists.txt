@@ -23,4 +23,5 @@ add_plugin(Tweaks
     "Tweaks/BlockDMSpawnItem.cpp"
     "Tweaks/FixArmorDexBonusUnderOne.cpp"
     "Tweaks/FixItemNullptrInCItemRepository.cpp"
+    "Tweaks/ClearSpellEffectsOnTURDs.cpp"
 )
