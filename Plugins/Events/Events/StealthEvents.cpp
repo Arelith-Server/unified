@@ -1,5 +1,6 @@
 #include "Events/StealthEvents.hpp"
 #include "API/CNWSCreature.hpp"
+#include "API/CNWSCreatureStats.hpp"
 #include "API/Functions.hpp"
 #include "Utils.hpp"
 #include "Events.hpp"
@@ -9,25 +10,36 @@ namespace Events {
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static NWNXLib::Hooking::FunctionHook* m_SetStealthModeHook = nullptr;
-static NWNXLib::Hooking::FunctionHook* m_DoSpotDetectionHook = nullptr;
-static NWNXLib::Hooking::FunctionHook* m_DoListenDetectionHook = nullptr;
+static NWNXLib::Hooking::FunctionHook* s_SetStealthModeHook;
+static NWNXLib::Hooking::FunctionHook* s_SetDetectModeHook;
+static NWNXLib::Hooking::FunctionHook* s_DoSpotDetectionHook;
+static NWNXLib::Hooking::FunctionHook* s_DoListenDetectionHook;
 
 StealthEvents::StealthEvents(Services::HooksProxy* hooker)
 {
-    Events::InitOnFirstSubscribe("NWNX_ON_E.*_STEALTH_.*", [hooker]() {
-        hooker->RequestExclusiveHook<API::Functions::_ZN12CNWSCreature14SetStealthModeEh>(&SetStealthModeHook);
-        m_SetStealthModeHook = hooker->FindHookByAddress(API::Functions::_ZN12CNWSCreature14SetStealthModeEh);
+    // TODO: Deprecate ON_E*_STEALTH in favor of ON_STEALTH_E*
+    Events::InitOnFirstSubscribe("NWNX_ON_(E.*_STEALTH_.*|STEALTH_E.*)", [hooker]() {
+        s_SetStealthModeHook = hooker->RequestExclusiveHook
+            <API::Functions::_ZN12CNWSCreature14SetStealthModeEh>
+            (&SetStealthModeHook);
+    });
+
+    Events::InitOnFirstSubscribe("NWNX_ON_DETECT_E.*", [hooker]() {
+        s_SetDetectModeHook = hooker->RequestExclusiveHook
+            <API::Functions::_ZN12CNWSCreature13SetDetectModeEh>
+            (&SetDetectModeHook);
     });
 
     Events::InitOnFirstSubscribe("NWNX_ON_DO_LISTEN_DETECTION_.*", [hooker]() {
-        hooker->RequestExclusiveHook<API::Functions::_ZN12CNWSCreature17DoListenDetectionEPS_i, int32_t>(&DoListenDetectionHook);
-        m_DoListenDetectionHook = hooker->FindHookByAddress(API::Functions::_ZN12CNWSCreature17DoListenDetectionEPS_i);
+        s_DoListenDetectionHook = hooker->RequestExclusiveHook
+            <API::Functions::_ZN12CNWSCreature17DoListenDetectionEPS_i, int32_t>
+            (&DoListenDetectionHook);
     });
 
     Events::InitOnFirstSubscribe("NWNX_ON_DO_SPOT_DETECTION.*", [hooker]() {
-        hooker->RequestExclusiveHook<API::Functions::_ZN12CNWSCreature15DoSpotDetectionEPS_i, int32_t>(&DoSpotDetectionHook);
-        m_DoSpotDetectionHook = hooker->FindHookByAddress(API::Functions::_ZN12CNWSCreature15DoSpotDetectionEPS_i);
+        s_DoSpotDetectionHook = hooker->RequestExclusiveHook
+            <API::Functions::_ZN12CNWSCreature15DoSpotDetectionEPS_i, int32_t>
+            (&DoSpotDetectionHook);
     });
 }
 
@@ -35,32 +47,99 @@ void StealthEvents::SetStealthModeHook(CNWSCreature* thisPtr, uint8_t nStealthMo
 {
     const bool willBeStealthed = nStealthMode != 0;
     const bool currentlyStealthed = thisPtr->m_nStealthMode != 0;
+    std::string sResult;
 
     if (!currentlyStealthed && willBeStealthed)
     {
-        if (Events::SignalEvent("NWNX_ON_ENTER_STEALTH_BEFORE", thisPtr->m_idSelf))
+        // TODO: Deprecate ON_E*_STEALTH in favor of ON_STEALTH_E*
+        if (Events::SignalEvent("NWNX_ON_ENTER_STEALTH_BEFORE", thisPtr->m_idSelf) &&
+            Events::SignalEvent("NWNX_ON_STEALTH_ENTER_BEFORE", thisPtr->m_idSelf, &sResult))
         {
-            m_SetStealthModeHook->CallOriginal<void>(thisPtr, nStealthMode);
+            s_SetStealthModeHook->CallOriginal<void>(thisPtr, nStealthMode);
         }
         else
         {
-            thisPtr->ClearActivities(1);
+            if (sResult == "0")
+            {
+                bool bHadHIPS = false;
+                if (thisPtr->m_pStats->HasFeat(Constants::Feat::HideInPlainSight))
+                {
+                    thisPtr->m_pStats->RemoveFeat(Constants::Feat::HideInPlainSight);
+                    bHadHIPS = true;
+                }
+                s_SetStealthModeHook->CallOriginal<void>(thisPtr, nStealthMode);
+                if (bHadHIPS)
+                    thisPtr->m_pStats->AddFeat(Constants::Feat::HideInPlainSight);
+            }
+            else if (sResult == "1")
+            {
+                bool bNoHIPS = false;
+                if (!thisPtr->m_pStats->HasFeat(Constants::Feat::HideInPlainSight))
+                {
+                    thisPtr->m_pStats->AddFeat(Constants::Feat::HideInPlainSight);
+                    bNoHIPS = true;
+                }
+                s_SetStealthModeHook->CallOriginal<void>(thisPtr, nStealthMode);
+                if (bNoHIPS)
+                    thisPtr->m_pStats->RemoveFeat(Constants::Feat::HideInPlainSight);
+            }
+            else
+                thisPtr->ClearActivities(1);
         }
 
+        // TODO: Deprecate ON_E*_STEALTH in favor of ON_STEALTH_E*
         Events::SignalEvent("NWNX_ON_ENTER_STEALTH_AFTER", thisPtr->m_idSelf);
+        Events::SignalEvent("NWNX_ON_STEALTH_ENTER_AFTER", thisPtr->m_idSelf);
     }
-    else if(currentlyStealthed && !willBeStealthed)
+    else if (currentlyStealthed && !willBeStealthed)
     {
-        if (Events::SignalEvent("NWNX_ON_EXIT_STEALTH_BEFORE", thisPtr->m_idSelf))
+        // TODO: Deprecate ON_E*_STEALTH in favor of ON_STEALTH_E*
+        if (Events::SignalEvent("NWNX_ON_EXIT_STEALTH_BEFORE", thisPtr->m_idSelf) &&
+            Events::SignalEvent("NWNX_ON_STEALTH_EXIT_BEFORE", thisPtr->m_idSelf))
         {
-            m_SetStealthModeHook->CallOriginal<void>(thisPtr, nStealthMode);
+            s_SetStealthModeHook->CallOriginal<void>(thisPtr, nStealthMode);
         }
         else
         {
             thisPtr->SetActivity(1, true);
         }
 
+        // TODO: Deprecate ON_E*_STEALTH in favor of ON_STEALTH_E*
         Events::SignalEvent("NWNX_ON_EXIT_STEALTH_AFTER", thisPtr->m_idSelf);
+        Events::SignalEvent("NWNX_ON_STEALTH_EXIT_AFTER", thisPtr->m_idSelf);
+    }
+}
+
+void StealthEvents::SetDetectModeHook(CNWSCreature* thisPtr, uint8_t nDetectMode)
+{
+    const bool willBeDetecting = nDetectMode != 0;
+    const bool currentlyDetecting = thisPtr->m_nDetectMode != 0;
+
+    if (!currentlyDetecting && willBeDetecting)
+    {
+        if (Events::SignalEvent("NWNX_ON_DETECT_ENTER_BEFORE", thisPtr->m_idSelf))
+        {
+            s_SetDetectModeHook->CallOriginal<void>(thisPtr, nDetectMode);
+        }
+        else
+        {
+            thisPtr->ClearActivities(0);
+        }
+
+        Events::SignalEvent("NWNX_ON_DETECT_ENTER_AFTER", thisPtr->m_idSelf);
+    }
+    else if(currentlyDetecting && !willBeDetecting)
+    {
+        if (Events::SignalEvent("NWNX_ON_DETECT_ENTER_BEFORE", thisPtr->m_idSelf))
+        {
+            s_SetDetectModeHook->CallOriginal<void>(thisPtr, nDetectMode);
+        }
+        else
+        {
+            thisPtr->SetActivity(0, true);
+        }
+
+        Events::SignalEvent("NWNX_ON_DETECT_ENTER_AFTER", thisPtr->m_idSelf);
     }
 }
 
@@ -100,7 +179,7 @@ int32_t StealthEvents::DoListenDetectionHook(
     if (!pTarget->m_nStealthMode && !bTargetInvisible)
         return true;
 
-    return HandleDetectionHook("LISTEN", m_DoListenDetectionHook, pThis, pTarget, bTargetInvisible);
+    return HandleDetectionHook("LISTEN", s_DoListenDetectionHook, pThis, pTarget, bTargetInvisible);
 }
 
 int32_t StealthEvents::DoSpotDetectionHook(
@@ -114,7 +193,7 @@ int32_t StealthEvents::DoSpotDetectionHook(
     if (!pTarget->m_nStealthMode)
         return true;
 
-    return HandleDetectionHook("SPOT", m_DoSpotDetectionHook, pThis, pTarget, bTargetInvisible);
+    return HandleDetectionHook("SPOT", s_DoSpotDetectionHook, pThis, pTarget, bTargetInvisible);
 }
 
 }

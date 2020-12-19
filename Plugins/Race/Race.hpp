@@ -18,7 +18,7 @@ namespace Race {
 class Race : public NWNXLib::Plugin
 {
 public:
-    Race(const Plugin::CreateParams& params);
+    Race(NWNXLib::Services::ProxyServiceList* services);
     virtual ~Race();
 
 private:
@@ -26,6 +26,7 @@ private:
 
     ArgumentStack SetRacialModifier(ArgumentStack&& args);
     ArgumentStack GetParentRace(ArgumentStack&& args);
+    ArgumentStack SetFavoredEnemyFeat(ArgumentStack&& args);
 
     enum RaceModifier
     {
@@ -77,6 +78,7 @@ private:
     unordered_map<uint16_t, pair<uint8_t, uint8_t>>                                   m_RaceSRCharGen;
     unordered_map<uint16_t, tuple<uint8_t, uint8_t, uint8_t>>                         m_RaceSR;
     unordered_map<uint16_t, std::vector<uint16_t>>                                    m_ChildRaces;
+    unordered_map<uint16_t, uint16_t>                                                 m_RaceFavoredEnemyFeat;
 
     NWNXLib::Hooking::FunctionHook* m_CheckRacialResHook;
 
@@ -90,12 +92,11 @@ private:
     static void LoadCharacterFinishHook(bool, CServerExoAppInternal*, CNWSPlayer*, int32_t, int32_t);
     static void ResetFeatRemainingUsesHook(bool, CNWSCreatureStats*);
     static void CreateDefaultQuickButtonsHook(bool, CNWSCreature*);
-    static void HandleValidateCharacter(Types::ObjectID, bool);
+    static void HandleValidateCharacter(ObjectID, bool);
     static void ValidateCharacterHook(bool, CNWSPlayer*, int32_t*);
 
-    static void SendServerToPlayerLevelUp_ConfirmationHook(bool, CNWSMessage*, Types::PlayerID, int32_t);
+    static void SendServerToPlayerLevelUp_ConfirmationHook(bool, CNWSMessage*, PlayerID, int32_t);
     static void LevelUpAutomaticHook(bool, CNWSCreatureStats*, uint8_t, int32_t, uint8_t);
-    static void GetFavoredEnemyBonusHook(bool, CNWSCreatureStats*, CNWSCreature*);
     static void GetMeetsPrestigeClassRequirementsHook(bool, CNWSCreatureStats*, CNWClass*);
     static void GetTotalEffectBonusHook(bool, CNWSCreature*, uint8_t, CNWSObject*, int32_t, int32_t, uint8_t, uint8_t, uint8_t, uint8_t, int32_t);
     static void ApplyEffectHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, int32_t);
@@ -103,6 +104,7 @@ private:
     static void GetWeaponPowerHook(bool, CNWSCreature*, CNWSObject*, int32_t);
     static void LoadRaceInfoHook(bool, CNWRules*);
     static int32_t CheckItemRaceRestrictionsHook(CNWSCreature*, CNWSItem*);
+    static int32_t GetFavoredEnemyBonusHook(CNWSCreatureStats*, CNWSCreature*);
 };
 
 }

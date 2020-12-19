@@ -43,12 +43,13 @@ std::string GetStackTrace(uint8_t levels)
         for (int i = 0; i < numCapturedFrames; ++i)
         {
             uintptr_t addr, addr2;
+            char path[64];
             char backtraceBuffer[2048];
             std::snprintf(backtraceBuffer, sizeof(backtraceBuffer), "    %s\n", resolvedFrames[i]);
-            if (std::sscanf(backtraceBuffer, "    ./nwserver-linux(+%lx) [%lx]", &addr, &addr2) == 2)
+            if (std::sscanf(backtraceBuffer, "    %63[^(](+%lx) [%lx]", path, &addr, &addr2) == 3)
             {
                 std::snprintf(backtraceBuffer, sizeof(backtraceBuffer),
-                    "    ./nwserver-linux(%s) [0x%lx]\n", ResolveAddress(addr).c_str(), addr2);
+                    "    %s(%s) [0x%lx]\n", path, ResolveAddress(addr).c_str(), addr2);
             }
             std::strncat(buffer, backtraceBuffer, sizeof(buffer)-1);
         }
@@ -75,10 +76,15 @@ std::string ResolveAddress(uintptr_t address)
     if (address > ASLR::GetRelocatedAddress(0))
         address -= ASLR::GetRelocatedAddress(0);
 
-    auto it = --s_FunctionMap.upper_bound(address);
-    char offset[64];
-    std::snprintf(offset, sizeof(offset), "+0x%lx", address - it->first);
-    return it->second + offset;
+    auto it = s_FunctionMap.upper_bound(address);
+    if (it != s_FunctionMap.begin())
+    {
+        --it;
+        char offset[64];
+        std::snprintf(offset, sizeof(offset), "+0x%lx", address - it->first);
+        return it->second + offset;
+    }
+    return "<UNKNOWN>";
 }
 
 uintptr_t GetFunctionAddress(const std::string& mangledname)

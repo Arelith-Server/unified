@@ -30,23 +30,9 @@ const int MAX_LEVEL_MAX = 60;
 
 static MaxLevel::MaxLevel* g_plugin;
 
-NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
+NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
-    return new Plugin::Info
-            {
-                    "MaxLevel",
-                    "Support for Levels 41 - 60",
-                    "orth",
-                    "plenarius@gmail.com",
-                    1,
-                    true,
-                    0
-            };
-}
-
-NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Plugin::CreateParams params)
-{
-    g_plugin = new MaxLevel::MaxLevel(params);
+    g_plugin = new MaxLevel::MaxLevel(services);
     return g_plugin;
 }
 
@@ -57,8 +43,8 @@ using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
 
-MaxLevel::MaxLevel(const Plugin::CreateParams& params)
-        : Plugin(params)
+MaxLevel::MaxLevel(Services::ProxyServiceList* services)
+        : Plugin(services)
 {
     m_maxLevel = GetServices()->m_config->Get<int>("MAX", (uint8_t)CORE_MAX_LEVEL);
     if (m_maxLevel > MAX_LEVEL_MAX)
@@ -67,13 +53,11 @@ MaxLevel::MaxLevel(const Plugin::CreateParams& params)
     if (m_maxLevel > CORE_MAX_LEVEL)
     {
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CServerExoAppInternal24GetServerInfoFromIniFileEv, void, CServerExoAppInternal *>(&GetServerInfoFromIniFileHook);
-        GetServices()->m_hooks->RequestSharedHook<Functions::_ZN8CNWRules9ReloadAllEv, void, CNWRules *>(&ReloadAllHook);
+        GetServices()->m_hooks->RequestSharedHook<Functions::_ZN10CNWSModule15LoadModuleStartE10CExoStringii, void, CNWSModule*, CExoString, int32_t, int32_t>(&LoadModuleStartHook);
         GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats10CanLevelUpEv>(&CanLevelUpHook);
         GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats22GetExpNeededForLevelUpEv>(&GetExpNeededForLevelUpHook);
-        GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats9LevelDownEP13CNWLevelStats>(&LevelDownHook);
-        m_LevelDownHook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN17CNWSCreatureStats9LevelDownEP13CNWLevelStats);
-        GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature15SummonAssociateE7CResRef10CExoStringt>(&SummonAssociateHook);
-        m_SummonAssociateHook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN12CNWSCreature15SummonAssociateE7CResRef10CExoStringt);
+        m_LevelDownHook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats9LevelDownEP13CNWLevelStats>(&LevelDownHook);
+        m_SummonAssociateHook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature15SummonAssociateE7CResRef10CExoStringt>(&SummonAssociateHook);
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN8CNWClass18LoadSpellGainTableE10CExoString, void, CNWClass *, CExoString *>(&LoadSpellGainTableHook);
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN8CNWClass19LoadSpellKnownTableE10CExoString, void, CNWClass *, CExoString *>(&LoadSpellKnownTableHook);
         GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN8CNWClass12GetSpellGainEhh>(&GetSpellGainHook);
@@ -94,9 +78,9 @@ void MaxLevel::GetServerInfoFromIniFileHook(bool before, CServerExoAppInternal* 
 }
 
 // After Rules aggregates all its information we add to our custom experience table map
-void MaxLevel::ReloadAllHook(bool before, CNWRules* pRules)
+void MaxLevel::LoadModuleStartHook(bool before, CNWSModule *pModule, CExoString, int32_t, int32_t)
 {
-    if (before || !pRules)
+    if (before || !pModule)
         return;
 
     auto *twoda = Globals::Rules()->m_p2DArrays->GetCached2DA("EXPTABLE", true);
@@ -116,6 +100,8 @@ void MaxLevel::ReloadAllHook(bool before, CNWRules* pRules)
             g_plugin->m_nExperienceTableAdded[i] = xpLevel;
         }
     }
+    if (g_plugin->m_maxLevel > CORE_MAX_LEVEL)
+        LOG_INFO("Max Level increased to %d.", g_plugin->m_maxLevel);
 }
 
 // If level is greater than 40 seek the xp_threshold from our custom map
@@ -170,6 +156,11 @@ uint32_t MaxLevel::GetExpNeededForLevelUpHook(CNWSCreatureStats *pStats)
 // If the player is at level 40 or lower we get the XP required from the normal array, otherwise we use our map
 void MaxLevel::LevelDownHook(CNWSCreatureStats *pStats, CNWLevelStats *pLevelStats)
 {
+    if (!pStats->m_bIsPC)
+    {
+        g_plugin->m_LevelDownHook->CallOriginal<void>(pStats, pLevelStats);
+        return;
+    }
     auto nXP = pStats->m_nExperience;
     int32_t totalLevels = pStats->GetLevel(false);
     uint32_t xp_threshold = 0;

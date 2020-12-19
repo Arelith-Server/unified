@@ -8,7 +8,7 @@ namespace MaxLevel {
 class MaxLevel : public NWNXLib::Plugin
 {
 public:
-    MaxLevel(const Plugin::CreateParams& params);
+    MaxLevel(NWNXLib::Services::ProxyServiceList* services);
     virtual ~MaxLevel();
 
 private:
@@ -21,7 +21,7 @@ private:
     NWNXLib::Hooking::FunctionHook* m_LevelDownHook;
     NWNXLib::Hooking::FunctionHook* m_SummonAssociateHook;
 
-    static void ReloadAllHook(bool, CNWRules* rules);
+    static void LoadModuleStartHook(bool before, CNWSModule *pModule, CExoString, int32_t, int32_t);
     static void LoadSpellGainTableHook(bool, CNWClass* pClass, CExoString *pTable);
     static void LoadSpellKnownTableHook(bool, CNWClass* pClass, CExoString *pTable);
     static uint8_t GetSpellGainHook(CNWClass*, uint8_t, uint8_t);

@@ -12,6 +12,7 @@
 #include "API/CExoArrayList.hpp"
 #include "API/CNWRules.hpp"
 #include "API/CNWClass.hpp"
+#include "API/CNWCCMessageData.hpp"
 #include "API/CNWSModule.hpp"
 #include "API/CServerExoAppInternal.hpp"
 #include "API/CFactionManager.hpp"
@@ -19,6 +20,9 @@
 #include "API/CResGFF.hpp"
 #include "API/CTwoDimArrays.hpp"
 #include "API/C2DA.hpp"
+#include "API/CNWSBarter.hpp"
+#include "API/CNWSCombatRound.hpp"
+#include "API/CEffectIconObject.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "API/Functions.hpp"
@@ -26,6 +30,7 @@
 #include "Services/Events/Events.hpp"
 #include "Services/Hooks/Hooks.hpp"
 #include "Services/PerObjectStorage/PerObjectStorage.hpp"
+#include "Services/Messaging/Messaging.hpp"
 #include "Encoding.hpp"
 
 
@@ -34,22 +39,9 @@ using namespace NWNXLib::API;
 
 static Creature::Creature* g_plugin;
 
-NWNX_PLUGIN_ENTRY Plugin::Info* PluginInfo()
+NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
-    return new Plugin::Info
-    {
-        "Creature",
-        "Functions exposing additional creature properties",
-        "various / sherincall",
-        "sherincall@gmail.com",
-        1,
-        true
-    };
-}
-
-NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Plugin::CreateParams params)
-{
-    g_plugin = new Creature::Creature(params);
+    g_plugin = new Creature::Creature(services);
     return g_plugin;
 }
 
@@ -60,9 +52,10 @@ bool Creature::s_bAdjustCasterLevel = false;
 bool Creature::s_bCasterLevelHooksInitialized = false;
 bool Creature::s_bCriticalMultiplierHooksInitialized = false;
 bool Creature::s_bCriticalRangeHooksInitialized = false;
+bool Creature::s_bResolveAttackRollHookInitialized = false;
 
-Creature::Creature(const Plugin::CreateParams& params)
-    : Plugin(params)
+Creature::Creature(Services::ProxyServiceList* services)
+    : Plugin(services)
 {
 #define REGISTER(func) \
     GetServices()->m_events->RegisterEvent(#func, \
@@ -107,6 +100,7 @@ Creature::Creature(const Plugin::CreateParams& params)
     REGISTER(SetMovementRate);
     REGISTER(GetMovementRateFactor);
     REGISTER(SetMovementRateFactor);
+    REGISTER(SetMovementRateFactorCap);
     REGISTER(SetAlignmentGoodEvil);
     REGISTER(SetAlignmentLawChaos);
     REGISTER(SetDomain);
@@ -170,6 +164,20 @@ Creature::Creature(const Plugin::CreateParams& params)
     REGISTER(SetCriticalRangeOverride);
     REGISTER(GetCriticalRangeOverride);
     REGISTER(AddAssociate);
+    REGISTER(SetLastItemCasterLevel);
+    REGISTER(GetLastItemCasterLevel);
+    REGISTER(GetArmorClassVersus);
+    REGISTER(SetEffectIconFlashing);
+    REGISTER(OverrideDamageLevel);
+    REGISTER(SetEncounter);
+    REGISTER(GetEncounter);
+    REGISTER(GetIsBartering);
+    REGISTER(GetWalkAnimation);
+    REGISTER(SetWalkAnimation);
+    REGISTER(SetAttackRollOverride);
+    REGISTER(SetParryAllAttacks);
+    REGISTER(GetNoPermanentDeath);
+    REGISTER(SetNoPermanentDeath);
 
 #undef REGISTER
 }
@@ -180,7 +188,7 @@ Creature::~Creature()
 
 CNWSCreature *Creature::creature(ArgumentStack& args)
 {
-    const auto creatureId = Services::Events::ExtractArgument<Types::ObjectID>(args);
+    const auto creatureId = Services::Events::ExtractArgument<ObjectID>(args);
 
     if (creatureId == Constants::OBJECT_INVALID)
     {
@@ -360,7 +368,6 @@ ArgumentStack Creature::GetMeetsFeatRequirements(ArgumentStack&& args)
         CExoArrayList<uint16_t> unused = {};
 
         retVal = pCreature->m_pStats->FeatRequirementsMet(static_cast<uint16_t>(feat), &unused);
-        free(unused.element);
     }
     return Services::Events::Arguments(retVal);
 }
@@ -1049,6 +1056,12 @@ ArgumentStack Creature::SetMovementRate(ArgumentStack&& args)
     if (auto *pCreature = creature(args))
     {
         const auto rate = Services::Events::ExtractArgument<int32_t>(args);
+
+        if (pCreature->m_pStats->m_nMovementRate == Constants::MovementRate::Immobile)
+        {
+            pCreature->m_nAIState |= Constants::AIState::CanUseLegs;
+        }
+
         pCreature->m_pStats->SetMovementRate(rate);
     }
     return Services::Events::Arguments();
@@ -1071,6 +1084,60 @@ ArgumentStack Creature::SetMovementRateFactor(ArgumentStack&& args)
         const float factor = Services::Events::ExtractArgument<float>(args);
         pCreature->SetMovementRateFactor(factor);
     }
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::SetMovementRateFactorCap(ArgumentStack&& args)
+{
+    static NWNXLib::Hooking::FunctionHook* pGetMovementRateFactor_hook;
+    static NWNXLib::Hooking::FunctionHook* pSetMovementRateFactor_hook;
+
+    if (!pGetMovementRateFactor_hook)
+    {
+        GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature21GetMovementRateFactorEv>(
+            +[](CNWSCreature *pThis) -> float
+            {
+                auto pRate = g_plugin->GetServices()->m_perObjectStorage->Get<float>(pThis, "MOVEMENT_RATE_FACTOR");
+                return pRate ? *pRate : pGetMovementRateFactor_hook->CallOriginal<float>(pThis);
+            });
+
+        pGetMovementRateFactor_hook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN12CNWSCreature21GetMovementRateFactorEv);
+    }
+
+    if (!pSetMovementRateFactor_hook)
+    {
+        GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature21SetMovementRateFactorEf>(
+            +[](CNWSCreature *pThis, float fRate) -> void
+            {
+                // Always set the default so it goes back to normal if cap is reset
+                pSetMovementRateFactor_hook->CallOriginal<void>(pThis, fRate);
+
+                auto pCap = g_plugin->GetServices()->m_perObjectStorage->Get<float>(pThis, "MOVEMENT_RATE_FACTOR_CAP");
+                if (pCap)
+                {
+                    if (fRate > *pCap) { fRate = *pCap; }
+                    g_plugin->GetServices()->m_perObjectStorage->Set(pThis, "MOVEMENT_RATE_FACTOR", fRate);
+                }
+            });
+
+        pSetMovementRateFactor_hook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN12CNWSCreature21SetMovementRateFactorEf);
+    }
+
+    if (auto *pCreature = creature(args))
+    {
+        const float fCap = Services::Events::ExtractArgument<float>(args);
+
+        if (fCap < 0.0) // remove the override
+        {
+            g_plugin->GetServices()->m_perObjectStorage->Remove(pCreature, "MOVEMENT_RATE_FACTOR");
+            g_plugin->GetServices()->m_perObjectStorage->Remove(pCreature, "MOVEMENT_RATE_FACTOR_CAP");
+        }
+        else
+        {
+            g_plugin->GetServices()->m_perObjectStorage->Set(pCreature, "MOVEMENT_RATE_FACTOR_CAP", fCap, true);
+        }
+    }
+
     return Services::Events::Arguments();
 }
 
@@ -1405,7 +1472,7 @@ ArgumentStack Creature::SetWalkRateCap(ArgumentStack&& args)
 
     if (!pGetWalkRate_hook)
     {
-        GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature11GetWalkRateEv>(
+        pGetWalkRate_hook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature11GetWalkRateEv>(
             +[](CNWSCreature *pThis) -> float
             {
                 float fWalkRate = pGetWalkRate_hook->CallOriginal<float>(pThis);
@@ -1414,7 +1481,6 @@ ArgumentStack Creature::SetWalkRateCap(ArgumentStack&& args)
                 return (cap && *cap < fWalkRate) ? *cap : fWalkRate;
 
             });
-        pGetWalkRate_hook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN12CNWSCreature11GetWalkRateEv);
     }
 
     if (auto *pCreature = creature(args))
@@ -1523,7 +1589,7 @@ ArgumentStack Creature::LevelUp(ArgumentStack&& args)
     {
         try
         {
-            GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats10CanLevelUpEv>(
+            pCanLevelUp_hook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats10CanLevelUpEv>(
                     +[](CNWSCreatureStats *pThis) -> int32_t
                     {
                         if (bSkipLevelUpValidation)
@@ -1534,14 +1600,13 @@ ArgumentStack Creature::LevelUp(ArgumentStack&& args)
                         }
                         return pCanLevelUp_hook->CallOriginal<int32_t>(pThis);
                     });
-            pCanLevelUp_hook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN17CNWSCreatureStats10CanLevelUpEv);
         }
         catch (...)
         {
             LOG_NOTICE("NWNX_MaxLevel will manage CanLevelUp.");
         }
 
-        GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats15ValidateLevelUpEP13CNWLevelStatshhh>(
+        pValidateLevelUp_hook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats15ValidateLevelUpEP13CNWLevelStatshhh>(
                 +[](CNWSCreatureStats *pThis, CNWLevelStats *pLevelStats, uint8_t nDomain1, uint8_t nDomain2, uint8_t nSchool) -> uint32_t
                 {
                     if (bSkipLevelUpValidation)
@@ -1553,7 +1618,6 @@ ArgumentStack Creature::LevelUp(ArgumentStack&& args)
                     }
                     return pValidateLevelUp_hook->CallOriginal<uint32_t>(pThis, pLevelStats, nDomain1, nDomain2, nSchool);
                 });
-        pValidateLevelUp_hook = GetServices()->m_hooks->FindHookByAddress(Functions::_ZN17CNWSCreatureStats15ValidateLevelUpEP13CNWLevelStatshhh);
     }
 
     if (auto *pCreature = creature(args))
@@ -1741,7 +1805,7 @@ ArgumentStack Creature::GetTotalEffectBonus(ArgumentStack&& args)
     {
         CNWSObject *versus = NULL;
         const auto bonusType = Services::Events::ExtractArgument<int32_t>(args);
-        const auto versus_id = Services::Events::ExtractArgument<Types::ObjectID>(args);
+        const auto versus_id = Services::Events::ExtractArgument<ObjectID>(args);
         if (versus_id != Constants::OBJECT_INVALID)
         {
             CGameObject *pObject = API::Globals::AppManager()->m_pServerExoApp->GetGameObject(versus_id);
@@ -1780,6 +1844,12 @@ ArgumentStack Creature::SetOriginalName(ArgumentStack&& args)
         {
             ASSERT_OR_THROW(!name.empty());
             pCreature->m_pStats->m_lsFirstName = locName;
+        }
+
+        if (pCreature->m_bPlayerCharacter || pCreature->m_pStats->m_bIsPC || pCreature->m_pStats->m_bIsDMCharacterFile)
+        {
+            g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_CREATURE_ORIGINALNAME_SIGNAL",
+                                                                   {NWNXLib::Utils::ObjectIDToString(pCreature->m_idSelf)});
         }
     }
 
@@ -2158,7 +2228,7 @@ ArgumentStack Creature::JumpToLimbo(ArgumentStack&& args)
 {
     if (auto *pCreature = creature(args))
     {
-        if (!pCreature->m_bPlayerCharacter && !pCreature->m_pStats->m_bIsPC && !pCreature->m_pStats->m_bIsDM)
+        if (!pCreature->m_bPlayerCharacter && !pCreature->m_pStats->m_bIsPC && !pCreature->m_pStats->m_bIsDMCharacterFile)
         {
             pCreature->RemoveFromArea();
             Utils::GetModule()->AddObjectToLimbo(pCreature->m_idSelf);
@@ -2464,7 +2534,7 @@ ArgumentStack Creature::AddAssociate(ArgumentStack&& args)
 {
     if (auto* pCreature = creature(args))
     {
-        auto oidAssociate = Services::Events::ExtractArgument<Types::ObjectID>(args);
+        auto oidAssociate = Services::Events::ExtractArgument<ObjectID>(args);
           ASSERT_OR_THROW(oidAssociate != Constants::OBJECT_INVALID);
         auto associateType = Services::Events::ExtractArgument<int32_t>(args);
           ASSERT_OR_THROW(associateType > Constants::AssociateType::None);
@@ -2477,6 +2547,438 @@ ArgumentStack Creature::AddAssociate(ArgumentStack&& args)
             else
                 LOG_WARNING("AddAssociate: Cannot add PCs as associate");
         }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::SetEffectIconFlashing(ArgumentStack&& args)
+{
+    if (auto* pCreature = creature(args))
+    {
+        auto iconId = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(iconId >= 0);
+          ASSERT_OR_THROW(iconId <= 255);
+        auto flashing = !!Services::Events::ExtractArgument<int32_t>(args);
+
+        for (auto* effectIconObject : pCreature->m_aEffectIcons)
+        {
+            if (effectIconObject->m_nIcon == iconId && effectIconObject->m_nPlayerBar)
+            {
+                effectIconObject->m_bFlashing = flashing;
+            }
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::OverrideDamageLevel(ArgumentStack&& args)
+{
+    static NWNXLib::Hooking::FunctionHook* pGetDamageLevelHook;
+    if (!pGetDamageLevelHook)
+    {
+        pGetDamageLevelHook = g_plugin->GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN10CNWSObject14GetDamageLevelEv>(
+            +[](CNWSObject *thisPtr) -> uint8_t
+            {
+                auto damageLevel = g_plugin->GetServices()->m_perObjectStorage->Get<int>(thisPtr->m_idSelf, "CREATURE_DAMAGE_LEVEL_OVERRIDE");
+                return damageLevel ? *damageLevel : pGetDamageLevelHook->CallOriginal<uint8_t>(thisPtr);
+            });
+    }
+
+    if (auto* pCreature = creature(args))
+    {
+        auto damageLevel = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(damageLevel <= 255);
+
+        if (damageLevel < 0)
+            GetServices()->m_perObjectStorage->Remove(pCreature->m_idSelf, "CREATURE_DAMAGE_LEVEL_OVERRIDE");
+        else
+            GetServices()->m_perObjectStorage->Set(pCreature->m_idSelf, "CREATURE_DAMAGE_LEVEL_OVERRIDE", damageLevel);
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::SetEncounter(ArgumentStack&& args)
+{
+    if (auto* pCreature = creature(args))
+    {
+        auto encounterId = Services::Events::ExtractArgument<ObjectID>(args);
+
+        if (encounterId == Constants::OBJECT_INVALID || (Globals::AppManager()->m_pServerExoApp->GetEncounterByGameObjectID(encounterId)))
+        {
+            pCreature->m_oidEncounter = encounterId;
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::GetEncounter(ArgumentStack&& args)
+{
+    ObjectID retVal = Constants::OBJECT_INVALID;
+
+    if (auto* pCreature = creature(args))
+    {
+        retVal = pCreature->m_oidEncounter;
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::GetIsBartering(ArgumentStack&& args)
+{
+    int32_t retVal = false;
+
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->m_pBarterInfo != nullptr && pCreature->m_pBarterInfo->m_bWindowOpen;
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::SetLastItemCasterLevel(ArgumentStack&& args)
+{
+    if (auto *pCreature = creature(args))
+    {
+        auto casterLvl = Services::Events::ExtractArgument<int32_t>(args);
+          ASSERT_OR_THROW(casterLvl >= 0);
+        pCreature->m_nLastItemCastSpellLevel = casterLvl;
+    }
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::GetLastItemCasterLevel(ArgumentStack&& args)
+{
+    int32_t retVal = 0;
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->m_nLastItemCastSpellLevel;
+    }
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::GetArmorClassVersus(ArgumentStack&& args)
+{
+    int32_t retVal = -255;
+    if (auto *pCreature = creature(args))
+    {
+        auto *pVersus = creature(args);
+        auto bTouchAttack = Services::Events::ExtractArgument<int32_t>(args);
+        retVal = pCreature->m_pStats->GetArmorClassVersus(pVersus, bTouchAttack);
+    }
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::GetWalkAnimation(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->m_nWalkAnimation;
+    }
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::SetWalkAnimation(ArgumentStack&& args)
+{
+    if (auto* pCreature = creature(args))
+    {
+        auto animation = Services::Events::ExtractArgument<int32_t>(args);
+
+        if (animation >= 0)
+        {
+            pCreature->m_nWalkAnimation = animation;
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+void Creature::DoResolveAttackHook(CNWSCreature* thisPtr, CNWSObject* pTarget)
+{
+    auto nDiceRoll = Globals::Rules()->RollDice(1, 20);
+    auto pAttackData = thisPtr->m_pcCombatRound->GetAttack(thisPtr->m_pcCombatRound->m_nCurrentAttack);
+    auto nAttackMod = 0;
+    auto nAutoFailOnOne = true;
+    auto nAutoSucceedOnTwenty = true;
+    auto rollIter = g_plugin->m_RollModifier.find(nDiceRoll);
+    if (rollIter != g_plugin->m_RollModifier.end())
+    {
+        auto modIterCreature = rollIter->second.find(thisPtr->m_idSelf);
+        if (modIterCreature != rollIter->second.end())
+        {
+            nAttackMod += modIterCreature->second;
+            if (nDiceRoll == 1)
+                nAutoFailOnOne = false;
+            else if (nDiceRoll == 20)
+                nAutoSucceedOnTwenty = false;
+        }
+        else
+        {
+            auto modIterAll = rollIter->second.find(Constants::OBJECT_INVALID);
+            if (modIterAll != rollIter->second.end())
+            {
+                nAttackMod += modIterAll->second;
+                if (nDiceRoll == 1)
+                    nAutoFailOnOne = false;
+                else if (nDiceRoll == 20)
+                    nAutoSucceedOnTwenty = false;
+            }
+        }
+    }
+
+    CNWSCreatureStats *pThisStats = thisPtr->m_pStats;
+    CNWSCreature *pTargetCreature = Utils::AsNWSCreature(pTarget);
+
+    if (pTargetCreature)
+    {
+        //Test Sneak
+        thisPtr->ResolveSneakAttack(pTargetCreature);
+        thisPtr->ResolveDeathAttack(pTargetCreature);
+    }
+
+    //Coup de grace
+    if (pAttackData->m_bCoupDeGrace)
+    {
+        pAttackData->m_nToHitRoll = 20;
+        pAttackData->m_nAttackResult = 7;
+        pAttackData->m_nToHitMod = pThisStats->GetAttackModifierVersus(pTargetCreature);
+        return;
+    }
+
+    if (*Globals::EnableCombatDebugging())
+    {
+        auto sInfo = pThisStats->GetFullName() + CExoString(" Attack Roll: ") +
+                     CExoString(std::to_string(nDiceRoll));
+        if (nAttackMod < 0)
+            sInfo = sInfo + CExoString(" - ") + CExoString(std::to_string(nAttackMod * -1)) +
+                    CExoString(" (Roll Modifier)");
+        else if (nAttackMod > 0)
+            sInfo = sInfo + CExoString(" + ") + CExoString(std::to_string(nAttackMod)) +
+                    CExoString(" (Roll Modifier)");
+        pAttackData->m_sAttackDebugText = sInfo;
+    }
+
+    //Update rolls
+    pAttackData->m_nToHitMod = pThisStats->GetAttackModifierVersus(pTargetCreature);
+    pAttackData->m_nToHitRoll = nDiceRoll;
+    pAttackData->m_nToHitMod += nAttackMod;
+
+    auto nModifiedRoll = pAttackData->m_nToHitRoll + pAttackData->m_nToHitMod;
+    auto nAC = !pTargetCreature ? 0 : pTargetCreature->m_pStats->GetArmorClassVersus(thisPtr, 0);
+    bool bHit = nModifiedRoll >= nAC;
+
+    //Test parry/deflect/concealment
+    if (thisPtr->ResolveDefensiveEffects(pTarget, bHit))
+    {
+        return;
+    }
+
+    //Parry
+    if (pTargetCreature && pAttackData->m_nToHitRoll != 20 &&
+        pTargetCreature->m_nCombatMode == 1 &&
+        pTargetCreature->m_pcCombatRound->m_nParryActions &&
+        !pTargetCreature->m_pcCombatRound->m_bRoundPaused &&
+        pTargetCreature->m_nState != 6 && !pAttackData->m_bRangedAttack &&
+        !(pTargetCreature->GetRangeWeaponEquipped()))
+    {
+
+        auto nParrySkill = pTargetCreature->m_pStats->GetSkillRank(Constants::Skill::Parry, thisPtr,
+                                                                   0);
+        auto nParryCheck = Globals::Rules()->RollDice(1, 20) + nParrySkill - nModifiedRoll;
+        pTargetCreature->m_pcCombatRound->m_nParryActions--;
+
+        if (nParryCheck >= 0)
+        {
+            pAttackData->m_nAttackResult = 2;
+            if (nParryCheck >= Globals::Rules()->GetRulesetIntEntry("PARRY_RIPOSTE_DIFFERENCE", 10))
+                pTargetCreature->m_pcCombatRound->AddParryAttack(thisPtr->m_idSelf);
+            return;
+        }
+
+        pTargetCreature->m_pcCombatRound->AddParryIndex();
+    }
+
+    if (pAttackData->m_nToHitRoll == 1 && nAutoFailOnOne)
+    {
+        pAttackData->m_nAttackResult = 4;
+        pAttackData->m_nMissedBy = 1;
+        return;
+    }
+    else if ((pAttackData->m_nToHitRoll != 20 || !nAutoSucceedOnTwenty) && nModifiedRoll < nAC)
+    {
+        pAttackData->m_nAttackResult = 4;
+        pAttackData->m_nMissedBy = static_cast<char>(nModifiedRoll - nAC);
+        if (pAttackData->m_nMissedBy < 0)
+            pAttackData->m_nMissedBy = static_cast<char>(-pAttackData->m_nMissedBy);
+        return;
+    }
+
+    //If attack connects
+    auto nCritThreat = pThisStats->GetCriticalHitRoll(thisPtr->m_pcCombatRound->GetOffHandAttack());
+
+    //Critical hit check
+    if (nCritThreat <= pAttackData->m_nToHitRoll)
+    {
+        pAttackData->m_nThreatRoll = Globals::Rules()->RollDice(1, 20);
+        pAttackData->m_bCriticalThreat = 1;
+        //Crit confirmed
+        if (pAttackData->m_nThreatRoll + pAttackData->m_nToHitMod >= nAC)
+        {
+            if (!pTargetCreature)
+            {
+                pAttackData->m_nAttackResult = 3;
+                return;
+            }
+            auto nDifficultySetting = Globals::AppManager()->m_pServerExoApp->GetDifficultyOption(
+                    0);
+            //Checking very easy difficulty, monster attack on PC or controlled familiar
+            if (nDifficultySetting == 1 && !thisPtr->m_bPlayerCharacter &&
+                (pTargetCreature->m_bPlayerCharacter || pTargetCreature->GetIsPossessedFamiliar())
+                && !thisPtr->GetIsPossessedFamiliar())
+            {
+                pAttackData->m_nAttackResult = 1;
+                return;
+            }
+
+            if (!pTargetCreature->m_pStats->GetEffectImmunity(Constants::ImmunityType::CriticalHit,
+                                                              thisPtr, 1))
+            {
+                pAttackData->m_nAttackResult = 3;
+                return;
+            }
+            auto pMessage = new CNWCCMessageData();
+            pMessage->SetObjectID(0, pTarget->m_idSelf);
+            pMessage->SetInteger(0, 126);
+            pAttackData->m_alstPendingFeedback.Add(pMessage);
+        }
+    }
+
+    //Regular hit
+    pAttackData->m_nAttackResult = 1;
+}
+
+bool Creature::InitResolveAttackRollHook()
+{
+    static NWNXLib::Hooking::FunctionHook* pResolveAttackRoll_hook;
+    if (!pResolveAttackRoll_hook)
+    {
+        try
+        {
+            g_plugin->GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature17ResolveAttackRollEP10CNWSObject>(
+                    +[](CNWSCreature *thisPtr, CNWSObject *pTarget) -> void
+                    {
+                        auto pTargetCreature = Utils::AsNWSCreature(pTarget);
+                        int32_t bRoundPaused = false;
+                        if (g_plugin->m_ParryAllAttacks[thisPtr->m_idSelf] ||
+                        g_plugin->m_ParryAllAttacks[Constants::OBJECT_INVALID])
+                        {
+                            if (auto *pCreature = pTargetCreature)
+                            {
+                                if (pCreature->m_nCombatMode == Constants::CombatMode::Parry &&
+                                    pCreature->m_pcCombatRound->m_nParryActions > 0 &&
+                                    !pCreature->GetRangeWeaponEquipped())
+                                {
+                                    bRoundPaused = pCreature->m_pcCombatRound->m_bRoundPaused;
+                                    pCreature->m_pcCombatRound->m_bRoundPaused = false;
+                                }
+                            }
+                        }
+
+                        DoResolveAttackHook(thisPtr, pTarget);
+
+                        if (g_plugin->m_ParryAllAttacks[pTarget->m_idSelf] ||
+                            g_plugin->m_ParryAllAttacks[Constants::OBJECT_INVALID])
+                        {
+                            if (bRoundPaused)
+                                pTargetCreature->m_pcCombatRound->m_bRoundPaused = true;
+                        }
+
+                    });
+            pResolveAttackRoll_hook = g_plugin->GetServices()->m_hooks->FindHookByAddress(
+                    Functions::_ZN12CNWSCreature17ResolveAttackRollEP10CNWSObject);
+        }
+        catch (...)
+        {
+            LOG_ERROR("Can't hook ResolveAttackRoll, is ParryAllAttacks Tweak turned on?");
+            return false;
+        }
+    }
+    s_bResolveAttackRollHookInitialized = true;
+    return true;
+}
+
+ArgumentStack Creature::SetAttackRollOverride(ArgumentStack&& args)
+{
+    if (!s_bResolveAttackRollHookInitialized)
+        if (!InitResolveAttackRollHook())
+            return Services::Events::Arguments();
+
+    const auto creatureId = Services::Events::ExtractArgument<ObjectID>(args);
+    auto nDie = Services::Events::ExtractArgument<int32_t>(args);
+    const auto nModifier = Services::Events::ExtractArgument<int32_t>(args);
+
+    if (nDie < 1 || 20 < nDie)
+    {
+        LOG_ERROR("Dice roll must be set between 1 and 20!");
+    }
+    else
+    {
+        if (creatureId == Constants::OBJECT_INVALID)
+        {
+            g_plugin->m_RollModifier[nDie][Constants::OBJECT_INVALID] = nModifier;
+        }
+        else
+        {
+            g_plugin->m_RollModifier[nDie][Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(creatureId)->m_idSelf] = nModifier;
+        }
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::SetParryAllAttacks(ArgumentStack&& args)
+{
+    if (!s_bResolveAttackRollHookInitialized)
+        if (!InitResolveAttackRollHook())
+            return Services::Events::Arguments();
+
+    const auto creatureId = Services::Events::ExtractArgument<ObjectID>(args);
+    const auto bParry = !!Services::Events::ExtractArgument<int32_t>(args);
+    if (creatureId == Constants::OBJECT_INVALID)
+    {
+        g_plugin->m_ParryAllAttacks[Constants::OBJECT_INVALID] = bParry;
+    }
+    else
+    {
+        g_plugin->m_ParryAllAttacks[Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(creatureId)->m_idSelf] = bParry;
+    }
+
+    return Services::Events::Arguments();
+}
+
+ArgumentStack Creature::GetNoPermanentDeath(ArgumentStack&& args)
+{
+    int32_t retVal = -1;
+
+    if (auto *pCreature = creature(args))
+    {
+        retVal = pCreature->m_bNoPermDeath;
+    }
+
+    return Services::Events::Arguments(retVal);
+}
+
+ArgumentStack Creature::SetNoPermanentDeath(ArgumentStack&& args)
+{
+    if (auto *pCreature = creature(args))
+    {
+        const auto noPermanentDeath = !!Services::Events::ExtractArgument<int32_t>(args);
+
+        pCreature->m_bNoPermDeath = noPermanentDeath;
     }
 
     return Services::Events::Arguments();
