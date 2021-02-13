@@ -1,10 +1,7 @@
 #pragma once
 
-#include "Plugin.hpp"
-#include "Services/Events/Events.hpp"
-#include "Services/Hooks/Hooks.hpp"
-
-using ArgumentStack = NWNXLib::Services::Events::ArgumentStack;
+#include "nwnx.hpp"
+using ArgumentStack = NWNXLib::Events::ArgumentStack;
 
 namespace Util {
 
@@ -36,6 +33,9 @@ private:
     ArgumentStack AddNSSFile                    (ArgumentStack&& args);
     ArgumentStack RemoveNWNXResourceFile        (ArgumentStack&& args);
     ArgumentStack SetInstructionLimit           (ArgumentStack&& args);
+    ArgumentStack GetInstructionLimit           (ArgumentStack&& args);
+    ArgumentStack SetInstructionsExecuted       (ArgumentStack&& args);
+    ArgumentStack GetInstructionsExecuted       (ArgumentStack&& args);
     ArgumentStack RegisterServerConsoleCommand  (ArgumentStack&& args);
     ArgumentStack UnregisterServerConsoleCommand(ArgumentStack&& args);
     ArgumentStack PluginExists                  (ArgumentStack&& args);
@@ -49,6 +49,7 @@ private:
     ArgumentStack GetScriptParamIsSet           (ArgumentStack&& args);
     ArgumentStack SetDawnHour                   (ArgumentStack&& args);
     ArgumentStack SetDuskHour                   (ArgumentStack&& args);
+    ArgumentStack GetHighResTimeStamp           (ArgumentStack&& args);
 
     size_t m_resRefIndex;
     std::vector<std::string> m_listResRefs;

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Plugin.hpp"
+#include "nwnx.hpp"
 #include "API/ALL_CLASSES.hpp"
+#include "API/Globals.hpp"
 
 namespace DotNET {
 
@@ -15,6 +16,8 @@ private:
     static inline DotNET* Instance;
 
     static bool InitThunks();
+
+    static inline std::vector<std::unique_ptr<NWNXLib::Hooks::FunctionHook>> s_managed_hooks;
 
     // Bootstrap functions
     using MainLoopHandlerType  = void (*)(uint64_t);
@@ -31,8 +34,13 @@ private:
     };
     static inline AllHandlers Handlers;
 
+    static void RegisterHandlers(AllHandlers* handlers, unsigned size);
+
+    // Interop functions
     static uintptr_t GetFunctionPointer(const char *name);
-    static void RegisterHandlers(AllHandlers *handlers, unsigned size);
+    static void* RequestHook(uintptr_t address, void* managedFuncPtr, int32_t order);
+    static void ReturnHook(void* trampoline);
+    static NWNXLib::API::Globals::NWNXExportedGlobals GetNWNXExportedGlobals();
 
     // NWScript VM functions
     static inline uint32_t PushedCount = 0;
