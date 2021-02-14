@@ -1,15 +1,13 @@
 #pragma once
 
-#include "Plugin.hpp"
-#include "Services/Events/Events.hpp"
-#include "Services/Hooks/Hooks.hpp"
+#include "nwnx.hpp"
 #include <memory>
 #include <stack>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-using ArgumentStack = NWNXLib::Services::Events::ArgumentStack;
+using ArgumentStack = NWNXLib::Events::ArgumentStack;
 struct bypassRed
 {
     uint16_t m_nPropertyName;
@@ -61,14 +59,13 @@ private: // Structures
     using EventMapType = std::unordered_map<std::string, std::vector<std::string>>;
 
 private:
-    NWNXLib::Hooking::FunctionHook* m_GetEffectImmunityHook;
-    NWNXLib::Services::Events::ArgumentStack OnSubscribeEvent(NWNXLib::Services::Events::ArgumentStack&& args);
-    NWNXLib::Services::Events::ArgumentStack OnPushEventData(NWNXLib::Services::Events::ArgumentStack&& args);
-    NWNXLib::Services::Events::ArgumentStack OnSignalEvent(NWNXLib::Services::Events::ArgumentStack&& args);
-    NWNXLib::Services::Events::ArgumentStack OnGetEventData(NWNXLib::Services::Events::ArgumentStack&& args);
-    NWNXLib::Services::Events::ArgumentStack OnSkipEvent(NWNXLib::Services::Events::ArgumentStack&& args);
-    NWNXLib::Services::Events::ArgumentStack OnEventResult(NWNXLib::Services::Events::ArgumentStack&& args);
-    NWNXLib::Services::Events::ArgumentStack OnGetCurrentEvent(NWNXLib::Services::Events::ArgumentStack&& args);
+    ArgumentStack OnSubscribeEvent(ArgumentStack&& args);
+    ArgumentStack OnPushEventData(ArgumentStack&& args);
+    ArgumentStack OnSignalEvent(ArgumentStack&& args);
+    ArgumentStack OnGetEventData(ArgumentStack&& args);
+    ArgumentStack OnSkipEvent(ArgumentStack&& args);
+    ArgumentStack OnEventResult(ArgumentStack&& args);
+    ArgumentStack OnGetCurrentEvent(ArgumentStack&& args);
     ArgumentStack GetWeaponPower(ArgumentStack&& args);
     ArgumentStack GetAttackModifierVersus(ArgumentStack&& args);
     ArgumentStack ResolveDefensiveEffects(ArgumentStack&& args);
@@ -81,8 +78,8 @@ private:
     ArgumentStack SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     CNWSObject *object(ArgumentStack& args);
-    static void ReportErrorHook(bool, CNWVirtualMachineCommands*, CExoString, int32_t);
-    static void WriteToLogFileHook(bool, CExoDebugInternal*, CExoString*);
+    static void ReportErrorHook(CNWVirtualMachineCommands*, CExoString*, int32_t);
+    static void WriteToLogFileHook(CExoDebugInternal*, CExoString*);
     static bool s_bSendError;
     static void SendWebHookHTTPS(const char* message);
     static std::string s_sHost;
@@ -90,10 +87,10 @@ private:
     static std::string s_sAdden;
     static uint8_t s_iMaterial;
     ArgumentStack SetWebhook(ArgumentStack&& args);
-    static void OnItemPropertyAppliedHook(bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL);
-    static void OnApplyDamageReductionHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
-    static void OnApplyEffectImmunityHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
-    static void DoDamageReductionHook(bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL);
+    static int32_t OnItemPropertyAppliedHook(CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL);
+    //static void OnApplyDamageReductionHook(bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
+    static int32_t OnApplyEffectImmunityHook(CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL);
+    //static void DoDamageReductionHook(bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL);
     static BOOL GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats);
 
     // Pushes a brand new event data onto the event data stack, set up with the correct defaults.
@@ -112,7 +109,6 @@ private:
     int32_t bypassEffectImm;
     std::vector<int32_t> polymorph;
     static int32_t CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature*);
-    NWNXLib::Hooking::FunctionHook* pGetUseMonkAbilities_hook;
 
 };
 
