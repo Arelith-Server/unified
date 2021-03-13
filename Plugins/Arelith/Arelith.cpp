@@ -400,13 +400,13 @@ NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 
 void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *message, int32_t error)
 {
+    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, message, error);
     if(s_sHost.empty() || s_sOrigPath.empty())
     {
         LOG_INFO("Host or path was empty.");
         return;
     }
     s_bSendError=true;
-    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, message, error);
 }
 
 void Arelith::WriteToLogFileHook(CExoDebugInternal* pExoDebugInternal, CExoString* message)
@@ -416,8 +416,9 @@ void Arelith::WriteToLogFileHook(CExoDebugInternal* pExoDebugInternal, CExoStrin
     {
         SendWebHookHTTPS(message->CStr());
         s_bSendError=false;
-        s_WriteToLogFileHook->CallOriginal<void>(pExoDebugInternal, message);
     }
+
+    s_WriteToLogFileHook->CallOriginal<void>(pExoDebugInternal, message);
 }
 
 std::string escape_json(const std::string &s) {
