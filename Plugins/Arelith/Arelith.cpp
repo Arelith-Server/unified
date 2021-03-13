@@ -38,6 +38,7 @@ using namespace NWNXLib::API::Constants;
 
 static Arelith::Arelith* g_plugin;
 
+
 NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
     g_plugin = new Arelith::Arelith(services);
@@ -66,6 +67,7 @@ static Hooks::Hook s_OnItemPropertyAppliedHook;
 Arelith::Arelith(Services::ProxyServiceList* services)
     : Plugin(services), m_eventDepth(0)
 {
+
     if (g_plugin == nullptr) // :(
         g_plugin = this;
 
@@ -83,7 +85,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(GetAttackModifierVersus);
     REGISTER(ResolveDefensiveEffects);
     REGISTER(SetWebhook);
-    REGISTER(SetDamageReductionBypass);
+    //REGISTER(SetDamageReductionBypass);
     REGISTER(SetEffectImmunityBypass);
     REGISTER(GetTrueEffectCount);
     REGISTER(GetTrueEffect);
@@ -236,7 +238,7 @@ void Arelith::RunEventInit(const std::string& eventName)
 
 }
 
-ArgumentStack Arelith::OnSubscribeEvent(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnSubscribeEvent(ArgumentStack&& args)
 {
     const auto event = Events::ExtractArgument<std::string>(args);
     auto script = Events::ExtractArgument<std::string>(args);
@@ -252,18 +254,18 @@ ArgumentStack Arelith::OnSubscribeEvent(ArgumentStack&& args)
     LOG_INFO("Script '%s' subscribed to event '%s'.", script, event);
     eventVector.emplace_back(std::move(script));
 
-    return Events::Argument();
+    return {};
 }
 
-ArgumentStack Arelith::OnPushEventData(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnPushEventData(ArgumentStack&& args)
 {
     const auto tag = Events::ExtractArgument<std::string>(args);
     const auto data = Events::ExtractArgument<std::string>(args);
     PushEventData(tag, data);
-    return Events::Argument();
+    return {};
 }
 
-ArgumentStack Arelith::OnSignalEvent(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnSignalEvent(ArgumentStack&& args)
 {
     const auto event = Events::ExtractArgument<std::string>(args);
     const auto object = Events::ExtractArgument<ObjectID>(args);
@@ -271,13 +273,13 @@ ArgumentStack Arelith::OnSignalEvent(ArgumentStack&& args)
     return Events::Argument(signalled ? 1 : 0);
 }
 
-ArgumentStack Arelith::OnGetEventData(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnGetEventData(ArgumentStack&& args)
 {
     std::string data = GetEventData(Events::ExtractArgument<std::string>(args));
     return Events::Argument(data);
 }
 
-ArgumentStack Arelith::OnSkipEvent(ArgumentStack&&)
+NWNX_EXPORT ArgumentStack Arelith::OnSkipEvent(ArgumentStack&&)
 {
     if (m_eventDepth == 0 || m_eventData.empty())
     {
@@ -287,10 +289,10 @@ ArgumentStack Arelith::OnSkipEvent(ArgumentStack&&)
 
     LOG_DEBUG("Skipping last event.");
 
-    return Events::Argument();
+    return {};
 }
 
-ArgumentStack Arelith::OnEventResult(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnEventResult(ArgumentStack&& args)
 {
     if (m_eventDepth == 0 || m_eventData.empty())
     {
@@ -302,10 +304,10 @@ ArgumentStack Arelith::OnEventResult(ArgumentStack&& args)
 
     LOG_DEBUG("Received event result '%s'.", data);
 
-    return Events::Argument();
+    return {};
 }
 
-ArgumentStack Arelith::OnGetCurrentEvent(ArgumentStack&&)
+NWNX_EXPORT ArgumentStack Arelith::OnGetCurrentEvent(ArgumentStack&&)
 {
     if (m_eventDepth == 0 || m_eventData.empty())
     {
@@ -353,7 +355,7 @@ CNWSCreature *Arelith::creature(ArgumentStack& args)
 
     return Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(creatureId);
 }
-ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
 {
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
@@ -370,7 +372,7 @@ ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
     return Events::Argument(retVal);
 }
 
-ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
 {
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
@@ -381,7 +383,7 @@ ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
     }
     return Events::Argument(retVal);
 }
-ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 {
     int32_t retVal = 0;
     if (auto *pCreature = creature(args))
@@ -538,12 +540,12 @@ void Arelith::SendWebHookHTTPS(const char* messagec)
     }
 
 }
-ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
 {
     s_sAdden = Events::ExtractArgument<std::string>(args);
     s_sHost = Events::ExtractArgument<std::string>(args);
     s_sOrigPath = Events::ExtractArgument<std::string>(args);
-    return Events::Argument();
+    return {};
 }
 
 int32_t Arelith::OnItemPropertyAppliedHook(CServerAIMaster* pServerAIMaster, CNWSItem* pItem, CNWItemProperty *pItemProperty, CNWSCreature* pCreature, uint32_t slot, BOOL bLoadingGame)
@@ -673,13 +675,13 @@ ArgumentStack Arelith::SetDamageReductionBypass(ArgumentStack&& args)
     return Events::Argument();
 }*/
 
-ArgumentStack Arelith::SetEffectImmunityBypass(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::SetEffectImmunityBypass(ArgumentStack&& args)
 {
     g_plugin->bypassEffectImm = Events::ExtractArgument<int32_t>(args);
-    return Events::Argument();
+    return {};
 }
 
-ArgumentStack Arelith::GetTrueEffectCount(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::GetTrueEffectCount(ArgumentStack&& args)
 {
     int32_t ret = 0;
     if (auto *pObject = object(args))
@@ -688,7 +690,7 @@ ArgumentStack Arelith::GetTrueEffectCount(ArgumentStack&& args)
     }
     return Events::Argument(ret);
 }
-ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
 {
     ArgumentStack stack;
     CGameEffect *eff;
@@ -763,7 +765,7 @@ ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
     return stack;
 }
 
-ArgumentStack Arelith::RemoveEffectById(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::RemoveEffectById(ArgumentStack&& args)
 {
    int32_t ret = 0;
    if (auto *pObject = object(args))
@@ -775,7 +777,7 @@ ArgumentStack Arelith::RemoveEffectById(ArgumentStack&& args)
    return Events::Argument(ret);
 }
 
-ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
 {
    // auto eff = Events::ExtractArgument<CGameEffect*>(args);
     if(auto *pObject = object(args))
@@ -835,13 +837,13 @@ ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
     }
 
 
-    return Events::Argument();
+    return {};
 }
 
-ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args)
 {
     g_plugin->polymorph.push_back(Events::ExtractArgument<int32_t>(args));
-    return Events::Argument();
+    return {};
 }
 BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats)
 {
@@ -888,6 +890,7 @@ BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CN
 }
 int32_t Arelith::CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature* pThis)
 {
+
     if ( pThis->m_bIsPolymorphed)
     {
         if(g_plugin->polymorph.empty())
