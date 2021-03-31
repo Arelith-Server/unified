@@ -143,8 +143,10 @@ ArgumentStack Damage::GetAttackEventData(ArgumentStack&&)
 {
     ArgumentStack stack;
 
-    Events::InsertArgument(stack, m_AttackData.nSneakAttack);
     Events::InsertArgument(stack, m_AttackData.nAttackType);
+    Events::InsertArgument(stack, m_AttackData.bKillingBlow);
+    Events::InsertArgument(stack, m_AttackData.nSneakAttack);
+    Events::InsertArgument(stack, m_AttackData.nWeaponAttackType);
     Events::InsertArgument(stack, m_AttackData.nAttackResult);
     Events::InsertArgument(stack, m_AttackData.nAttackNumber);
     for (int k = 12; k >= 0; k--)
@@ -205,8 +207,10 @@ void Damage::OnCombatAttack(CNWSCreature *pThis, CNWSObject *pTarget, std::strin
     attackData.oidTarget = pTarget->m_idSelf;
     attackData.nAttackNumber = attackNumber + 1; // 1-based for backwards compatibility
     attackData.nAttackResult = combatAttackData->m_nAttackResult;
-    attackData.nAttackType = combatAttackData->m_nWeaponAttackType;
+    attackData.nWeaponAttackType = combatAttackData->m_nWeaponAttackType;
     attackData.nSneakAttack = combatAttackData->m_bSneakAttack + (combatAttackData->m_bDeathAttack << 1);
+    attackData.bKillingBlow = combatAttackData->m_bKillingBlow;
+    attackData.nAttackType = combatAttackData->m_nAttackType;
     std::memcpy(attackData.vDamage, combatAttackData->m_nDamage, sizeof(attackData.vDamage));
     // run script, then copy back attack data
     Utils::ExecuteScript(script, pThis->m_idSelf);
@@ -233,15 +237,7 @@ ArgumentStack Damage::DealDamage(ArgumentStack&& args)
     }
     int damagePower = Events::ExtractArgument<int32_t>(args);
 
-    int range = 0;
-    try
-    {
-        range = Events::ExtractArgument<int>(args);
-    }
-    catch(const std::runtime_error& e)
-    {
-        LOG_WARNING("NWNX_Damage_DealDamage() called from NWScript without final parameter. Please download the latest versions of NWNX scripts.");
-    }
+    int range = Events::ExtractArgument<int32_t>(args);
 
     CNWSCreature *pSource = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(oidSource);
     CNWSObject *pTarget = Utils::AsNWSObject(Globals::AppManager()->m_pServerExoApp->GetGameObject(oidTarget));

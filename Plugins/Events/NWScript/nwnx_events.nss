@@ -1326,6 +1326,37 @@ _______________________________________
     @note This event only fires when DR gets broken in combat.
 
 _______________________________________
+    ## Creature Unpossess Familiar Event
+    - NWNX_ON_UNPOSSESS_FAMILIAR_BEFORE
+    - NWNX_ON_UNPOSSESS_FAMILIAR_AFTER
+
+    `OBJECT_SELF` = The creature unpossessing a familiar
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    FAMILIAR              | object | The familiar. Convert to object with StringToObject()  |
+
+_______________________________________
+    ## Client Levelup Begin Event
+    - NWNX_ON_CLIENT_LEVEL_UP_BEGIN_BEFORE
+    - NWNX_ON_CLIENT_LEVEL_UP_BEGIN_AFTER
+
+    `OBJECT_SELF` = The player clicking the levelup button
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+
+_______________________________________
+    ## Creature Possess Familiar Event
+    - NWNX_ON_POSSESS_FAMILIAR_BEFORE
+    - NWNX_ON_POSSESS_FAMILIAR_AFTER
+
+    `OBJECT_SELF` = The creature possessing a familiar
+
+    Event Data Tag        | Type   | Notes
+    ----------------------|--------|-------
+    FAMILIAR              | object | The familiar. Convert to object with StringToObject()  |
+_______________________________________
 */
 /*
 const int NWNX_EVENTS_OBJECT_TYPE_CREATURE          = 5;
@@ -1415,6 +1446,8 @@ string NWNX_Events_GetEventData(string tag);
 /// - Disarm event
 /// - {Enter|Exit}Detect events
 /// - Faction events
+/// - UnpossessFamiliar event
+/// - ClientLevelUpBegin event
 void NWNX_Events_SkipEvent();
 
 /// Set the return value of the event.

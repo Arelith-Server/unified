@@ -4,16 +4,59 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 8193.20-HEAD
-https://github.com/nwnxee/unified/compare/build8193.20...HEAD
+## 8193.21-HEAD
+https://github.com/nwnxee/unified/compare/build8193.21...HEAD
+
+### Added
+- Events: added skippable event `NWNX_ON_CLIENT_LEVEL_UP_BEGIN_*` which fires when a player clicks the levelup button.
+- Events: added skippable event `NWNX_ON_POSSESS_FAMILIAR_*` which fires when a player attempts to possess their familiar.
+- Tweaks: added `NWNX_TWEAKS_SEND_TLK_OVERRIDE_BEFORE_CHARGEN` to send TlkTable overrides before Character Generation.
+- Tweaks: added `NWNX_TWEAKS_RETAIN_LOCAL_VARIABLES_ON_ITEM_SPLIT` to retain local variables when an item is split.
+
+##### New Plugins
+- NoStack: Adds `NWNX_NOSTACK_*` variables to control ability, skill, attack and/or saving throw bonuses stacking
+
+##### New NWScript Functions
+- Creature: Get{Armor|Shield}CheckPenalty() for dex-based skills
+- Creature: {Get/Set}BypassEffectImmunity()
+- Effect: GetTrueEffectCount()
+- Effect: GetTrueEffect()
+- Effect: RemoveEffectById()
+- Effect: ReplaceEffectByIndex()
+- Player: SetTlkOverride()
+- Util: GetTTY()
+
+### Changed
+- The argument stack is now cleared after every NWNX function call.
+- Effect: (Un)PackEffect functions now can retrieve the id and Item Property Source. _**ABI breaking:** You will need to update nwnx_effect.nss if you are using these functions_.
+- Events: `NWNX_ON_UNPOSSESS_FAMILIAR_*` is now skippable. 
+- ItemProperty: UnpackIP now can retrieve the item property's id. _**ABI breaking:** You will need to update nwnx_itemprop.nss if you are using these functions_.
+- ***API BREAKING*** Damage: The NWNX_Damage_AttackEventData fields have changed their names: `iAttackType -> iWeaponAttackType`, `iAttackType_REAL -> iAttackType`.
+- ***API BREAKING*** Object: The `NWNX_Object_Export` function has had its arguments reordered.
+
+### Deprecated
+- N/A
+
+### Removed
+- Data and Time plugins have been removed. Compatibility scripts are provided [here](Compatibility/)
+- ***API BREAKING*** Events: removed deprecated `NWNX_ON_{ENTER|EXIT}_STEALTH_*` events. Use `NWNX_ON_STEALTH_{ENTER|EXIT}_*`
+- Tweaks: removed deprecated `NWNX_TWEAKS_HIDE_DMS_ON_CHAR_LIST` environment variable. Use `NWNX_TWEAKS_HIDE_PLAYERS_ON_CHAR_LIST`
+
+### Fixed
+- N/A
+
+## 8193.20
+https://github.com/nwnxee/unified/compare/build8193.20...build8193.21
 
 ### Added
 - Events: added `NWNX_ON_INPUT_EMOTE_*` events to InputEvents, this event fires when a player uses a radial menu emote.
-- Events: added `NWNX_ON_COMBAT_DR_BROKEN_*` events to CombatEvents, this event fires when a creature's limited Damage{Resistance|Reduction} gets broken.  
+- Events: added `NWNX_ON_COMBAT_DR_BROKEN_*` events to CombatEvents, this event fires when a creature's limited Damage{Resistance|Reduction} gets broken.
+- Events: added `NWNX_ON_UNPOSSESS_FAMILIAR_*` events to AssociateEvents, this event fires when a player unpossesses a familiar.
 - Experimental: Added `NWNX_EXPERIMENTAL_DISABLE_LEVELUP_VALIDATION` to disable levelup validation.
 - Experimental: Added `NWNX_EXPERIMENTAL_UNHARDCODE_RANGER_DUALWIELD` to remove the hardcoded effects of the Ranger's Dual-wield feat. This functionality is not compatible with the NWNX_ON_HAS_FEAT_* event.
 - Tweaks: Added `NWNX_TWEAKS_ALWAYS_RETURN_FULL_DEX_STAT` to have GetDEXStat() always return a creature's full dexterity stat.
 - Tweaks: added `NWNX_TWEAKS_DISPLAY_NUM_ATTACKS_OVERRIDE_IN_CHARACTER_SHEET` to display the correct amount of attacks per round on the character sheet when overridden with SetBaseAttackBonus()
+- Tweaks: added `NWNX_TWEAKS_TURD_BY_CDKEY` to associate TURDs by CDKey/CharacterName instead of PlayerName/CharacterName. Note: pass the CDKey instead of PlayerName when calling NWNX_Administration_DeleteTURD().
 - DotNET: Added native function hook support.
 - Optimizations: Added `LuoLookup` optimization that speeds up per-player object updates.
 - Optimizations: Added `PlayerLookup` optimization that speeds up some player related functions on highly populated servers.
@@ -24,8 +67,9 @@ https://github.com/nwnxee/unified/compare/build8193.20...HEAD
 ##### New NWScript Functions
 - Admin: {Get/Set}MinLevel()
 - Admin: {Get/Set}MaxLevel()
-- Area: NWNX_Area_GetAmbientSound{Day/Night}()
-- Area: NWNX_Area_GetAmbientSound{Day/Night}Volume
+- Area: GetAmbientSound{Day/Night}()
+- Area: GetAmbientSound{Day/Night}Volume
+- Area: CreateSoundObject()
 - Creature: ComputeSafeLocation()
 - Creature: DoPerceptionUpdateOnCreature()
 - Creature: {Get/Set}PersonalSpace()
@@ -37,13 +81,15 @@ https://github.com/nwnxee/unified/compare/build8193.20...HEAD
 - Encounter: SetGeometry()
 - Encounter: {Get/Set}CanReset()
 - Object: {Get|Set}AILevel()
+- Object: {Get|Set}MapNote()
 - Util: GetInstructionLimit()
 - Util: {Get|Set}InstructionsExecuted()
-- Util: NWNX_Util_GetHighResTimeStamp() (in preparation for removing the now deprecated NWNX_Time)
+- Util: GetHighResTimeStamp() (in preparation for removing the now deprecated NWNX_Time)
 - Weapon: SetMaxRangedAttackDistanceOverride()
 
 ### Changed
 - Creature: Functions for CriticalMultipler and CriticalRange extended to allow declaration of nBaseItem. Order of Overrides is Specified Baseitem > Specified Hand > non-Specified. Modifiers now apply in addition to overrides (rather than only in the absence of overrides). _**ABI breaking:** You will need to update nwnx_creature.nss if you are using these functions_.
+- Damage: added `iAttackType_REAL` and `bKillingBlow` to the `AttackEventData` struct. Updated struct documentation.
 - Race: SetFavoredEnemyFeat() now supports multiple feats per race.
 - Rename: NWNX_Rename can now co-exist with `NWNX_TWEAKS_HIDE_CLASSES_ON_CHAR_LIST`, as such NWNX_Rename's handling of said tweak has been removed.
 - Optimizations: `GameObjectLookup` no longer reads nwn config for cache size, and instead just assumes 1 million (uses 64MB RAM).
@@ -52,11 +98,9 @@ https://github.com/nwnxee/unified/compare/build8193.20...HEAD
 - Data: The NWNX_Data array implementation is deprecated. SQLite implementation available.  Shim include file provided for compatibility.
 - Time: The NWNX_Time implementation is deprecated. A SQLite implementation is now in use. The include file inc_sqlite_time is provided.
 
-### Removed
-- N/A
-
 ### Fixed
 - Feedback: Fixed a memory leak when suppressing messages.
+- Utils: Fixed a memory corruption in `GetAsciiTableString()`
 
 ## 8193.16
 https://github.com/nwnxee/unified/compare/build8193.16...build8193.20

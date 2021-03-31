@@ -1,7 +1,11 @@
 %module NWNXLib
 
 %include <stdint.i>
+%include <std_string.i>
+%include <std_vector.i>
 %include <swiginterface.i>
+
+%include "std_unordered_map.i"
 
 #pragma SWIG nowarn=317
 #define NWNXLIB_FUNCTION_NO_VERSION_CHECK
@@ -54,7 +58,7 @@
 
 // Extensions
 %typemap(cscode) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE (CLASS::*) %{
-  public System.IntPtr Pointer {
+  public global::System.IntPtr Pointer {
     get {
       return swigCPtr.Handle;
     }
@@ -64,7 +68,7 @@
     return (void*)self.swigCPtr.Handle;
   }
 
-  public static implicit operator System.IntPtr($csclassname self) {
+  public static implicit operator global::System.IntPtr($csclassname self) {
     return self.swigCPtr.Handle;
   }
 
@@ -98,7 +102,7 @@
 %}
 
 %typemap(cscode) CExoString %{
-  public System.IntPtr Pointer {
+  public global::System.IntPtr Pointer {
     get {
       return swigCPtr.Handle;
     }
@@ -108,7 +112,7 @@
     return (void*)self.swigCPtr.Handle;
   }
 
-  public static implicit operator System.IntPtr($csclassname self) {
+  public static implicit operator global::System.IntPtr($csclassname self) {
     return self.swigCPtr.Handle;
   }
 
@@ -145,35 +149,38 @@
   }
 %}
 
-%define MarshalType(CTYPE, CSTYPE)
-%typemap(ctype)  CTYPE*,CTYPE&,CTYPE[ANY] "CTYPE*"
-%typemap(imtype) CTYPE*,CTYPE& "global::System.IntPtr"
-%typemap(imtype, inattributes="[global::System.Runtime.InteropServices.In, global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPArray)]") CTYPE[ANY] "CSTYPE[]"
+%define MarshalType(CTYPE, CSTYPE, CSARRAYTYPE)
+%typemap(ctype) CTYPE*,CTYPE&,CTYPE[ANY] "CTYPE*"
+%typemap(imtype) CTYPE*,CTYPE&,CTYPE[ANY] "global::System.IntPtr"
 %typemap(cstype) CTYPE*,CTYPE& "CSTYPE*"
-%typemap(cstype) CTYPE[ANY] "CSTYPE[]"
+%typemap(cstype) CTYPE[ANY] "NativeArray<CSARRAYTYPE>"
 %typemap(csin)   CTYPE*,CTYPE& "(global::System.IntPtr)$csinput"
 %typemap(csin)   CTYPE[ANY] "$csinput"
 %typemap(in)     CTYPE*,CTYPE&,CTYPE[ANY] %{ $1 = $input; %}
 %typemap(out)    CTYPE*,CTYPE& %{ $result = $1; %}
 
 %typemap(csout, excode=SWIGEXCODE) CTYPE*,CTYPE& { 
-    System.IntPtr retVal = $imcall;$excode
+    global::System.IntPtr retVal = $imcall;$excode
     return (CSTYPE*)retVal;
   }
 %typemap(csvarout, excode=SWIGEXCODE2) CTYPE*,CTYPE& %{ 
     get {
-        System.IntPtr retVal = $imcall;$excode 
+        global::System.IntPtr retVal = $imcall;$excode 
         return (CSTYPE*)retVal; 
     }
 %}
-%typemap(csout, excode=SWIGEXCODE) CTYPE[ANY] { 
-    CSTYPE[] retVal = $imcall;$excode
-    return retVal;
+%typemap(csout, excode=SWIGEXCODE) CTYPE[ANY] {
+    global::System.IntPtr arrayPtr = $imcall;$excode
+    NativeArray<CSARRAYTYPE> retVal = new NativeArray<CSARRAYTYPE>(arrayPtr, $1_dim0);
+
+    return retVal; // CSTYPE[$1_dim0]
   }
 %typemap(csvarout, excode=SWIGEXCODE2) CTYPE[ANY] %{ 
     get {
-        CSTYPE[] retVal = $imcall;$excode
-        return retVal;
+      global::System.IntPtr arrayPtr = $imcall;$excode
+      NativeArray<CSARRAYTYPE> retVal = new NativeArray<CSARRAYTYPE>(arrayPtr, $1_dim0);
+
+      return retVal; // CSTYPE[$1_dim0] 
     }
 %}
 %enddef
@@ -187,12 +194,12 @@
 %typemap(out)    CTYPE*,CTYPE& %{ $result = $1; %}
 
 %typemap(csout, excode=SWIGEXCODE) CTYPE*,CTYPE& { 
-    System.IntPtr retVal = $imcall;$excode
+    global::System.IntPtr retVal = $imcall;$excode
     return (CSTYPE*)retVal;
   }
 %typemap(csvarout, excode=SWIGEXCODE2) CTYPE*,CTYPE& %{ 
     get {
-        System.IntPtr retVal = $imcall;$excode 
+        global::System.IntPtr retVal = $imcall;$excode 
         return (CSTYPE*)retVal; 
     }
 %}
@@ -223,7 +230,7 @@
     }
   }
 
-  public System.IntPtr Pointer {
+  public global::System.IntPtr Pointer {
     get {
       return swigCPtr.Handle;
     }
@@ -233,7 +240,7 @@
     return (void*)self.swigCPtr.Handle;
   }
 
-  public static implicit operator System.IntPtr($csclassname self) {
+  public static implicit operator global::System.IntPtr($csclassname self) {
     return self.swigCPtr.Handle;
   }
 
@@ -331,23 +338,23 @@ static NAME* FromPointer(TYPE *ptr) {
 SWIG_CSBODY_PROXY(public, internal, SWIGTYPE)
 
 // Marshal native types to managed types.
-MarshalType(void, void)
-MarshalType(void*, void*) // void**
-MarshalType(signed char, sbyte)
-MarshalType(char*, char*) // char**
-MarshalType(short int, short)
-MarshalType(int, int)
-MarshalType(int*, int*) // int**
-MarshalType(float, float)
-MarshalType(float*, float*) //float**
-MarshalType(float**, float**) //float***
-MarshalType(long, long)
-MarshalType(unsigned char, byte)
-MarshalType(unsigned char*, byte*) //unsigned char**
-MarshalType(unsigned short int, ushort)
-MarshalType(unsigned int, uint)
-MarshalType(unsigned int*, uint*) //unsigned int**
-MarshalType(unsigned long, ulong)
+MarshalType(void, void, global::System.IntPtr) 
+MarshalType(void*, void*, global::System.IntPtr) // void**
+MarshalType(signed char, sbyte, sbyte)
+MarshalType(char*, char*, global::System.IntPtr) // char**
+MarshalType(short int, short, short)
+MarshalType(int, int, int)
+MarshalType(int*, int*, global::System.IntPtr) // int**
+MarshalType(float, float, float)
+MarshalType(float*, float*, global::System.IntPtr) //float**
+MarshalType(float**, float**, global::System.IntPtr) //float***
+MarshalType(long, long, long)
+MarshalType(unsigned char, byte, byte)
+MarshalType(unsigned char*, byte*, global::System.IntPtr) //unsigned char**
+MarshalType(unsigned short int, ushort, ushort)
+MarshalType(unsigned int, uint, uint)
+MarshalType(unsigned int*, uint*, global::System.IntPtr) //unsigned int**
+MarshalType(unsigned long, ulong, ulong)
 
 // Marshal pointer to pointer types.
 MarshalPtrPtr(C2DA*, void*)
@@ -364,7 +371,7 @@ MarshalPtrPtr(CFeatUseListEntry*, void*)
 MarshalPtrPtr(CGameEffect*, void*)
 MarshalPtrPtr(CGameObject*, void*)
 MarshalPtrPtr(CGameObjectArrayNode*, void*)
-MarshalPtrPtr(CItemRepository*, System.IntPtr)
+MarshalPtrPtr(CItemRepository*, global::System.IntPtr)
 MarshalPtrPtr(CKeyTableEntry*, void*)
 MarshalPtrPtr(CLastUpdateObject*, void*)
 MarshalPtrPtr(CLastUpdatePartyObject*, void*)
@@ -556,10 +563,15 @@ MarshalPtrPtr(Task::CExoTaskManager*, void*)
 %template(CResHelperNCS) CResHelper<CResNCS,2010>;
 
 // Add function defines to subclass in module.
-%pragma(csharp) modulecode="public static class Functions {\n"
-%include "Functions.hpp"
+%define NWNXLIB_FUNCTION(name, address)
+    %pragma(csharp) modulecode="    public const uint name = address;"
+%enddef
+
+%pragma(csharp) modulecode="  public static class Functions {"
 %include "FunctionsLinux.hpp"
-%pragma(csharp) modulecode="}\n"
+%pragma(csharp) modulecode="  }\n"
+
+#undef NWNXLIB_FUNCTION
 
 // Array wrappers for structures
 MapArray(CExoArrayList<CNWSStats_Spell *>, CExoArrayListCNWSStatsSpellPtr, CExoArrayListCNWSStatsSpellPtrArray)
@@ -608,3 +620,11 @@ DefineArray(CVirtualMachineScript, CVirtualMachineScript, CVirtualMachineScriptA
 DefineArray(Vector, Vector, VectorArray);
 
 DefineArrayPtr(CNWSTile, CNWSTile, CNWSTileArray);
+
+// Std templates
+%template(VectorNWSyncAdvertisementManifest) std::vector<NWSyncAdvertisementManifest>;
+%template(VectorCExoString) std::vector<CExoString>;
+%template(UnorderedMapCExoStringCNWSScriptVar) std::unordered_map<CExoString, CNWSScriptVar>;
+%template(UnorderedMapUInt32CExoString) std::unordered_map<uint32_t, CExoString>;
+%template(UnorderedMapUInt32STR_RES) std::unordered_map<uint32_t, STR_RES>;
+%template(UnorderedMapStringCachedRulesetEntry) std::unordered_map<std::string, CachedRulesetEntry>;
