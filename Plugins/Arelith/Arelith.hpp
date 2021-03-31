@@ -70,11 +70,6 @@ private:
     ArgumentStack GetAttackModifierVersus(ArgumentStack&& args);
     ArgumentStack ResolveDefensiveEffects(ArgumentStack&& args);
     ArgumentStack SetDamageReductionBypass(ArgumentStack&& args);
-    ArgumentStack SetEffectImmunityBypass(ArgumentStack&& args);
-    ArgumentStack GetTrueEffectCount(ArgumentStack&& args);
-    ArgumentStack GetTrueEffect(ArgumentStack&& args);
-    ArgumentStack RemoveEffectById(ArgumentStack&& args);
-    ArgumentStack ReplaceEffect(ArgumentStack&& args);
     ArgumentStack SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     CNWSObject *object(ArgumentStack& args);
@@ -106,7 +101,6 @@ private:
     std::unordered_map<std::string, std::function<void(void)>> m_initList;
 
     std::unique_ptr<ArelithEvents> m_arelithEvents;
-    int32_t bypassEffectImm;
     std::vector<int32_t> polymorph;
     static int32_t CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature*);
 

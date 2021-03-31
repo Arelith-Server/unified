@@ -86,11 +86,6 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(ResolveDefensiveEffects);
     REGISTER(SetWebhook);
     //REGISTER(SetDamageReductionBypass);
-    REGISTER(SetEffectImmunityBypass);
-    REGISTER(GetTrueEffectCount);
-    REGISTER(GetTrueEffect);
-    REGISTER(RemoveEffectById);
-    REGISTER(ReplaceEffect);
     REGISTER(SetDisableMonkAbilitiesPolymorph);
 #undef REGISTER
 
@@ -118,7 +113,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
                                                         (void*)&WriteToLogFileHook, Hooks::Order::VeryEarly);
 
     s_GetEffectImmunityHook = Hooks::HookFunction(Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei,
-        (void*)&GetEffectImmunityHook, Hooks::Order::Early);
+        (void*)&GetEffectImmunityHook, Hooks::Order::Latest);
 
     s_OnItemPropertyAppliedHook = Hooks::HookFunction(Functions::_ZN15CServerAIMaster21OnItemPropertyAppliedEP8CNWSItemP15CNWItemPropertyP12CNWSCreatureji,
         (void*)&OnItemPropertyAppliedHook, Hooks::Order::Early);
@@ -142,7 +137,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     s_sOrigPath = Config::Get<std::string>("PATH", "");
     s_sAdden = Config::Get<std::string>("ROLE", "");
 
-    g_plugin->bypassEffectImm=0;
+
 }
 
 Arelith::~Arelith()
@@ -676,171 +671,6 @@ ArgumentStack Arelith::SetDamageReductionBypass(ArgumentStack&& args)
     return Events::Argument();
 }*/
 
-NWNX_EXPORT ArgumentStack Arelith::SetEffectImmunityBypass(ArgumentStack&& args)
-{
-    g_plugin->bypassEffectImm = Events::ExtractArgument<int32_t>(args);
-    return {};
-}
-
-NWNX_EXPORT ArgumentStack Arelith::GetTrueEffectCount(ArgumentStack&& args)
-{
-    int32_t ret = 0;
-    if (auto *pObject = object(args))
-    {
-        ret = pObject->m_appliedEffects.num;
-    }
-    return Events::Argument(ret);
-}
-NWNX_EXPORT ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
-{
-    ArgumentStack stack;
-    CGameEffect *eff;
-    auto *pObject = object(args);
-      ASSERT_OR_THROW(pObject);
-    auto it = Events::ExtractArgument<int32_t>(args);
-      ASSERT_OR_THROW(it >= 0);
-      ASSERT_OR_THROW(it < pObject->m_appliedEffects.num);
-    eff = pObject->m_appliedEffects.element[it];
-
-
-    Events::InsertArgument(stack, std::to_string(eff->m_nID));
-    Events::InsertArgument(stack, (int32_t)eff->m_nType);
-    Events::InsertArgument(stack, (int32_t)eff->m_nSubType);
-    Events::InsertArgument(stack, (float)eff->m_fDuration);
-    Events::InsertArgument(stack, (int32_t)eff->m_nExpiryCalendarDay);
-    Events::InsertArgument(stack, (int32_t)eff->m_nExpiryTimeOfDay);
-    Events::InsertArgument(stack, (ObjectID)eff->m_oidCreator);
-    Events::InsertArgument(stack, (int32_t)eff->m_nSpellId);
-    Events::InsertArgument(stack, (int32_t)eff->m_bExpose);
-    Events::InsertArgument(stack, (int32_t)eff->m_bShowIcon);
-    Events::InsertArgument(stack, (int32_t)eff->m_nCasterLevel);
-
-    // The DestroyGameEffect at the end of this function will delete any linked effects
-    // as well so we make a copy of the linked effects and send those for unpacking
-   /* CGameEffect *leftLinkEff = nullptr;
-    if (eff->m_pLinkLeft != nullptr)
-    {
-        leftLinkEff = new CGameEffect(true);
-        leftLinkEff->CopyEffect(eff->m_pLinkLeft, 0);
-    }
-    Events::InsertArgument(stack, leftLinkEff);
-    Events::InsertArgument(stack, eff->m_pLinkLeft != nullptr);
-
-    CGameEffect *rightLinkEff = nullptr;
-    if (eff->m_pLinkRight != nullptr)
-    {
-        rightLinkEff = new CGameEffect(true);
-        rightLinkEff->CopyEffect(eff->m_pLinkRight, 0);
-    }*/
-    Events::InsertArgument(stack, (int32_t)eff->m_nNumIntegers);
-    Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 0 ? eff->m_nParamInteger[0] : -1));
-    Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 1 ? eff->m_nParamInteger[1] : -1));
-    Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 2 ? eff->m_nParamInteger[2] : -1));
-    Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 3 ? eff->m_nParamInteger[3] : -1));
-    Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 4 ? eff->m_nParamInteger[4] : -1));
-    Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 5 ? eff->m_nParamInteger[5] : -1));
-    Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 6 ? eff->m_nParamInteger[6] : -1));
-    Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 7 ? eff->m_nParamInteger[7] : -1));
-
-    Events::InsertArgument(stack, (float)eff->m_nParamFloat[0]);
-    Events::InsertArgument(stack, (float)eff->m_nParamFloat[1]);
-    Events::InsertArgument(stack, (float)eff->m_nParamFloat[2]);
-    Events::InsertArgument(stack, (float)eff->m_nParamFloat[3]);
-
-    Events::InsertArgument(stack, std::string(eff->m_sParamString[0].CStr()));
-    Events::InsertArgument(stack, std::string(eff->m_sParamString[1].CStr()));
-    Events::InsertArgument(stack, std::string(eff->m_sParamString[2].CStr()));
-    Events::InsertArgument(stack, std::string(eff->m_sParamString[3].CStr()));
-    Events::InsertArgument(stack, std::string(eff->m_sParamString[4].CStr()));
-    Events::InsertArgument(stack, std::string(eff->m_sParamString[5].CStr()));
-
-    Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[0]);
-    Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[1]);
-    Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[2]);
-    Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[3]);
-
-    Events::InsertArgument(stack, std::to_string(eff->m_nItemPropertySourceId));
-
-    Events::InsertArgument(stack, std::string(eff->m_sCustomTag.CStr()));
-
-    return stack;
-}
-
-NWNX_EXPORT ArgumentStack Arelith::RemoveEffectById(ArgumentStack&& args)
-{
-   int32_t ret = 0;
-   if (auto *pObject = object(args))
-   {
-        auto id = Events::ExtractArgument<std::string>(args);
-        ret = pObject->RemoveEffectById(std::stoi(id));
-   }
-
-   return Events::Argument(ret);
-}
-
-NWNX_EXPORT ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
-{
-   // auto eff = Events::ExtractArgument<CGameEffect*>(args);
-    if(auto *pObject = object(args))
-    {
-        auto element = Events::ExtractArgument<int32_t>(args);
-          ASSERT_OR_THROW(element >= 0);
-          ASSERT_OR_THROW(element < pObject->m_appliedEffects.num);
-        auto eff = pObject->m_appliedEffects.element[element];
-
-        eff->m_sCustomTag = Events::ExtractArgument<std::string>(args).c_str();
-
-        auto vector1z = Events::ExtractArgument<float>(args);
-        auto vector1y = Events::ExtractArgument<float>(args);
-        auto vector1x = Events::ExtractArgument<float>(args);
-        eff->m_vParamVector[1] = {vector1x, vector1y, vector1z};
-
-        auto vector0z = Events::ExtractArgument<float>(args);
-        auto vector0y = Events::ExtractArgument<float>(args);
-        auto vector0x = Events::ExtractArgument<float>(args);
-        eff->m_vParamVector[0] = {vector0x, vector0y, vector0z};
-
-        eff->m_oidParamObjectID[3] = Events::ExtractArgument<ObjectID>(args);
-        eff->m_oidParamObjectID[2] = Events::ExtractArgument<ObjectID>(args);
-        eff->m_oidParamObjectID[1] = Events::ExtractArgument<ObjectID>(args);
-        eff->m_oidParamObjectID[0] = Events::ExtractArgument<ObjectID>(args);
-
-        eff->m_sParamString[5] = Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[4] = Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[3] = Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[2] = Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[1] = Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[0] = Events::ExtractArgument<std::string>(args).c_str();
-
-        eff->m_nParamFloat[3] = Events::ExtractArgument<float>(args);
-        eff->m_nParamFloat[2] = Events::ExtractArgument<float>(args);
-        eff->m_nParamFloat[1] = Events::ExtractArgument<float>(args);
-        eff->m_nParamFloat[0] = Events::ExtractArgument<float>(args);
-
-        eff->m_nParamInteger[7] = Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[6] = Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[5] = Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[4] = Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[3] = Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[2] = Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[1] = Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[0] = Events::ExtractArgument<int32_t>(args);
-
-        eff->m_nCasterLevel       = Events::ExtractArgument<int32_t>(args);
-        eff->m_bShowIcon          = Events::ExtractArgument<int32_t>(args);
-        eff->m_bExpose            = Events::ExtractArgument<int32_t>(args);
-        eff->m_nSpellId           = Events::ExtractArgument<int32_t>(args);
-        eff->m_oidCreator         = Events::ExtractArgument<ObjectID>(args);
-        eff->m_nExpiryTimeOfDay   = Events::ExtractArgument<int32_t>(args);
-        eff->m_nExpiryCalendarDay = Events::ExtractArgument<int32_t>(args);
-        eff->m_fDuration          = Events::ExtractArgument<float>(args);
-        eff->m_nSubType           = Events::ExtractArgument<int32_t>(args);
-    }
-
-
-    return {};
-}
-
 NWNX_EXPORT ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args)
 {
     g_plugin->polymorph.push_back(Events::ExtractArgument<int32_t>(args));
@@ -848,8 +678,6 @@ NWNX_EXPORT ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStac
 }
 BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats)
 {
-    if(g_plugin->bypassEffectImm > 0)
-        return false;
 
     if(nType == Constants::ImmunityType::CriticalHit || nType == Constants::ImmunityType::SneakAttack)
     {
