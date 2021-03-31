@@ -3,7 +3,7 @@
 /// @{
 /// @file nwnx_data.nss
 
-#include "inc_array"
+#include "inc_array1"
 
 // All these calls just pass through to the Array code in inc_array to provide
 // an NWNX_Data compatible API for ease of transition.
