@@ -126,7 +126,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
 
     s_SetCreatorHook =
             Hooks::HookFunction(Functions::_ZN11CGameEffect10SetCreatorEj,
-        (void*)&SetCreatorHook, Hooks::Order::Earliest);
+        (void*)&SetCreatorHook, Hooks::Order::Latest);
    /* if(GetServices()->m_config->Get<bool>("DMG_RED", false))
     {
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
@@ -778,12 +778,35 @@ void Arelith::SetCreatorHook(CGameEffect *pThis, ObjectID oidCreator)
                     }
                     else
                     {
-                        pThis->m_nCasterLevel = pCreature->m_pStats->GetClassLevel(pCreature->m_nLastSpellCastMulticlass, 0);
+                        auto disMod = pCreature->nwnxGet<int>("DISPELRESIST_MODIFIER" + std::to_string(pCreature->m_pStats->m_ClassInfo[pCreature->m_nLastSpellCastMulticlass].m_nClass));
+                        if(disMod)
+                            pThis->m_nCasterLevel = pCreature->m_pStats->GetClassLevel(pCreature->m_nLastSpellCastMulticlass, 0) + disMod.value();
+                        else
+                            pThis->m_nCasterLevel = pCreature->m_pStats->GetClassLevel(pCreature->m_nLastSpellCastMulticlass, 0);
                     }
                 }
             }
         }
     }
+}
+
+NWNX_EXPORT ArgumentStack SetDispelResistanceModifier(ArgumentStack&& args)
+{
+
+    if (auto* pCreature = Utils::PopCreature(args))
+    {
+        const auto nClass = args.extract<int32_t>();
+        ASSERT_OR_THROW(nClass >= 0);
+        ASSERT_OR_THROW(nClass <= Constants::ClassType::MAX);
+        const auto nModifier = args.extract<int32_t>();
+        const bool bPersist = !!args.extract<int32_t>();
+
+        if (nModifier)
+            pCreature->nwnxSet("DISPELRESIST_MODIFIER" + std::to_string(nClass), nModifier, bPersist);
+        else
+            pCreature->nwnxRemove("DISPELRESIST_MODIFIER" + std::to_string(nClass));
+    }
+    return {};
 }
 
 }
