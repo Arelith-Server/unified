@@ -10,15 +10,19 @@ https://github.com/nwnxee/unified/compare/build8193.21...HEAD
 ### Added
 - Events: added skippable event `NWNX_ON_CLIENT_LEVEL_UP_BEGIN_*` which fires when a player clicks the levelup button.
 - Events: added skippable event `NWNX_ON_POSSESS_FAMILIAR_*` which fires when a player attempts to possess their familiar.
+- Events: added skippable event `NWNX_ON_CHARACTER_SHEET_PERMITTED_*` which fires when a player attempts to view a charactersheet.
+- Events: added events `NWNX_ON_CHARACTER_SHEET_{OPEN|CLOSE}_*` which fire when a player opens or closes a charactersheeet.   
 - Tweaks: added `NWNX_TWEAKS_SEND_TLK_OVERRIDE_BEFORE_CHARGEN` to send TlkTable overrides before Character Generation.
 - Tweaks: added `NWNX_TWEAKS_RETAIN_LOCAL_VARIABLES_ON_ITEM_SPLIT` to retain local variables when an item is split.
+- Tweaks: added `NWNX_TWEAKS_PREVENT_ATTACK_BONUS_BYPASSING_REDUCTION` to make attack bonuses not bypass reductions (soak).
 
 ##### New Plugins
 - NoStack: Adds `NWNX_NOSTACK_*` variables to control ability, skill, attack and/or saving throw bonuses stacking
 
 ##### New NWScript Functions
-- Creature: Get{Armor|Shield}CheckPenalty() for dex-based skills
+- Creature: Get{Armor|Shield}CheckPenalty()
 - Creature: {Get/Set}BypassEffectImmunity()
+- Creature: {Get/Set}LastKiller()
 - Effect: GetTrueEffectCount()
 - Effect: GetTrueEffect()
 - Effect: RemoveEffectById()
@@ -33,6 +37,7 @@ https://github.com/nwnxee/unified/compare/build8193.21...HEAD
 - ItemProperty: UnpackIP now can retrieve the item property's id. _**ABI breaking:** You will need to update nwnx_itemprop.nss if you are using these functions_.
 - ***API BREAKING*** Damage: The NWNX_Damage_AttackEventData fields have changed their names: `iAttackType -> iWeaponAttackType`, `iAttackType_REAL -> iAttackType`.
 - ***API BREAKING*** Object: The `NWNX_Object_Export` function has had its arguments reordered.
+- ***ABI BREAKING:*** `nwnx.nss` has changed, please update all your `nwnx_*.nss` scripts including `nwnx.nss` and recompile. Existing compiled scripts will still work.
 
 ### Deprecated
 - N/A
@@ -43,7 +48,7 @@ https://github.com/nwnxee/unified/compare/build8193.21...HEAD
 - Tweaks: removed deprecated `NWNX_TWEAKS_HIDE_DMS_ON_CHAR_LIST` environment variable. Use `NWNX_TWEAKS_HIDE_PLAYERS_ON_CHAR_LIST`
 
 ### Fixed
-- N/A
+- Race: Effects vs Child Races are now functional. Battle Training Vs. * feats now apply their bonus against child races as well.
 
 ## 8193.20
 https://github.com/nwnxee/unified/compare/build8193.20...build8193.21
