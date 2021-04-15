@@ -31,6 +31,8 @@
 #include <iomanip>
 #include "External/httplib.h"
 #include "API/CNWSInventory.hpp"
+#include "API/CNWSAreaOfEffectObject.hpp"
+#include "API/CNWSpellArray.hpp"
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
@@ -63,6 +65,7 @@ static Hooks::Hook s_WriteToLogFileHook;
 static Hooks::Hook s_ReportErrorHook;
 static Hooks::Hook s_OnApplyEffectImmunityHook;
 static Hooks::Hook s_OnItemPropertyAppliedHook;
+static Hooks::Hook s_SetCreatorHook;
 
 Arelith::Arelith(Services::ProxyServiceList* services)
     : Plugin(services), m_eventDepth(0)
@@ -121,7 +124,9 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     s_OnApplyEffectImmunityHook = Hooks::HookFunction(Functions::_ZN21CNWSEffectListHandler21OnApplyEffectImmunityEP10CNWSObjectP11CGameEffecti,
         (void*)&OnApplyEffectImmunityHook, Hooks::Order::Early);
 
-
+    s_SetCreatorHook =
+            Hooks::HookFunction(Functions::_ZN11CGameEffect10SetCreatorEj,
+        (void*)&SetCreatorHook, Hooks::Order::Earliest);
    /* if(GetServices()->m_config->Get<bool>("DMG_RED", false))
     {
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
@@ -743,4 +748,42 @@ int32_t Arelith::CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature* pThis)
 
     return s_GetUseMonkAbilitiesHook->CallOriginal<int32_t>(pThis);
 }
+
+void Arelith::SetCreatorHook(CGameEffect *pThis, ObjectID oidCreator)
+{
+    auto* pCreator = Utils::GetGameObject(oidCreator);
+    pThis->m_oidCreator = oidCreator;
+
+    if (auto* pCreatorObject = Utils::AsNWSObject(pCreator))
+    {
+        pThis->m_nSpellId = pCreatorObject->GetEffectSpellId();
+
+        if (auto* pAoE = Utils::AsNWSAreaOfEffectObject(pCreatorObject))
+        {
+            pThis->m_oidCreator = pAoE->m_oidCreator;
+        }
+        else if (auto* pCreature = Utils::AsNWSCreature(pCreatorObject))
+        {
+            if (pCreature->m_bLastSpellCast)
+            {
+                if (auto* pSpell = Globals::Rules()->m_pSpellArray->GetSpell(pCreature->m_nLastSpellId))
+                {
+                    if (pCreature->m_bLastItemCastSpell)
+                    {
+                        pThis->m_nCasterLevel = 150+pCreature->m_nLastItemCastSpellLevel;
+                    }
+                    else if (pCreature->m_nLastSpellCastMulticlass == Constants::ClassType::MAX)
+                    {
+                        pThis->m_nCasterLevel = pCreature->m_pStats->GetSpellLikeAbilityCasterLevel(pCreature->m_nLastSpellId);
+                    }
+                    else
+                    {
+                        pThis->m_nCasterLevel = pCreature->m_pStats->GetClassLevel(pCreature->m_nLastSpellCastMulticlass, 0);
+                    }
+                }
+            }
+        }
+    }
+}
+
 }
