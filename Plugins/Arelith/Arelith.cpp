@@ -809,4 +809,85 @@ NWNX_EXPORT ArgumentStack SetDispelResistanceModifier(ArgumentStack&& args)
     return {};
 }
 
+void ResolvePack(CGameEffect *eff, ArgumentStack& args)
+{
+    eff->m_nItemPropertySourceId = std::stoull(args.extract<std::string>());
+
+    eff->m_sCustomTag = args.extract<std::string>().c_str();
+
+    auto vector1z = args.extract<float>();
+    auto vector1y = args.extract<float>();
+    auto vector1x = args.extract<float>();
+    eff->m_vParamVector[1] = {vector1x, vector1y, vector1z};
+
+    auto vector0z = args.extract<float>();
+    auto vector0y = args.extract<float>();
+    auto vector0x = args.extract<float>();
+    eff->m_vParamVector[0] = {vector0x, vector0y, vector0z};
+
+    eff->m_oidParamObjectID[3] = args.extract<ObjectID>();
+    eff->m_oidParamObjectID[2] = args.extract<ObjectID>();
+    eff->m_oidParamObjectID[1] = args.extract<ObjectID>();
+    eff->m_oidParamObjectID[0] = args.extract<ObjectID>();
+
+    eff->m_sParamString[5] = args.extract<std::string>().c_str();
+    eff->m_sParamString[4] = args.extract<std::string>().c_str();
+    eff->m_sParamString[3] = args.extract<std::string>().c_str();
+    eff->m_sParamString[2] = args.extract<std::string>().c_str();
+    eff->m_sParamString[1] = args.extract<std::string>().c_str();
+    eff->m_sParamString[0] = args.extract<std::string>().c_str();
+
+    eff->m_nParamFloat[3] = args.extract<float>();
+    eff->m_nParamFloat[2] = args.extract<float>();
+    eff->m_nParamFloat[1] = args.extract<float>();
+    eff->m_nParamFloat[0] = args.extract<float>();
+
+    eff->SetNumIntegers(8); // allocate array
+    eff->m_nParamInteger[7] = args.extract<int32_t>();
+    eff->m_nParamInteger[6] = args.extract<int32_t>();
+    eff->m_nParamInteger[5] = args.extract<int32_t>();
+    eff->m_nParamInteger[4] = args.extract<int32_t>();
+    eff->m_nParamInteger[3] = args.extract<int32_t>();
+    eff->m_nParamInteger[2] = args.extract<int32_t>();
+    eff->m_nParamInteger[1] = args.extract<int32_t>();
+    eff->m_nParamInteger[0] = args.extract<int32_t>();
+    // Overwrite num integers from 8
+    eff->m_nNumIntegers = args.extract<int32_t>();
+
+    auto bRightLinkValid = args.extract<int32_t>();
+    auto *pRightLink = args.extract<CGameEffect*>();
+    eff->m_pLinkRight = (bRightLinkValid) ? pRightLink : nullptr;
+    auto bLeftLinkValid = args.extract<int32_t>();
+    auto *pLeftLink = args.extract<CGameEffect*>();
+    eff->m_pLinkLeft = (bLeftLinkValid) ? pLeftLink : nullptr;
+
+
+    eff->m_nCasterLevel       = args.extract<int32_t>();
+    eff->m_bShowIcon          = args.extract<int32_t>();
+    eff->m_bExpose            = args.extract<int32_t>();
+    eff->m_nSpellId           = args.extract<int32_t>();
+    eff->m_oidCreator         = args.extract<ObjectID>();
+    eff->m_nExpiryTimeOfDay   = args.extract<int32_t>();
+    eff->m_nExpiryCalendarDay = args.extract<int32_t>();
+    eff->m_fDuration          = args.extract<float>();
+    eff->m_nSubType           = args.extract<int32_t>();
+
+    eff->m_nType = args.extract<int32_t>();
+
+    eff->m_nID = std::stoull(args.extract<std::string>());
+
+    if(bLeftLinkValid || bRightLinkValid)
+        eff->UpdateLinked();
+}
+
+NWNX_EXPORT ArgumentStack PackEffect(ArgumentStack&& args)
+{
+    CGameEffect *eff = new CGameEffect(false);
+
+    ResolvePack(eff, args);
+    LOG_WARNING(std::to_string(eff->m_nID).c_str());
+
+    return eff;
+}
+
 }

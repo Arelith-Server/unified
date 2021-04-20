@@ -1,5 +1,5 @@
 #include "nwnx"
-
+#include "nwnx_effect"
 // Scripts can subscribe to events.
 // Some events are dispatched via the NWNX plugin (see NWNX_Arelith_EVENT_* constants).
 // Others can be signaled via script code (see NWNX_Arelith_SignalEvent).
@@ -66,55 +66,6 @@ void NWNX_Arelith_SetDisableMonkAbilitiesPolymorph(int nPolymorphType);
 
 void NWNX_Arelith_SetDispelResistanceModifier(object oCreature, int nClass, int nModifier, int bPersist = FALSE);
 
-struct NWNX_EffectUnpackedAre
-{
-    string sID;
-    int nType; ///< @todo Describe
-    int nSubType; ///< @todo Describe
-
-    float fDuration; ///< @todo Describe
-    int nExpiryCalendarDay; ///< @todo Describe
-    int nExpiryTimeOfDay; ///< @todo Describe
-
-    object oCreator; ///< @todo Describe
-    int nSpellId; ///< @todo Describe
-    int bExpose; ///< @todo Describe
-    int bShowIcon; ///< @todo Describe
-    int nCasterLevel; ///< @todo Describe
-
-    int nNumIntegers; ///< @todo Describe
-    int nParam0; ///< @todo Describe
-    int nParam1; ///< @todo Describe
-    int nParam2; ///< @todo Describe
-    int nParam3; ///< @todo Describe
-    int nParam4; ///< @todo Describe
-    int nParam5; ///< @todo Describe
-    int nParam6; ///< @todo Describe
-    int nParam7; ///< @todo Describe
-    float fParam0; ///< @todo Describe
-    float fParam1; ///< @todo Describe
-    float fParam2; ///< @todo Describe
-    float fParam3; ///< @todo Describe
-    string sParam0; ///< @todo Describe
-    string sParam1; ///< @todo Describe
-    string sParam2; ///< @todo Describe
-    string sParam3; ///< @todo Describe
-    string sParam4; ///< @todo Describe
-    string sParam5; ///< @todo Describe
-    object oParam0; ///< @todo Describe
-    object oParam1; ///< @todo Describe
-    object oParam2; ///< @todo Describe
-    object oParam3; ///< @todo Describe
-    vector vParam0; ///< @todo Describe
-    vector vParam1; ///< @todo Describe
-
-    string sItemPropId;
-
-    string sTag; ///< @todo Describe
-};
-
-//Gets the true effect at array spot effectNumbr, will loop through item proeprties and effects.
-struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int effectNumber);
 
 const string ARELITH_PLUGIN = "NWNX_Arelith";
 
@@ -237,4 +188,75 @@ void NWNX_Arelith_SetDispelResistanceModifier(object oCreature, int nClass, int 
     NWNX_PushArgumentObject(oCreature);
 
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+}
+
+void __NWNX_Arelith_ResolvePack(string sFunc, struct NWNX_EffectUnpacked e)
+{
+
+    NWNX_PushArgumentString(e.sID);
+    NWNX_PushArgumentInt(e.nType);
+
+    NWNX_PushArgumentInt(e.nSubType);
+
+    NWNX_PushArgumentFloat(e.fDuration);
+    NWNX_PushArgumentInt(e.nExpiryCalendarDay);
+    NWNX_PushArgumentInt(e.nExpiryTimeOfDay);
+
+    NWNX_PushArgumentObject(e.oCreator);
+    NWNX_PushArgumentInt(e.nSpellId);
+    NWNX_PushArgumentInt(e.bExpose);
+    NWNX_PushArgumentInt(e.bShowIcon);
+    NWNX_PushArgumentInt(e.nCasterLevel);
+
+    NWNX_PushArgumentEffect(e.eLinkLeft);
+    NWNX_PushArgumentInt(e.bLinkLeftValid);
+    NWNX_PushArgumentEffect(e.eLinkRight);
+    NWNX_PushArgumentInt(e.bLinkRightValid);
+
+
+    NWNX_PushArgumentInt(e.nNumIntegers);
+    NWNX_PushArgumentInt(e.nParam0);
+    NWNX_PushArgumentInt(e.nParam1);
+    NWNX_PushArgumentInt(e.nParam2);
+    NWNX_PushArgumentInt(e.nParam3);
+    NWNX_PushArgumentInt(e.nParam4);
+    NWNX_PushArgumentInt(e.nParam5);
+    NWNX_PushArgumentInt(e.nParam6);
+    NWNX_PushArgumentInt(e.nParam7);
+    NWNX_PushArgumentFloat(e.fParam0);
+    NWNX_PushArgumentFloat(e.fParam1);
+    NWNX_PushArgumentFloat(e.fParam2);
+    NWNX_PushArgumentFloat(e.fParam3);
+    NWNX_PushArgumentString(e.sParam0);
+    NWNX_PushArgumentString(e.sParam1);
+    NWNX_PushArgumentString(e.sParam2);
+    NWNX_PushArgumentString(e.sParam3);
+    NWNX_PushArgumentString(e.sParam4);
+    NWNX_PushArgumentString(e.sParam5);
+    NWNX_PushArgumentObject(e.oParam0);
+    NWNX_PushArgumentObject(e.oParam1);
+    NWNX_PushArgumentObject(e.oParam2);
+    NWNX_PushArgumentObject(e.oParam3);
+
+    NWNX_PushArgumentFloat(e.vParam0.x);
+    NWNX_PushArgumentFloat(e.vParam0.y);
+    NWNX_PushArgumentFloat(e.vParam0.z);
+
+    NWNX_PushArgumentFloat(e.vParam1.x);
+    NWNX_PushArgumentFloat(e.vParam1.y);
+    NWNX_PushArgumentFloat(e.vParam1.z);
+
+    NWNX_PushArgumentString(e.sTag);
+
+    NWNX_PushArgumentString(e.sItemProp);
+}
+
+effect NWNX_Arelith_PackEffect(struct NWNX_EffectUnpacked e)
+{
+    string sFunc = "PackEffect";
+
+    __NWNX_Arelith_ResolvePack(sFunc, e);
+
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+    return NWNX_GetReturnValueEffect();
 }
