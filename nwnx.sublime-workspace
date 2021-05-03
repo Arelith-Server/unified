@@ -1,0 +1,862 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"Huma",
+				"HumanoidReptilian"
+			],
+			[
+				"Racial",
+				"RacialType"
+			],
+			[
+				"GS_SU_YUAN",
+				"GS_SU_YUANTI_PUREBLOOD"
+			],
+			[
+				"object",
+				"objectID"
+			],
+			[
+				"Argum",
+				"ArgumentStack"
+			],
+			[
+				"gsSUGet",
+				"gsSUGetNameBySubRace"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "Plugins/Arelith/Arelith.cpp",
+			"settings":
+			{
+				"buffer_size": 33436,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "Plugins/Arelith/NWScript/nwnx_arelith.nss",
+			"settings":
+			{
+				"buffer_size": 8869,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/zzdlg_plc_cards.nss",
+			"settings":
+			{
+				"buffer_size": 811,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/inc_spells.nss",
+			"settings":
+			{
+				"buffer_size": 146056,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/chat_spectate.nss",
+			"settings":
+			{
+				"buffer_size": 1511,
+				"encoding": "Western (Windows 1252)",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/nw_s0_acidfogc.nss",
+			"settings":
+			{
+				"buffer_size": 1415,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/nw_s0_acidfog.nss",
+			"settings":
+			{
+				"buffer_size": 1335,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "Plugins/Effect/NWScript/nwnx_effect.nss",
+			"settings":
+			{
+				"buffer_size": 12201,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "Plugins/Effect/Effect.cpp",
+			"settings":
+			{
+				"buffer_size": 11731,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "Packages/User/nwsciptsf.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					""
+				],
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					"Run"
+				]
+			],
+			[
+				"Packages/C++/C++ Single File.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/User/nwsciptsf.sublime-build",
+					""
+				],
+				[
+					"Packages/User/nwsciptsf.sublime-build",
+					"Single File"
+				],
+				[
+					"Packages/User/nwsciptsf.sublime-build",
+					"All Files"
+				]
+			],
+			[
+				"Packages/User/nwsciptsf.sublime-build",
+				"All Files"
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"PCInstall",
+				"Package Control: Install Package"
+			],
+			[
+				"install Pa",
+				"Install Package Control"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/H/Program Files/Git Data/Arelith-unified",
+		"/H/Program Files/Git Data/Arelith-unified/CMakeModules",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/Constants",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Arelith",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Arelith/NWScript",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Creature",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Effect",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Effect/NWScript",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Events",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Events/NWScript",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/ItemProperty",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Object",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Race",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Rename",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Weapon"
+	],
+	"file_history":
+	[
+		"/H/Program Files/Git Data/Arelith-unified/CHANGELOG.md",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Creature/Creature.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Arelith/Arelith.cpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/chat_spectate.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/nwnx_alts.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/ki_inc_calc_bab.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Arelith/NWScript/nwnx_arelith.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Arelith/Arelith.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CNWSCreature.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CGameEffect.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Creature/Creature.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Creature/NWScript/nwnx_creature.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Effect/Effect.cpp",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Creature/NWScript/nwnx_creature.nss",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Weapon/Weapon.hpp",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Weapon/Weapon.cpp",
+		"/H/Program Files/Git Data/Mord NWNX Unified/CHANGELOG.md",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Tweaks/AddPrestigeclassCasterLevels.cpp",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Race/Race.cpp",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Race/Race.hpp",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Effect/Effect.cpp",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Effect/NWScript/nwnx_effect.nss",
+		"/H/Program Files/Git Data/Mord NWNX Unified/Plugins/Object/Object.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Race/Race.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Optimizations/README.md",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/md_jewelrysell.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/scrollcase_sell.nss",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CNWSCreatureStats.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CNWSObject.hpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/evt_equip_bef.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_ai_spawn.nss",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CNWSEffectListHandler.hpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_m_load.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/evt_item_bef.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/nwnx_arelith.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/nwnx_effect_t.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Effect/NWScript/nwnx_effect.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Rename/Rename.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Weapon/Weapon.cpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_a_enter.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Effect/Effect.hpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/crittest.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Object/Object.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/ItemProperty/ItemProperty.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Player/Player.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Player/Player.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Player/NWScript/nwnx_player.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/zdlg_entry.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/zdlg_subrace_inc.nss",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CNWSMessage.hpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/evt_pt_lv_bef.nss",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CServerExoApp.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Events/Events/BarterEvents.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/Utils.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CMessagePlayer.hpp",
+		"/D/Documents/Neverwinter Nights/modules/temp0/chat_requestbuy.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Util/Util.cpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/nwnx_creature.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_generic.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/ar_inc_rnd_trap.nss",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CExoString.hpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/ar_c_qu_class.nss",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/Constants/Effect.hpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_notifychange.nss",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/Utils.cpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_spellscript.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/mi_inc_spllswrd.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_swash.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_item.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_inc_subrace.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/Custom content/Input json/racialtypes.json",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_subrace.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_twodac.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_inc_iprop.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_run_pc_init.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_m_activate.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_m_equip.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/sp2_epicspell.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/x2_s0_bldethst.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/im_w_bldthst.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_pl_inv_unique.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_inc_craft.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/chat_leave_party.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/nw_s0_harm.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/x0_s0_inflict.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_pl_inv_plot.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_pl_inventory.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_pl_inv_nogold.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/mi_log.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/mi_inc_scry.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_inc_spell.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/sp2_createarrow.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_ranger.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/ar_ai_kir_jumpsp.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/x0_s0_flare.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/warlock",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/mi_inc_warlock.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_color.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Tweaks/Tweaks/StripOVTFromNotVisibleObject.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/API/CCombatInformation.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Damage/Damage.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Damage/NWScript/nwnx_damage.nss",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Events/Events/EffectEvents.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Events/Events/HealerKitEvents.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Appearance/Appearance.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Creature/Creature.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Events/Events.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/Constants.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/Constants/VirtualMachine.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/NWNXLib/API/Constants/Base.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Arelith/Source/ArelithEvents.hpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Arelith/Source/ArelithEvents.cpp",
+		"/H/Program Files/Git Data/Arelith-unified/Plugins/Events/Events.hpp",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/mi_inc_class.nss",
+		"/D/Documents/Neverwinter Nights/development/login",
+		"/D/Documents/Neverwinter Nights/development/test.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/evt_ft_bef.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_ai_conv.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/chat_walk.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_cargo.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/nw_s0_divpower.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/x0_s2_divmight.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_quest.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/inc_bonuses.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_m_level_up.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/md_inc_conclrace.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/zz_co_crafting.nss",
+		"/H/Program Files/Git Data/Arelith EE 2/scripts/gs_m_enter.nss"
+	],
+	"find":
+	{
+		"height": 27.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"setdispelresistance",
+			"resolvepack",
+			"itempropertycustom",
+			"nwnxget",
+			"static_cast",
+			"setcasterlevelmodif",
+			"initcasterlevelhooks",
+			"getclasslevelhook",
+			"casterlevel",
+			"classlevel",
+			"=true",
+			"applyeffect",
+			"getclasslevel",
+			"getcasterlevel",
+			"CASTERLEVEL_OV",
+			"_getclasslevel",
+			"__getclasslevel",
+			"CNWSCreatureStats__GetClassLevel",
+			"getclasslevelhook",
+			"casterlevel_",
+			"getclasslevel",
+			"casterlvl",
+			"casterlvl_",
+			"getclasslevel",
+			"load",
+			"pcreature",
+			"getattackmodifierversus",
+			"weaponpower",
+			"m_gasling",
+			"attackmodifierversus",
+			"weaponpowerhook",
+			"weaponpower",
+			"getweaponpower",
+			"invalid",
+			"getweaponpower",
+			"attackbonuslimit",
+			"ac",
+			"setorrestore",
+			"geteffectimmunity",
+			"geteffectimmunityhook",
+			"bypass",
+			"bypasseffectimm",
+			"highest",
+			"lst",
+			"list",
+			"cgameeffect",
+			"m_bypass",
+			"bypassRed",
+			"m_b",
+			"m_bypass",
+			"g_plugin",
+			"effect:",
+			"geteffectimmunityhook",
+			"do",
+			"dospellimmunity",
+			"cnwsitem",
+			"servertoplayer",
+			"store",
+			"Store",
+			"shop",
+			"store",
+			"name",
+			"::object",
+			"object_id",
+			":player",
+			"player",
+			"getnwsmessage",
+			"endDMAllPalettes",
+			"SendDMAllPalettes",
+			"replaceeffectbyelement",
+			"b_isDm",
+			"SendDMAllPalettes",
+			"replaceeffectbyelement",
+			"ability",
+			"ability decrease",
+			"geteffectimmunityhook",
+			"gettrueeffect",
+			"gettrueeffectcount",
+			"Arelith",
+			"creature",
+			"removeswashweaponeffects",
+			"swasgweaponeffects",
+			"additem",
+			"nwis",
+			"deep_imaskari",
+			"NAME_GS_SU_DPIMA",
+			"gs_inc_subrace",
+			"dwarf_de",
+			"dwarf_g",
+			"mundane",
+			"weaponpower",
+			"totaleffect",
+			"getlocalized",
+			"versus",
+			"total",
+			"weaponpower",
+			"pobject",
+			"cnwsobject",
+			"attack",
+			"OBJECT_INVALID",
+			"creature",
+			"getattackbonus",
+			"objectid",
+			"gettotaleffect",
+			"attack",
+			"AC",
+			"armo",
+			"armoor",
+			"BAB",
+			"attackbonus",
+			"get",
+			"walkratecap",
+			"walk",
+			"HasCourierQuest",
+			"ZHENT_SCOUT",
+			"ZHENT",
+			"removeparry",
+			"removeparrybonus",
+			"removetaggedeffects",
+			"removetaggedeffectsonlogin",
+			"removetaggedeffects",
+			"applyparry",
+			"getistaggedeffect",
+			"removeparry",
+			"removetaggedeffects",
+			"RemoveTaggedEffects",
+			"removetaggedeffectsonlogin",
+			"removetaggedeffects"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"RACIAL_TYPE"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 6,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "Plugins/Arelith/Arelith.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 33436,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								33177,
+								33177
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 15346.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "Plugins/Arelith/NWScript/nwnx_arelith.nss",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8869,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								8817,
+								8817
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Neverwinter Script syntax and build/nwscript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 3992.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/zzdlg_plc_cards.nss",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 811,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Neverwinter Script syntax and build/nwscript.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/inc_spells.nss",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 146056,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Neverwinter Script syntax and build/nwscript.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 62257.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/chat_spectate.nss",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1511,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Neverwinter Script syntax and build/nwscript.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 540.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/nw_s0_acidfogc.nss",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1415,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Neverwinter Script syntax and build/nwscript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "/H/Program Files/Git Data/Arelith EE 2/scripts/nw_s0_acidfog.nss",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1335,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Neverwinter Script syntax and build/nwscript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 270.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "Plugins/Effect/NWScript/nwnx_effect.nss",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 12201,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								9929,
+								9894
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Neverwinter Script syntax and build/nwscript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 4374.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "Plugins/Effect/Effect.cpp",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 11731,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								6908,
+								6747
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2970.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 8,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 27.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 126.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "Packages/User/nwsciptsf.sublime-build",
+	"project": "nwnx.sublime-project",
+	"replace":
+	{
+		"height": 50.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"Plugins\\Effect\\Effect.cpp"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 399.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

@@ -885,7 +885,6 @@ NWNX_EXPORT ArgumentStack PackEffect(ArgumentStack&& args)
     CGameEffect *eff = new CGameEffect(false);
 
     ResolvePack(eff, args);
-    LOG_WARNING(std::to_string(eff->m_nID).c_str());
 
     return eff;
 }
