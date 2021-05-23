@@ -116,13 +116,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
                                                         (void*)&WriteToLogFileHook, Hooks::Order::VeryEarly);
 
     s_GetEffectImmunityHook = Hooks::HookFunction(Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei,
-        (void*)&GetEffectImmunityHook, Hooks::Order::Latest);
-
-    s_OnItemPropertyAppliedHook = Hooks::HookFunction(Functions::_ZN15CServerAIMaster21OnItemPropertyAppliedEP8CNWSItemP15CNWItemPropertyP12CNWSCreatureji,
-        (void*)&OnItemPropertyAppliedHook, Hooks::Order::Early);
-
-    s_OnApplyEffectImmunityHook = Hooks::HookFunction(Functions::_ZN21CNWSEffectListHandler21OnApplyEffectImmunityEP10CNWSObjectP11CGameEffecti,
-        (void*)&OnApplyEffectImmunityHook, Hooks::Order::Early);
+        (void*)&GetEffectImmunityHook, Hooks::Order::Final);
 
     s_SetCreatorHook =
             Hooks::HookFunction(Functions::_ZN11CGameEffect10SetCreatorEj,
@@ -549,17 +543,7 @@ NWNX_EXPORT ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
     return {};
 }
 
-int32_t Arelith::OnItemPropertyAppliedHook(CServerAIMaster* pServerAIMaster, CNWSItem* pItem, CNWItemProperty *pItemProperty, CNWSCreature* pCreature, uint32_t slot, BOOL bLoadingGame)
-{
-    if(pItemProperty->m_nParam1Value > 0 && pItemProperty->m_nParam1Value != 255)
-    {
-        if(pItemProperty->m_nPropertyName==Constants::ItemProperty::DamageReduction || pItemProperty->m_nPropertyName==Constants::ItemProperty::ImmunityMiscellaneous)
-          s_iMaterial=pItemProperty->m_nParam1Value;
 
-    }
-
-   return s_OnItemPropertyAppliedHook->CallOriginal<int32_t>(pServerAIMaster, pItem, pItemProperty, pCreature, slot, bLoadingGame);
-}
 /*void Arelith::OnApplyDamageReductionHook(bool before, CNWSEffectListHandler*, CNWSObject*, CGameEffect* pEffect, BOOL)
 {
     if(before && s_iMaterial > 0)
@@ -568,15 +552,7 @@ int32_t Arelith::OnItemPropertyAppliedHook(CServerAIMaster* pServerAIMaster, CNW
         s_iMaterial=0;
     }
 }*/
-int32_t Arelith::OnApplyEffectImmunityHook(CNWSEffectListHandler* pEffectListHandler, CNWSObject *pObject, CGameEffect * pEffect, BOOL bLoadingGame = false)
-{
-    if(s_iMaterial > 0)
-    {
-        pEffect->SetInteger(4, s_iMaterial);
-        s_iMaterial=0;
-    }
-    return s_OnApplyEffectImmunityHook->CallOriginal<int32_t>(pEffectListHandler, pObject, pEffect, bLoadingGame);
-}
+
 /*void Arelith::DoDamageReductionHook(bool before, CNWSObject *pObject, CNWSCreature *pCreature, int32_t, uint8_t, BOOL, BOOL)
 {
     static std::unordered_map<uint64_t, int32_t> s_mEffects;
@@ -683,44 +659,57 @@ NWNX_EXPORT ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStac
 }
 BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats)
 {
-
-    if(nType == Constants::ImmunityType::CriticalHit || nType == Constants::ImmunityType::SneakAttack)
+    if(bConsiderFeats)
     {
-        if(bConsiderFeats && pStats->HasFeat(Constants::Feat::DeathlessMastery))
+        if((nType == Constants::ImmunityType::CriticalHit || nType == Constants::ImmunityType::SneakAttack) && pStats->HasFeat(Constants::Feat::DeathlessMastery))
             return true;
+        else if(nType == Constants::ImmunityType::MindSpells && pStats->HasFeat(Constants::Feat::PerfectSelf))
+            return true;
+        else if(nType == Constants::ImmunityType::Fear && pStats->HasFeat(Constants::Feat::AuraOfCourage))
+            return true;
+        else if(nType == Constants::ImmunityType::Paralysis && (pStats->HasFeat(Constants::Feat::DragonImmuneParalysis) || pStats->HasFeat(Constants::Feat::ToughAsBone)))
+            return true;
+        else if(nType == Constants::ImmunityType::Stun && pStats->HasFeat(Constants::Feat::ToughAsBone))
+            return true;
+        else if(nType == Constants::ImmunityType::Poison && (pStats->HasFeat(Constants::Feat::DiamondBody) || pStats->HasFeat(Constants::Feat::VenomImmunity) || pStats->HasFeat(Constants::Feat::EpicPerfectHealth)))
+            return true;
+        else if(nType == Constants::ImmunityType::Disease && (pStats->HasFeat(Constants::Feat::DivineHealth) || pStats->HasFeat(Constants::Feat::PurityOfBody) || pStats->HasFeat(Constants::Feat::EpicPerfectHealth)))
+            return true;
+        else if(nType == Constants::ImmunityType::Sleep && pStats->HasFeat(Constants::Feat::ImmunityToSleep))
+            return true;
+    }
 
-        auto effectList = pStats->m_pBaseCreature->m_appliedEffects;
+    auto effectList = pStats->m_pBaseCreature->m_appliedEffects;
 
-        int32_t highest = 0;
+    int32_t highest = 0;
 
-        for (int32_t i = 0; i < effectList.num; i++)
+    for (auto *eff : effectList)
+    {
+        //auto *eff = effectList.element[i];
+
+        if(eff->m_nType==Constants::EffectTrueType::Immunity && eff->m_nParamInteger[0]==nType)
         {
-            auto *eff = effectList.element[i];
-
-            if(eff->m_nType==Constants::EffectTrueType::Immunity && eff->m_nParamInteger[0]==nType)
+            if((eff->m_nParamInteger[1] == Constants::RacialType::All || (pVersus != nullptr && eff->m_nParamInteger[1] == pVersus->m_pStats->m_nRace)) && //race check
+                (eff->m_nParamInteger[2] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[2] == pVersus->m_pStats->GetSimpleAlignmentLawChaos())) &&
+                (eff->m_nParamInteger[3] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[3] == pVersus->m_pStats->GetSimpleAlignmentGoodEvil())))
             {
-                if((eff->m_nParamInteger[1] == Constants::RacialType::All || (pVersus != nullptr && eff->m_nParamInteger[1] == pVersus->m_pStats->m_nRace)) && //race check
-                    (eff->m_nParamInteger[2] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[2] == pVersus->m_pStats->m_nAlignmentLawChaos)) &&
-                    (eff->m_nParamInteger[3] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[3] == pVersus->m_pStats->m_nAlignmentGoodEvil)))
-                {
 
-                    if(eff->m_nParamInteger[4] <= 0 || eff->m_nParamInteger[4] >= 100)
-                        return true;
+                if(eff->m_nParamInteger[4] <= 0 || eff->m_nParamInteger[4] >= 100)
+                    return true;
 
-                    if(eff->m_nParamInteger[4] > highest)
-                        highest = eff->m_nParamInteger[4];
-                }
-
+                if(eff->m_nParamInteger[4] > highest)
+                    highest = eff->m_nParamInteger[4];
             }
 
         }
 
-        if(highest > 0 && Globals::Rules()->RollDice(1, 100) <= highest)
-            return true;
-
-        return false;
     }
-    return s_GetEffectImmunityHook->CallOriginal<BOOL>(pStats, nType, pVersus, bConsiderFeats);
+
+    if(highest > 0 && Globals::Rules()->RollDice(1, 100) <= highest)
+        return true;
+
+    return false;
+
 }
 int32_t Arelith::CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature* pThis)
 {
