@@ -35,7 +35,7 @@
 						<td id="projectlogo"><img width="80" height="74" alt="Logo" src="logo-transparent.png"/></td>
 						<td id="projectalign" style="padding-left: 0.5em;">
 							<div id="projectname">NWNX:EE
-								&#160;<span id="projectnumber">8193.20</span>
+								&#160;<span id="projectnumber">8193.23</span>
 							</div>
 						</td>
 						<td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -137,6 +137,12 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 </li>
 <li>NWNX_Administration_GetDMPassword()
 : <a class="el" href="group__admin.html#ga15438a0d3b9cddad5b0fa2eedaeaabbc">nwnx_admin.nss</a>
+</li>
+<li>NWNX_Administration_GetMaxLevel()
+: <a class="el" href="group__admin.html#gaecc251cf502f16cf57ef34fa0f59c67b">nwnx_admin.nss</a>
+</li>
+<li>NWNX_Administration_GetMinLevel()
+: <a class="el" href="group__admin.html#gaac078a00b22b69026b9ce317fbfc1484">nwnx_admin.nss</a>
 </li>
 <li>NWNX_Administration_GetPlayerPassword()
 : <a class="el" href="group__admin.html#ga350b7e2b7d00e0a1373bcd16980f9426">nwnx_admin.nss</a>
@@ -246,6 +252,12 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Administration_SetDMPassword()
 : <a class="el" href="group__admin.html#ga082d709b97251d246e7b32ede3102c1e">nwnx_admin.nss</a>
 </li>
+<li>NWNX_Administration_SetMaxLevel()
+: <a class="el" href="group__admin.html#gac28cbdc390856011334b8db529f6107a">nwnx_admin.nss</a>
+</li>
+<li>NWNX_Administration_SetMinLevel()
+: <a class="el" href="group__admin.html#gacb21ba2dd9de2caeafb83de04d79d857">nwnx_admin.nss</a>
+</li>
 <li>NWNX_Administration_SetModuleName()
 : <a class="el" href="group__admin.html#ga30afeceaca4db8237fd034475d36c0e4">nwnx_admin.nss</a>
 </li>
@@ -321,6 +333,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Area_CreateGenericTrigger()
 : <a class="el" href="group__area.html#ga70470c5fd872dd9204c486c04ed8f037">nwnx_area.nss</a>
 </li>
+<li>NWNX_Area_CreateSoundObject()
+: <a class="el" href="group__area.html#gad70afa4be08555a35a98d2cfdbbe0200">nwnx_area.nss</a>
+</li>
 <li>NWNX_Area_CreateTransition()
 : <a class="el" href="group__area.html#ga375a5f37746e7d248292788987a7ccb9">nwnx_area.nss</a>
 </li>
@@ -338,6 +353,18 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 </li>
 <li>NWNX_Area_ExportGIT()
 : <a class="el" href="group__area.html#gaf4cd40dfca87acbe7c81e13b0a3fa035">nwnx_area.nss</a>
+</li>
+<li>NWNX_Area_GetAmbientSoundDay()
+: <a class="el" href="group__area.html#gac4c2c49edd84605bfa8b1b4a0d0d60de">nwnx_area.nss</a>
+</li>
+<li>NWNX_Area_GetAmbientSoundDayVolume()
+: <a class="el" href="group__area.html#ga556e1a68f9df6876c3a527f08a540993">nwnx_area.nss</a>
+</li>
+<li>NWNX_Area_GetAmbientSoundNight()
+: <a class="el" href="group__area.html#gad2b840855bcbff623f74b6f052a1115b">nwnx_area.nss</a>
+</li>
+<li>NWNX_Area_GetAmbientSoundNightVolume()
+: <a class="el" href="group__area.html#gaaaa5a20b21e0d637b40269f1db8f8196">nwnx_area.nss</a>
 </li>
 <li>NWNX_Area_GetAreaListenModifier()
 : <a class="el" href="group__area.html#ga68990cdb91389da15d782bc76f4f723b">nwnx_area.nss</a>
@@ -519,6 +546,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Chat_SkipMessage()
 : <a class="el" href="group__chat.html#gab8ea39914a0ac0df6ece2c27dcffe11a">nwnx_chat.nss</a>
 </li>
+<li>NWNX_Consts_TranslateEngineAnimation()
+: <a class="el" href="group__consts.html#ga39f52ea25e872bff385666e4cd26be23">nwnx_consts.nss</a>
+</li>
 <li>NWNX_Consts_TranslateNWScriptAnimation()
 : <a class="el" href="group__consts.html#gaee44aad01b7468a094b310dab48ebe50">nwnx_consts.nss</a>
 </li>
@@ -621,8 +651,20 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_CREATURE_CLERIC_DOMAIN_WATER
 : <a class="el" href="group__creature.html#gafea1002c0334de7fe9e98b874f6bd214">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_ComputeSafeLocation()
+: <a class="el" href="group__creature.html#ga36db232e8294ec90dc5f1203ee38ac56">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_DeserializeQuickbar()
 : <a class="el" href="group__creature.html#gab71f0c54c88e6c54bfdb025c67a5aa44">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_DoItemCastSpell()
+: <a class="el" href="group__creature.html#gaf03a816c11492f7465ebbe977c278bbf">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_DoPerceptionUpdateOnCreature()
+: <a class="el" href="group__creature.html#ga07ef1d837354f127b72d7d301555c857">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_GetArmorCheckPenalty()
+: <a class="el" href="group__creature.html#ga1300b28822e4534d0210593c8e65042c">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_GetArmorClassVersus()
 : <a class="el" href="group__creature.html#gacd4022d011b84e8b015b4bbe5abca7fa">nwnx_creature.nss</a>
@@ -639,6 +681,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Creature_GetBaseSavingThrow()
 : <a class="el" href="group__creature.html#gaec44d5608a8adeb007c901425cfd92f8">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_GetBypassEffectImmunity()
+: <a class="el" href="group__creature.html#ga3e559430fbdbd5bf1d8de42a9c1fbac0">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_GetCasterLevelModifier()
 : <a class="el" href="group__creature.html#gab29a65c34e82a3f565551a6d706179db">nwnx_creature.nss</a>
 </li>
@@ -648,17 +693,20 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Creature_GetClassByLevel()
 : <a class="el" href="group__creature.html#ga9f675908b28f41658f1c1e5acfe78068">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_GetCreaturePersonalSpace()
+: <a class="el" href="group__creature.html#ga122ada903bb353eb480690c4f2170f36">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_GetCriticalMultiplierModifier()
-: <a class="el" href="group__creature.html#ga75516a1c64d50a6192f21031400f87c0">nwnx_creature.nss</a>
+: <a class="el" href="group__creature.html#ga86d70c8f0727daeec07a84df9e5d353b">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_GetCriticalMultiplierOverride()
-: <a class="el" href="group__creature.html#ga0885ae77421d7f3290578f4a32a5f9f1">nwnx_creature.nss</a>
+: <a class="el" href="group__creature.html#gab02585354561ce598009815630a8ea20">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_GetCriticalRangeModifier()
-: <a class="el" href="group__creature.html#gae3e5766823787c9e848bf6925e9cf313">nwnx_creature.nss</a>
+: <a class="el" href="group__creature.html#ga58a843c2c406486e373508a0b2c3e5ad">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_GetCriticalRangeOverride()
-: <a class="el" href="group__creature.html#gaf3a3048abd469980487c640d2c9d1877">nwnx_creature.nss</a>
+: <a class="el" href="group__creature.html#gafb933fa7d2964d92dde97aaa671cf666">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_GetDisarmable()
 : <a class="el" href="group__creature.html#gacd41f5111f1d4ef3e6d8d20c1b6b7252">nwnx_creature.nss</a>
@@ -696,8 +744,14 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Creature_GetFlatFooted()
 : <a class="el" href="group__creature.html#ga43289d7f208dbe759b856d1f4757dc2e">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_GetHeight()
+: <a class="el" href="group__creature.html#gac69265115bfdd7741c1844c6ac612d4a">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_GetHighestLevelOfFeat()
 : <a class="el" href="group__creature.html#gacfe25337fd54b63488a16dc0c2f4b2b3">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_GetHitDistance()
+: <a class="el" href="group__creature.html#ga4d38b26798137697a8a5ac02a6ea1eed">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_GetIsBartering()
 : <a class="el" href="group__creature.html#ga3dbffac4654be2a32707775255e39c15">nwnx_creature.nss</a>
@@ -741,6 +795,12 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Creature_GetOriginalName()
 : <a class="el" href="group__creature.html#gaa2c4265518c9385e694f438ce4fb7816">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_GetPersonalSpace()
+: <a class="el" href="group__creature.html#ga57a72fd8445236356ec6af7ff2b54604">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_GetPreferredAttackDistance()
+: <a class="el" href="group__creature.html#ga5c920d130feaac48d02758af4fd9f777">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_GetPrePolymorphAbilityScore()
 : <a class="el" href="group__creature.html#gafdcf540c2ebaea7ac27563d74461b57d">nwnx_creature.nss</a>
 </li>
@@ -749,6 +809,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 </li>
 <li>NWNX_Creature_GetRemainingSpellSlots()
 : <a class="el" href="group__creature.html#gacb4f736a792fe146e85ae56e147db0ad">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_GetShieldCheckPenalty()
+: <a class="el" href="group__creature.html#ga6f6d31fc7c93583af61cc9c8f884d844">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_GetSkillPointsRemaining()
 : <a class="el" href="group__creature.html#ga926e85f71e7f8373b312e7a41782d356">nwnx_creature.nss</a>
@@ -849,6 +912,12 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Creature_RestoreSpells()
 : <a class="el" href="group__creature.html#ga79ca3913561cdb9d2402f2c498cfab1d">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_RunEquip()
+: <a class="el" href="group__creature.html#ga66a243ea31ee826876bcefb15a71023b">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_RunUnequip()
+: <a class="el" href="group__creature.html#gaa2141d9dfe8ec4ee03b228b4ca6274f1">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_SerializeQuickbar()
 : <a class="el" href="group__creature.html#ga69a3585f503e30907380f440f95860ec">nwnx_creature.nss</a>
 </li>
@@ -876,6 +945,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Creature_SetBaseSavingThrow()
 : <a class="el" href="group__creature.html#ga6a50f09f77b3dd53a49b2e68ebf75547">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_SetBypassEffectImmunity()
+: <a class="el" href="group__creature.html#gaf2ca9b1aca1f674b70e858b5279521f9">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_SetCasterLevelModifier()
 : <a class="el" href="group__creature.html#ga007d581a39d037dce04fdfa034427efd">nwnx_creature.nss</a>
 </li>
@@ -891,17 +963,20 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Creature_SetCorpseDecayTime()
 : <a class="el" href="group__creature.html#ga9416ebcf6ecac41884242e6f40096100">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_SetCreaturePersonalSpace()
+: <a class="el" href="group__creature.html#ga5073b2d8c2f96c9b88f42340b71088e1">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_SetCriticalMultiplierModifier()
-: <a class="el" href="group__creature.html#ga3ddf72fb0099eeac9e33141ea911deb0">nwnx_creature.nss</a>
+: <a class="el" href="group__creature.html#gab61678215d81d3af279dc045ebbb9e43">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_SetCriticalMultiplierOverride()
-: <a class="el" href="group__creature.html#gadf59e261ec68cdb725951456e5ea8936">nwnx_creature.nss</a>
+: <a class="el" href="group__creature.html#ga8a48cc0182cbf146078eec518f53fa41">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_SetCriticalRangeModifier()
-: <a class="el" href="group__creature.html#gae29537af98f07a44b68aaefe70023494">nwnx_creature.nss</a>
+: <a class="el" href="group__creature.html#ga296154fa071de065671cf0b8a2c0ce02">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_SetCriticalRangeOverride()
-: <a class="el" href="group__creature.html#gad408cb931491c5cf15de7f584d3b5d70">nwnx_creature.nss</a>
+: <a class="el" href="group__creature.html#ga97256379fce2e54fe3c674e491581bc2">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_SetDisarmable()
 : <a class="el" href="group__creature.html#gae737b5e9c3eb8fb6523a1f0ad68d16b1">nwnx_creature.nss</a>
@@ -933,8 +1008,17 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Creature_SetGold()
 : <a class="el" href="group__creature.html#ga4888c788f124ca985ba585677cdeaad8">nwnx_creature.nss</a>
 </li>
+<li>NWNX_Creature_SetHeight()
+: <a class="el" href="group__creature.html#ga502bc6e9e35007d7fe56266eec92dc6b">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_SetHitDistance()
+: <a class="el" href="group__creature.html#gaf7db82f03c9c44452a4003139c992edc">nwnx_creature.nss</a>
+</li>
 <li>NWNX_Creature_SetLastItemCasterLevel()
 : <a class="el" href="group__creature.html#gaaf4852e6a077da9128b3923ff52701df">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_SetLastKiller()
+: <a class="el" href="group__creature.html#gaa064e2886118310f391f0d6c4901f33d">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_SetLevelByPosition()
 : <a class="el" href="group__creature.html#ga69f0f037d2b2ccc1185da9588fe5901c">nwnx_creature.nss</a>
@@ -962,6 +1046,12 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 </li>
 <li>NWNX_Creature_SetParryAllAttacks()
 : <a class="el" href="group__creature.html#ga27aefe7af67628a090a0685c3e07cc9e">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_SetPersonalSpace()
+: <a class="el" href="group__creature.html#ga994ad112617ff2e246e8c45c132304b7">nwnx_creature.nss</a>
+</li>
+<li>NWNX_Creature_SetPreferredAttackDistance()
+: <a class="el" href="group__creature.html#gabc272bf0a40b296512e7963b7369ee39">nwnx_creature.nss</a>
 </li>
 <li>NWNX_Creature_SetRacialType()
 : <a class="el" href="group__creature.html#ga318adbef08926e9c47d9d4840cef6e0f">nwnx_creature.nss</a>
@@ -1110,6 +1200,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Data_Array_Size()
 : <a class="el" href="group__data.html#gad37c78f2336265e251a454dd91d7cb9e">nwnx_data.nss</a>
 </li>
+<li>NWNX_Data_Array_Sort()
+: <a class="el" href="nwnx__data_8nss.html#aabcd822a12310ed064e09bf1d56e7f6d">nwnx_data.nss</a>
+</li>
 <li>NWNX_Data_Array_SortAscending()
 : <a class="el" href="group__data.html#gad7cc5dade93f9d0a00983e42d632f018">nwnx_data.nss</a>
 </li>
@@ -1203,17 +1296,32 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Dialog_SetCurrentNodeText()
 : <a class="el" href="group__dialog.html#ga75123d6a2fd1bcac7e8534e1a88b4e5a">nwnx_dialog.nss</a>
 </li>
+<li>NWNX_Effect_Apply()
+: <a class="el" href="group__effect.html#ga0e78c0b3879c2de62fda891fcb81f045">nwnx_effect.nss</a>
+</li>
 <li>NWNX_Effect_GetEffectExpiredCreator()
 : <a class="el" href="group__effect.html#ga9dfcfd6d65f0e22b66dd9c6b51df5484">nwnx_effect.nss</a>
 </li>
 <li>NWNX_Effect_GetEffectExpiredData()
 : <a class="el" href="group__effect.html#gabb4f9e4e4b8315cda42c1e7dc4d2dff3">nwnx_effect.nss</a>
 </li>
+<li>NWNX_Effect_GetTrueEffect()
+: <a class="el" href="group__effect.html#ga2e0dcb3e029747151deefd63cbcb1197">nwnx_effect.nss</a>
+</li>
+<li>NWNX_Effect_GetTrueEffectCount()
+: <a class="el" href="group__effect.html#gad5ee5799b1d4ce82fb0f28a602152739">nwnx_effect.nss</a>
+</li>
 <li>NWNX_Effect_PackEffect()
 : <a class="el" href="group__effect.html#ga8c7e4f71ab7b12105e5051ec90e9fd2e">nwnx_effect.nss</a>
 </li>
+<li>NWNX_Effect_RemoveEffectById()
+: <a class="el" href="group__effect.html#ga81207d2dfad9c4733ce803bad36b534f">nwnx_effect.nss</a>
+</li>
 <li>NWNX_Effect_ReplaceEffect()
 : <a class="el" href="group__effect.html#gab4c4af97dfa245d6774c2d6cdccd720b">nwnx_effect.nss</a>
+</li>
+<li>NWNX_Effect_ReplaceEffectByIndex()
+: <a class="el" href="group__effect.html#gae8ddfbe898a7449551e3a6cf53c64f8c">nwnx_effect.nss</a>
 </li>
 <li>NWNX_Effect_SetEffectExpiredScript()
 : <a class="el" href="group__effect.html#ga3c6b1b67f4bd4332f8b2b4fdf8217aec">nwnx_effect.nss</a>
@@ -1281,6 +1389,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_ELC_VALIDATION_FAILURE_TYPE_SPELL
 : <a class="el" href="group__elc.html#gaf204259b43b1f440fbbb05739cec0a03">nwnx_elc.nss</a>
 </li>
+<li>NWNX_Encounter_GetCanReset()
+: <a class="el" href="group__encounter.html#ga4d7d62de355882b0e9adfcabddcc38bc">nwnx_encounter.nss</a>
+</li>
 <li>NWNX_Encounter_GetCurrentNumSpawned()
 : <a class="el" href="group__encounter.html#ga3b3afc41feff135f4480b596eb627e43">nwnx_encounter.nss</a>
 </li>
@@ -1289,6 +1400,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 </li>
 <li>NWNX_Encounter_GetFactionId()
 : <a class="el" href="group__encounter.html#ga63e14a9f74bbee43dd845a24491d232a">nwnx_encounter.nss</a>
+</li>
+<li>NWNX_Encounter_GetGeometry()
+: <a class="el" href="group__encounter.html#gaebb72d10375b99be9531fbbd848dccf1">nwnx_encounter.nss</a>
 </li>
 <li>NWNX_Encounter_GetMaxNumSpawned()
 : <a class="el" href="group__encounter.html#gae8357f2f4fc6a232aa95e351061b3d97">nwnx_encounter.nss</a>
@@ -1311,11 +1425,17 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Encounter_GetSpawnPointByIndex()
 : <a class="el" href="group__encounter.html#gac7f78fea14b6484c7e2700a6b1e3054d">nwnx_encounter.nss</a>
 </li>
+<li>NWNX_Encounter_SetCanReset()
+: <a class="el" href="group__encounter.html#gad097cfa83c811d4ef7aecd89f4a4022a">nwnx_encounter.nss</a>
+</li>
 <li>NWNX_Encounter_SetEncounterCreatureByIndex()
 : <a class="el" href="group__encounter.html#gac6953a870158522005e6638d872a6f6a">nwnx_encounter.nss</a>
 </li>
 <li>NWNX_Encounter_SetFactionId()
 : <a class="el" href="group__encounter.html#gad85333d88eb73973046fb706f02f6319">nwnx_encounter.nss</a>
+</li>
+<li>NWNX_Encounter_SetGeometry()
+: <a class="el" href="group__encounter.html#gab38f68612ca3cdecb42cc92999319dea">nwnx_encounter.nss</a>
 </li>
 <li>NWNX_Encounter_SetPlayerTriggeredOnly()
 : <a class="el" href="group__encounter.html#gab4fb5b83a7852007af7714b3e6e33fd8">nwnx_encounter.nss</a>
@@ -1483,22 +1603,22 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 : <a class="el" href="group__feedback.html#ga291f1b8003190dce13ff3472ee847d27">nwnx_feedback.nss</a>
 </li>
 <li>NWNX_GetReturnValueEffect()
-: <a class="el" href="group__nwnx.html#ga265e82b3283a4f1c7c18e34b83387d70">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#ga9f0628baff6b1b0275da288206078f1b">nwnx.nss</a>
 </li>
 <li>NWNX_GetReturnValueFloat()
-: <a class="el" href="group__nwnx.html#ga6af62159954fb31011088f52b82fce03">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#gaa3dcd61ce351dab1f1766dc8bf693684">nwnx.nss</a>
 </li>
 <li>NWNX_GetReturnValueInt()
-: <a class="el" href="group__nwnx.html#gabc581e541c864a29a2ec698945996f23">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#ga8bc42aa371f75376b969065f2b95aa19">nwnx.nss</a>
 </li>
 <li>NWNX_GetReturnValueItemProperty()
-: <a class="el" href="group__nwnx.html#gaf0a53533256121ffee2e34abc349d1f8">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#ga0c3dece5a08fe4de9f04b40e898ab407">nwnx.nss</a>
 </li>
 <li>NWNX_GetReturnValueObject()
-: <a class="el" href="group__nwnx.html#ga2314f3844fc63b5731fe41a678174790">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#ga612b2acd591162a671739910de0d0b34">nwnx.nss</a>
 </li>
 <li>NWNX_GetReturnValueString()
-: <a class="el" href="group__nwnx.html#ga5020d69354c6bead3824922b66282b6e">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#gae9cc53e85c008a30a58c0d7cee4169d6">nwnx.nss</a>
 </li>
 <li>NWNX_Item_GetAddGoldPieceValue()
 : <a class="el" href="group__item.html#ga6ef9c816f115d571f4b40a0f8edc81fd">nwnx_item.nss</a>
@@ -1551,6 +1671,36 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Lua_RunEvent()
 : <a class="el" href="group__lua.html#ga5a16247c28d75f20ccdefbd517cf557b">nwnx_lua.nss</a>
 </li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_CIRCUMSTANCE
+: <a class="el" href="group__nostack.html#gae43da613a7225996ceeb2f8e2604c39e">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_COMPETENCE
+: <a class="el" href="group__nostack.html#gab96ba353acc013e1b42bd9cee339f41b">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_ENHANCEMENT
+: <a class="el" href="group__nostack.html#gab4afcfc55a697db55b10b4a316e60a2d">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_INSIGHT
+: <a class="el" href="group__nostack.html#ga4f6686ab894c0408fdb517d5bd22d4c2">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_LUCK
+: <a class="el" href="group__nostack.html#gabc5eec139b76f9115e4d0c04fcd08d86">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_MORALE
+: <a class="el" href="group__nostack.html#ga97e2de210a09f6e5abf9c34673328038">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_PROFANE
+: <a class="el" href="group__nostack.html#ga3d31be0f055deafe9ddfe2dd9b56d989">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_RESISTANCE
+: <a class="el" href="group__nostack.html#ga0eb676d47de430aa9b01b845e4ff017e">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NOSTACK_EFFECT_TYPE_SACRED
+: <a class="el" href="group__nostack.html#gadb18a1e0599c282e4d910d68a8d945c9">nwnx_nostack.nss</a>
+</li>
+<li>NWNX_NoStack_SetSpellBonusType()
+: <a class="el" href="group__nostack.html#gab58506b6c8bd6a1d1f00797a1a7925d8">nwnx_nostack.nss</a>
+</li>
 <li>NWNX_Object_AcquireItem()
 : <a class="el" href="group__object.html#gabac51683829dcd5e2898b1e072d2b760">nwnx_object.nss</a>
 </li>
@@ -1588,7 +1738,10 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 : <a class="el" href="group__object.html#ga0543152520c56d3c3d3d724a38409f7d">nwnx_object.nss</a>
 </li>
 <li>NWNX_Object_Export()
-: <a class="el" href="group__object.html#ga091bdd0e7c99ed5254ca138db05d7156">nwnx_object.nss</a>
+: <a class="el" href="group__object.html#ga248baa30ff85960bf6b559554125fff4">nwnx_object.nss</a>
+</li>
+<li>NWNX_Object_GetAILevel()
+: <a class="el" href="group__object.html#ga73c0bae422bd3bc0f8dc1fbcfeeecdce">nwnx_object.nss</a>
 </li>
 <li>NWNX_Object_GetAppearance()
 : <a class="el" href="group__object.html#gaf809aa376e569c45f734efa2567094b8">nwnx_object.nss</a>
@@ -1626,11 +1779,17 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Object_GetIsDestroyable()
 : <a class="el" href="group__object.html#ga78ec105f4a5438d13687f98c294ce228">nwnx_object.nss</a>
 </li>
+<li>NWNX_Object_GetLastSpellCastFeat()
+: <a class="el" href="group__object.html#ga7e6bd03c53974433edb5581fa92dd2b5">nwnx_object.nss</a>
+</li>
 <li>NWNX_Object_GetLocalVariable()
 : <a class="el" href="group__object.html#gaf2230d31bc03edaa2b5a1be654846a46">nwnx_object.nss</a>
 </li>
 <li>NWNX_Object_GetLocalVariableCount()
 : <a class="el" href="group__object.html#ga11f4a73b409e6d3726f84fd4c556344c">nwnx_object.nss</a>
+</li>
+<li>NWNX_Object_GetMapNote()
+: <a class="el" href="group__object.html#ga4da581cc592ca482b63628d11602188c">nwnx_object.nss</a>
 </li>
 <li>NWNX_Object_GetPlaceableIsStatic()
 : <a class="el" href="group__object.html#ga1d756724555adaee80ec12a102bb4c69">nwnx_object.nss</a>
@@ -1671,6 +1830,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Object_Serialize()
 : <a class="el" href="group__object.html#ga037ae0502bb24d81f64b0f053ca00028">nwnx_object.nss</a>
 </li>
+<li>NWNX_Object_SetAILevel()
+: <a class="el" href="group__object.html#ga0e48a65367a70d409138ea55c4c300df">nwnx_object.nss</a>
+</li>
 <li>NWNX_Object_SetAppearance()
 : <a class="el" href="group__object.html#ga18c5e6922094fddfffeaf7e626602ba6">nwnx_object.nss</a>
 </li>
@@ -1694,6 +1856,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 </li>
 <li>NWNX_Object_SetInt()
 : <a class="el" href="group__object.html#ga9b295885844e07263c10712a6ebf955e">nwnx_object.nss</a>
+</li>
+<li>NWNX_Object_SetMapNote()
+: <a class="el" href="group__object.html#ga98394f91f30d5a4910db9ada5a1f5853">nwnx_object.nss</a>
 </li>
 <li>NWNX_Object_SetMaxHitPoints()
 : <a class="el" href="group__object.html#gaf2b9688d3adfe9569f8659eebe864822">nwnx_object.nss</a>
@@ -2037,6 +2202,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Player_SetSpawnLocation()
 : <a class="el" href="group__player.html#ga9ee3f2a0e9d42efced12e3992e366a4a">nwnx_player.nss</a>
 </li>
+<li>NWNX_Player_SetTlkOverride()
+: <a class="el" href="group__player.html#gac1e82d1407aa32ddbcbe2c8822a0fa8a">nwnx_player.nss</a>
+</li>
 <li>NWNX_Player_ShowVisualEffect()
 : <a class="el" href="group__player.html#ga237db89fac702f2b9f404a33c63e7b93">nwnx_player.nss</a>
 </li>
@@ -2082,6 +2250,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Player_UpdateItemName()
 : <a class="el" href="group__player.html#gacac5076de03030e5d2c8fd210d63248d">nwnx_player.nss</a>
 </li>
+<li>NWNX_POP
+: <a class="el" href="group__nwnx.html#ga0448ef12ff047f3fb7dbc8bc253f135f">nwnx.nss</a>
+</li>
 <li>NWNX_Profiler_PopPerfScope()
 : <a class="el" href="group__profiler.html#ga495550a915f20515c9be66513245fdb4">nwnx_profiler.nss</a>
 </li>
@@ -2089,22 +2260,22 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 : <a class="el" href="group__profiler.html#ga58c858bf7d10aaf6a166e78de69de79c">nwnx_profiler.nss</a>
 </li>
 <li>NWNX_PushArgumentEffect()
-: <a class="el" href="group__nwnx.html#ga070e2e6319eed3c965c496a4505f1434">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#gaa536fa9ff7c2bd8753baa975d84b7fbc">nwnx.nss</a>
 </li>
 <li>NWNX_PushArgumentFloat()
-: <a class="el" href="group__nwnx.html#ga8d3c3b2724a4cdb2555455a4d6e1053b">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#ga1d63de8f806049fdbf3a7c92670a1e21">nwnx.nss</a>
 </li>
 <li>NWNX_PushArgumentInt()
-: <a class="el" href="group__nwnx.html#gadc430d6df00ece8e9cd208ba19701698">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#ga1d7bbbf30928800bacc327e93beff2e6">nwnx.nss</a>
 </li>
 <li>NWNX_PushArgumentItemProperty()
-: <a class="el" href="group__nwnx.html#ga2591d1676fb7308c13284b6640b9df68">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#ga5d4f8a84144962d19b67e5d721ac28a1">nwnx.nss</a>
 </li>
 <li>NWNX_PushArgumentObject()
-: <a class="el" href="group__nwnx.html#ga9e802e758646d32b71f30f1578151938">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#ga633ccd114d588939b34db8a85b3cbf63">nwnx.nss</a>
 </li>
 <li>NWNX_PushArgumentString()
-: <a class="el" href="group__nwnx.html#ga6e7ebe01f31c59279956f562609c964a">nwnx.nss</a>
+: <a class="el" href="group__nwnx.html#gac4eedc41505f53a08f7aa03093a2daaf">nwnx.nss</a>
 </li>
 <li>NWNX_Race_GetModifierConstant()
 : <a class="el" href="group__race.html#gae2d72337de73db7e5cd65ad47ae73c48">nwnx_race_2da.nss</a>
@@ -3091,7 +3262,7 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 : <a class="el" href="group__tileset.html#ga0fef8a55cc5bedf3e8b468a36bf3a890">nwnx_tileset.nss</a>
 </li>
 <li>NWNX_Tileset_GetTilesetGroupTile()
-: <a class="el" href="group__tileset.html#gad8635435688d3eb9c8d923a08ad84370">nwnx_tileset.nss</a>
+: <a class="el" href="group__tileset.html#gabb37973c04de9bc0d4ebc9b0e155f772">nwnx_tileset.nss</a>
 </li>
 <li>NWNX_Tileset_GetTilesetTerrain()
 : <a class="el" href="group__tileset.html#ga1486694caa032fb4c14a3893f4a03474">nwnx_tileset.nss</a>
@@ -3147,6 +3318,15 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Util_GetFirstResRef()
 : <a class="el" href="group__util.html#gadab94b9c74eca8a4532f4d29eaf34117">nwnx_util.nss</a>
 </li>
+<li>NWNX_Util_GetHighResTimeStamp()
+: <a class="el" href="group__util.html#gab1478de40af08e03284db6fe313f319c">nwnx_util.nss</a>
+</li>
+<li>NWNX_Util_GetInstructionLimit()
+: <a class="el" href="group__util.html#ga9175e3721919bd1c82d4e2f5c376b681">nwnx_util.nss</a>
+</li>
+<li>NWNX_Util_GetInstructionsExecuted()
+: <a class="el" href="group__util.html#ga783bcf722cf620148b07dc9bb2900f53">nwnx_util.nss</a>
+</li>
 <li>NWNX_Util_GetLastCreatedObject()
 : <a class="el" href="group__util.html#ga4dc71b0421a9bf57e18aa42b177d9b4b">nwnx_util.nss</a>
 </li>
@@ -3170,6 +3350,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 </li>
 <li>NWNX_Util_GetServerTicksPerSecond()
 : <a class="el" href="group__util.html#gac9df9a6c3e6b9a8b767719c04a485188">nwnx_util.nss</a>
+</li>
+<li>NWNX_Util_GetTTY()
+: <a class="el" href="group__util.html#gadfdd32feae60ad5d4835d455a6990c38">nwnx_util.nss</a>
 </li>
 <li>NWNX_Util_GetUserDirectory()
 : <a class="el" href="group__util.html#gab9b71c82c64c7ae1a72187e47a828bed">nwnx_util.nss</a>
@@ -3248,6 +3431,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 </li>
 <li>NWNX_Util_SetInstructionLimit()
 : <a class="el" href="group__util.html#gad0e851326e9fea411b8e3125fd37b462">nwnx_util.nss</a>
+</li>
+<li>NWNX_Util_SetInstructionsExecuted()
+: <a class="el" href="group__util.html#gad95eb52baed4046da6653e3f2a41df72">nwnx_util.nss</a>
 </li>
 <li>NWNX_Util_SetItemActivator()
 : <a class="el" href="group__util.html#gaf603bdb6ed957e9016094ddcbde043b3">nwnx_util.nss</a>
@@ -3333,6 +3519,9 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 <li>NWNX_Weapon_SetGreaterWeaponSpecializationFeat()
 : <a class="el" href="group__weapon.html#ga390c5fc0caf45d77be05324a8af3762c">nwnx_weapon.nss</a>
 </li>
+<li>NWNX_Weapon_SetMaxRangedAttackDistanceOverride()
+: <a class="el" href="group__weapon.html#gab6f2ce92fc80b5deac9c83c06a0b294c">nwnx_weapon.nss</a>
+</li>
 <li>NWNX_Weapon_SetOneHalfStrength()
 : <a class="el" href="group__weapon.html#gae7c6f1ab3a37f621abeb432622071c0c">nwnx_weapon.nss</a>
 </li>
@@ -3376,7 +3565,7 @@ $(document).ready(function(){initNavTree('globals_n.html',''); initResizable(); 
 		<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
 			<ul>
 				<li class="footer">
-					Generated on Sat Dec 19 2020 00:23:20 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
+					Generated on Mon May 24 2021 05:28:04 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
 					<img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.17.
 					<a href="../">Light version</a>
 				</li>

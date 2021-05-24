@@ -6,6 +6,10 @@ var group__util =
       [ "nCalendarDay", "structNWNX__Util__WorldTime.html#afc097db3b754424f759865e53f56de39", null ],
       [ "nTimeOfDay", "structNWNX__Util__WorldTime.html#a40e833c28b4d71306dd171afe50dc3a9", null ]
     ] ],
+    [ "NWNX_Util_HighResTimestamp", "structNWNX__Util__HighResTimestamp.html", [
+      [ "seconds", "structNWNX__Util__HighResTimestamp.html#af3737b091078810d1d68beee390a48e0", null ],
+      [ "microseconds", "structNWNX__Util__HighResTimestamp.html#adb932a093a3a74a4a067f0b6c79030c0", null ]
+    ] ],
     [ "NWNX_Util_GetCurrentScriptName", "group__util.html#ga972eafd2cce6e28be85212774a0a4cf4", null ],
     [ "NWNX_Util_GetAsciiTableString", "group__util.html#ga1e18a85480ecf06727502ef50937bc71", null ],
     [ "NWNX_Util_Hash", "group__util.html#ga5e4f594854644fa1d465d9a68fbc9497", null ],
@@ -28,6 +32,9 @@ var group__util =
     [ "NWNX_Util_AddNSSFile", "group__util.html#gab41097dda05d408fd6516683eac3ce6b", null ],
     [ "NWNX_Util_RemoveNWNXResourceFile", "group__util.html#ga5722e88a786743053f24abdf3305f429", null ],
     [ "NWNX_Util_SetInstructionLimit", "group__util.html#gad0e851326e9fea411b8e3125fd37b462", null ],
+    [ "NWNX_Util_GetInstructionLimit", "group__util.html#ga9175e3721919bd1c82d4e2f5c376b681", null ],
+    [ "NWNX_Util_SetInstructionsExecuted", "group__util.html#gad95eb52baed4046da6653e3f2a41df72", null ],
+    [ "NWNX_Util_GetInstructionsExecuted", "group__util.html#ga783bcf722cf620148b07dc9bb2900f53", null ],
     [ "NWNX_Util_RegisterServerConsoleCommand", "group__util.html#ga2bf1f3fc290ca7dcf27f8266336b2a65", null ],
     [ "NWNX_Util_UnregisterServerConsoleCommand", "group__util.html#gaf0dcdc5e920d5b156079476b66fef71f", null ],
     [ "NWNX_Util_PluginExists", "group__util.html#gaa7ead2a0ea727ef1c5f8cd007681f14a", null ],
@@ -41,6 +48,8 @@ var group__util =
     [ "NWNX_Util_GetScriptParamIsSet", "group__util.html#ga8891cfa3355c004b16d5a93d8a8a4c1d", null ],
     [ "NWNX_Util_SetDawnHour", "group__util.html#gac122f4f23c7758540e8fe00bc28fe61e", null ],
     [ "NWNX_Util_SetDuskHour", "group__util.html#ga271625868161100e33f790e57cc37636", null ],
+    [ "NWNX_Util_GetHighResTimeStamp", "group__util.html#gab1478de40af08e03284db6fe313f319c", null ],
+    [ "NWNX_Util_GetTTY", "group__util.html#gadfdd32feae60ad5d4835d455a6990c38", null ],
     [ "NWNX_UTIL_RESREF_TYPE_NSS", "group__util.html#ga44497bc0ee50b6fc9525d1fe40fed2e6", null ],
     [ "NWNX_UTIL_RESREF_TYPE_NCS", "group__util.html#gac7c3717541176f4e20e5824aa2668dd0", null ],
     [ "NWNX_UTIL_RESREF_TYPE_AREA_ARE", "group__util.html#ga610bf05a8489288df5ce9ad2326bd54c", null ],

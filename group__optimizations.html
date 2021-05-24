@@ -35,7 +35,7 @@
 						<td id="projectlogo"><img width="80" height="74" alt="Logo" src="logo-transparent.png"/></td>
 						<td id="projectalign" style="padding-left: 0.5em;">
 							<div id="projectname">NWNX:EE
-								&#160;<span id="projectnumber">8193.20</span>
+								&#160;<span id="projectnumber">8193.23</span>
 							</div>
 						</td>
 						<td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -102,7 +102,7 @@ $(document).ready(function(){initNavTree('group__optimizations.html',''); initRe
 <div class="contents">
 
 
-<h3><a id="optimizations"></a>Readme</h3><div class="textblock">Game optimizations. Improves performance of various game elements.<h2><a class="anchor" id="autotoc_md310"></a>
+<h3><a id="optimizations"></a>Readme</h3><div class="textblock">Game optimizations. Improves performance of various game elements.<h2><a class="anchor" id="autotoc_md342"></a>
 Environment Variables</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -111,6 +111,14 @@ Environment Variables</h2>
 <td class="markdownTableBodyNone"><code>NWNX_OPTIMIZATIONS_ASYNC_LOG_FLUSH</code> </td><td class="markdownTableBodyCenter">true/false </td><td class="markdownTableBodyNone">Flushes the game log on an async thread, potentially improving performance  </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>NWNX_OPTIMIZATIONS_GAME_OBJECT_LOOKUP</code> </td><td class="markdownTableBodyCenter">true/false </td><td class="markdownTableBodyNone">Optimizes object lookup code, improving performance  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_OPTIMIZATIONS_PLAYER_LOOKUP</code> </td><td class="markdownTableBodyCenter">true/false </td><td class="markdownTableBodyNone">Optimizes Player client lookup from object IDs, improving performance  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_OPTIMIZATIONS_LUO_LOOKUP</code> </td><td class="markdownTableBodyCenter">true/false </td><td class="markdownTableBodyNone">Optimizes LastUpdateObject lookup code, improving performance  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_OPTIMIZATIONS_ALTERNATE_GAME_OBJECT_UPDATE</code> </td><td class="markdownTableBodyCenter">true/false </td><td class="markdownTableBodyNone">Uses an experimental alternative update mechanism. Requires <code>LUO_LOOKUP</code>. <b>WARNING</b>: Will break all of NWNX_Appearance and the following NWNX_Player functions: SetObjectVisualTransformOverride, ApplyLoopingVisualEffectToObject, SetPlaceableNameOverride, SetCreatureNameOverride, SetObjectMouseCursorOverride and SetObjectHiliteColorOverride  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_OPTIMIZATIONS_RECONCILE_AUTOMAP_DATA</code> </td><td class="markdownTableBodyCenter">true/false </td><td class="markdownTableBodyNone">Reduces the number of checks for mismatches between players' and module's area list  </td></tr>
 </table>
 </div></div><!-- contents -->
 </div><!-- doc-content -->
@@ -118,7 +126,7 @@ Environment Variables</h2>
 		<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
 			<ul>
 				<li class="footer">
-					Generated on Sat Dec 19 2020 00:23:19 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
+					Generated on Mon May 24 2021 05:28:03 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
 					<img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.17.
 					<a href="dark/">Dark version</a>
 				</li>

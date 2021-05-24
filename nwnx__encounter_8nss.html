@@ -35,7 +35,7 @@
 						<td id="projectlogo"><img width="80" height="74" alt="Logo" src="logo-transparent.png"/></td>
 						<td id="projectalign" style="padding-left: 0.5em;">
 							<div id="projectname">NWNX:EE
-								&#160;<span id="projectnumber">8193.20</span>
+								&#160;<span id="projectnumber">8193.23</span>
 							</div>
 						</td>
 						<td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -136,6 +136,12 @@ Functions</h2></td></tr>
 <tr class="memitem:gab4fb5b83a7852007af7714b3e6e33fd8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__encounter.html#gab4fb5b83a7852007af7714b3e6e33fd8">NWNX_Encounter_SetPlayerTriggeredOnly</a> (object encounter, int playerTriggeredOnly)</td></tr>
 <tr class="memdesc:gab4fb5b83a7852007af7714b3e6e33fd8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set if encounter is player triggered only.  <a href="group__encounter.html#gab4fb5b83a7852007af7714b3e6e33fd8">More...</a><br /></td></tr>
 <tr class="separator:gab4fb5b83a7852007af7714b3e6e33fd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga4d7d62de355882b0e9adfcabddcc38bc"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__encounter.html#ga4d7d62de355882b0e9adfcabddcc38bc">NWNX_Encounter_GetCanReset</a> (object encounter)</td></tr>
+<tr class="memdesc:ga4d7d62de355882b0e9adfcabddcc38bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get if the encounter respawns or not.  <a href="group__encounter.html#ga4d7d62de355882b0e9adfcabddcc38bc">More...</a><br /></td></tr>
+<tr class="separator:ga4d7d62de355882b0e9adfcabddcc38bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gad097cfa83c811d4ef7aecd89f4a4022a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__encounter.html#gad097cfa83c811d4ef7aecd89f4a4022a">NWNX_Encounter_SetCanReset</a> (object encounter, int reset)</td></tr>
+<tr class="memdesc:gad097cfa83c811d4ef7aecd89f4a4022a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set if the encounter respawns or not.  <a href="group__encounter.html#gad097cfa83c811d4ef7aecd89f4a4022a">More...</a><br /></td></tr>
+<tr class="separator:gad097cfa83c811d4ef7aecd89f4a4022a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac5518f02ee12132540934acfcd58c780"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__encounter.html#gac5518f02ee12132540934acfcd58c780">NWNX_Encounter_GetResetTime</a> (object encounter)</td></tr>
 <tr class="memdesc:gac5518f02ee12132540934acfcd58c780"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the reset time of encounter.  <a href="group__encounter.html#gac5518f02ee12132540934acfcd58c780">More...</a><br /></td></tr>
 <tr class="separator:gac5518f02ee12132540934acfcd58c780"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -157,6 +163,12 @@ Functions</h2></td></tr>
 <tr class="memitem:ga3b3afc41feff135f4480b596eb627e43"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__encounter.html#ga3b3afc41feff135f4480b596eb627e43">NWNX_Encounter_GetCurrentNumSpawned</a> (object encounter)</td></tr>
 <tr class="memdesc:ga3b3afc41feff135f4480b596eb627e43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current number of creatures that are spawned and alive.  <a href="group__encounter.html#ga3b3afc41feff135f4480b596eb627e43">More...</a><br /></td></tr>
 <tr class="separator:ga3b3afc41feff135f4480b596eb627e43"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaebb72d10375b99be9531fbbd848dccf1"><td class="memItemLeft" align="right" valign="top">string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__encounter.html#gaebb72d10375b99be9531fbbd848dccf1">NWNX_Encounter_GetGeometry</a> (object oEncounter)</td></tr>
+<tr class="memdesc:gaebb72d10375b99be9531fbbd848dccf1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the geometry of an encounter.  <a href="group__encounter.html#gaebb72d10375b99be9531fbbd848dccf1">More...</a><br /></td></tr>
+<tr class="separator:gaebb72d10375b99be9531fbbd848dccf1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab38f68612ca3cdecb42cc92999319dea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__encounter.html#gab38f68612ca3cdecb42cc92999319dea">NWNX_Encounter_SetGeometry</a> (object oTrigger, string sGeometry)</td></tr>
+<tr class="memdesc:gab38f68612ca3cdecb42cc92999319dea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the geometry of an encounter with a list of vertex positions.  <a href="group__encounter.html#gab38f68612ca3cdecb42cc92999319dea">More...</a><br /></td></tr>
+<tr class="separator:gab38f68612ca3cdecb42cc92999319dea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->
@@ -165,7 +177,7 @@ Functions</h2></td></tr>
 			<ul>
 				<li class="navelem"><a class="el" href="dir_0b4eaef40a1fe20bedafe9e8e719ce66.html">Plugins</a></li><li class="navelem"><a class="el" href="dir_bf7b181b7d07eec0e4a023ccab1d7777.html">Encounter</a></li><li class="navelem"><a class="el" href="dir_e3ec0c5244f9043863c5012a1706e753.html">NWScript</a></li><li class="navelem"><a class="el" href="nwnx__encounter_8nss.html">nwnx_encounter.nss</a></li>
 				<li class="footer">
-					Generated on Sat Dec 19 2020 00:23:18 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
+					Generated on Mon May 24 2021 05:28:03 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
 					<img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.17.
 					<a href="dark/">Dark version</a>
 				</li>

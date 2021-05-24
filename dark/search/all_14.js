@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['visibility_1656',['Visibility',['../group__visibility.html',1,'']]],
-  ['vparam0_1657',['vParam0',['../structNWNX__EffectUnpacked.html#a2a662e0b9af4a7c7aff93d810cb87f54',1,'NWNX_EffectUnpacked']]],
-  ['vparam1_1658',['vParam1',['../structNWNX__EffectUnpacked.html#a02dd1d1841933c337c9ee948e6264d4f',1,'NWNX_EffectUnpacked']]]
+  ['unique_1784',['unique',['../structNWNX__Encounter__CreatureListEntry.html#ad9fd36779fea2410a0c7c91ca019d601',1,'NWNX_Encounter_CreatureListEntry']]],
+  ['unlink_1785',['UNLINK',['../nwnx__redis__short_8nss.html#aa1fa7cbf23cda9c2431f3c44a2eb3175',1,'nwnx_redis_short.nss']]],
+  ['unwatch_1786',['UNWATCH',['../nwnx__redis__short_8nss.html#a3a728ec56f956f7c8dc04740fb06ea53',1,'nwnx_redis_short.nss']]],
+  ['util_1787',['Util',['../group__util.html',1,'']]]
 ];
