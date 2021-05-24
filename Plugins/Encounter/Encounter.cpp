@@ -1,100 +1,35 @@
-#include "Encounter.hpp"
+#include "nwnx.hpp"
 
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
+#include "API/CNWSArea.hpp"
 #include "API/CNWSEncounter.hpp"
 #include "API/CEncounterSpawnPoint.hpp"
 #include "API/CEncounterListEntry.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
-#include "Services/Events/Events.hpp"
-
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static Encounter::Encounter* g_plugin;
-
-NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
+NWNX_EXPORT ArgumentStack GetNumberOfCreaturesInEncounterList(ArgumentStack&& args)
 {
-    g_plugin = new Encounter::Encounter(services);
-    return g_plugin;
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_nNumEncounterListEntries;
+
+    return 0;
 }
 
-
-namespace Encounter {
-
-Encounter::Encounter(Services::ProxyServiceList* services)
-    : Plugin(services)
-{
-#define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, \
-        [this](ArgumentStack&& args){ return func(std::move(args)); })
-
-    REGISTER(GetNumberOfCreaturesInEncounterList);
-    REGISTER(GetEncounterCreatureByIndex);
-    REGISTER(SetEncounterCreatureByIndex);
-    REGISTER(GetFactionId);
-    REGISTER(SetFactionId);
-    REGISTER(GetPlayerTriggeredOnly);
-    REGISTER(SetPlayerTriggeredOnly);
-    REGISTER(GetResetTime);
-    REGISTER(SetResetTime);
-    REGISTER(GetNumberOfSpawnPoints);
-    REGISTER(GetSpawnPointByIndex);
-    REGISTER(GetMinNumSpawned);
-    REGISTER(GetMaxNumSpawned);
-    REGISTER(GetCurrentNumSpawned);
-
-#undef REGISTER
-}
-
-Encounter::~Encounter()
-{
-}
-
-CNWSEncounter *Encounter::encounter(ArgumentStack& args)
-{
-    const auto encounterId = Services::Events::ExtractArgument<ObjectID>(args);
-
-    if (encounterId == Constants::OBJECT_INVALID)
-    {
-        LOG_NOTICE("NWNX_Encounter function called on OBJECT_INVALID");
-        return nullptr;
-    }
-
-    auto *pEncounter = Globals::AppManager()->m_pServerExoApp->GetEncounterByGameObjectID(encounterId);
-
-    if (!pEncounter)
-    {
-        LOG_NOTICE("NWNX_Encounter function called on non-encounter object %x", encounterId);
-    }
-
-    return pEncounter;
-}
-
-ArgumentStack Encounter::GetNumberOfCreaturesInEncounterList(ArgumentStack&& args)
-{
-    int32_t retVal = 0;
-
-    if (auto *pEncounter = encounter(args))
-    {
-        retVal = pEncounter->m_nNumEncounterListEntries;
-    }
-
-    return Services::Events::Arguments(retVal);
-}
-
-ArgumentStack Encounter::GetEncounterCreatureByIndex(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetEncounterCreatureByIndex(ArgumentStack&& args)
 {
     std::string resRef = "";
     float cr = 0.0;
     int32_t unique = 0;
     int32_t alreadyUsed = 0;
 
-    if (auto *pEncounter = encounter(args))
+    if (auto *pEncounter = Utils::PopEncounter(args))
     {
-        const auto index = Services::Events::ExtractArgument<int32_t>(args);
+        const auto index = args.extract<int32_t>();
         ASSERT_OR_THROW(index >= 0.0);
 
         if (index < pEncounter->m_nNumEncounterListEntries)
@@ -106,20 +41,20 @@ ArgumentStack Encounter::GetEncounterCreatureByIndex(ArgumentStack&& args)
         }
     }
 
-    return Services::Events::Arguments(resRef, cr, unique, alreadyUsed);
+    return {resRef, cr, unique, alreadyUsed};
 }
 
-ArgumentStack Encounter::SetEncounterCreatureByIndex(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack SetEncounterCreatureByIndex(ArgumentStack&& args)
 {
-    if (auto *pEncounter = encounter(args))
+    if (auto *pEncounter = Utils::PopEncounter(args))
     {
-        const auto index = Services::Events::ExtractArgument<int32_t>(args);
-        const auto resRef = Services::Events::ExtractArgument<std::string>(args);
-        auto cr = Services::Events::ExtractArgument<float>(args);
+        const auto index = args.extract<int32_t>();
+        const auto resRef = args.extract<std::string>();
+        auto cr = args.extract<float>();
         ASSERT_OR_THROW(cr >= 0.0);
-        auto unique = Services::Events::ExtractArgument<int32_t>(args);
+        auto unique = args.extract<int32_t>();
         unique = !!unique;
-        auto alreadyUsed = Services::Events::ExtractArgument<int32_t>(args);
+        auto alreadyUsed = args.extract<int32_t>();
         alreadyUsed = !!alreadyUsed;
 
         if (index < pEncounter->m_nNumEncounterListEntries)
@@ -132,105 +67,97 @@ ArgumentStack Encounter::SetEncounterCreatureByIndex(ArgumentStack&& args)
         }
     }
 
-    return Services::Events::Arguments();
+    return {};
 }
 
-ArgumentStack Encounter::GetFactionId(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetFactionId(ArgumentStack&& args)
 {
-    int32_t retVal = 0;
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_nFactionId;
 
-    if (auto *pEncounter = encounter(args))
-    {
-        retVal = pEncounter->m_nFactionId;
-    }
-
-    return Services::Events::Arguments(retVal);
+    return 0;
 }
 
-ArgumentStack Encounter::SetFactionId(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack SetFactionId(ArgumentStack&& args)
 {
-    if (auto *pEncounter = encounter(args))
+    if (auto *pEncounter = Utils::PopEncounter(args))
     {
-        auto factionId = Services::Events::ExtractArgument<int32_t>(args);
-
-        ASSERT_OR_THROW(factionId >= 0);
-
+        auto factionId = args.extract<int32_t>();
+          ASSERT_OR_THROW(factionId >= 0);
         pEncounter->m_nFactionId = factionId;
     }
 
-    return Services::Events::Arguments();
+    return {};
 }
 
-ArgumentStack Encounter::GetPlayerTriggeredOnly(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetPlayerTriggeredOnly(ArgumentStack&& args)
 {
-    int32_t retVal = 0;
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_bPlayerTriggeredOnly;
 
-    if (auto *pEncounter = encounter(args))
-    {
-        retVal = pEncounter->m_bPlayerTriggeredOnly;
-    }
-
-    return Services::Events::Arguments(retVal);
+    return 0;
 }
 
-ArgumentStack Encounter::SetPlayerTriggeredOnly(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack SetPlayerTriggeredOnly(ArgumentStack&& args)
 {
-    if (auto *pEncounter = encounter(args))
-    {
-        auto playerTriggeredOnly = Services::Events::ExtractArgument<int32_t>(args);
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        pEncounter->m_bPlayerTriggeredOnly = !!args.extract<int32_t>();
 
-        playerTriggeredOnly = !!playerTriggeredOnly;
-
-        pEncounter->m_bPlayerTriggeredOnly = playerTriggeredOnly;
-    }
-
-    return Services::Events::Arguments();
+    return {};
 }
 
-ArgumentStack Encounter::GetResetTime(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetCanReset(ArgumentStack&& args)
 {
-    int32_t retVal = 0;
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_bReset;
 
-    if (auto *pEncounter = encounter(args))
-    {
-        retVal = pEncounter->m_nResetTime;
-    }
-
-    return Services::Events::Arguments(retVal);
+    return 0;
 }
 
-ArgumentStack Encounter::SetResetTime(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack SetCanReset(ArgumentStack&& args)
 {
-    if (auto *pEncounter = encounter(args))
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        pEncounter->m_bReset = !!args.extract<int32_t>();
+
+    return {};
+}
+
+NWNX_EXPORT ArgumentStack GetResetTime(ArgumentStack&& args)
+{
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_nResetTime;
+
+    return 0;
+}
+
+NWNX_EXPORT ArgumentStack SetResetTime(ArgumentStack&& args)
+{
+    if (auto *pEncounter = Utils::PopEncounter(args))
     {
-        auto resetTime = Services::Events::ExtractArgument<int32_t>(args);
-        ASSERT_OR_THROW(resetTime >= 0);
+        auto resetTime = args.extract<int32_t>();
+          ASSERT_OR_THROW(resetTime >= 0);
 
         pEncounter->m_nResetTime = resetTime;
     }
 
-    return Services::Events::Arguments();
+    return {};
 }
 
-ArgumentStack Encounter::GetNumberOfSpawnPoints(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetNumberOfSpawnPoints(ArgumentStack&& args)
 {
-    int32_t retVal = 0;
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_nNumSpawnPoints;
 
-    if (auto *pEncounter = encounter(args))
-    {
-        retVal = pEncounter->m_nNumSpawnPoints;
-    }
-
-    return Services::Events::Arguments(retVal);
+    return 0;
 }
 
-ArgumentStack Encounter::GetSpawnPointByIndex(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetSpawnPointByIndex(ArgumentStack&& args)
 {
     float x = 0.0, y = 0.0, z = 0.0, o = 0.0;
 
-    if (auto *pEncounter = encounter(args))
+    if (auto *pEncounter = Utils::PopEncounter(args))
     {
-        const auto index = Services::Events::ExtractArgument<int32_t>(args);
+        const auto index = args.extract<int32_t>();
         ASSERT_OR_THROW(index >= 0);
 
         if (index < pEncounter->m_nNumSpawnPoints)
@@ -242,40 +169,102 @@ ArgumentStack Encounter::GetSpawnPointByIndex(ArgumentStack&& args)
         }
     }
 
-    return Services::Events::Arguments(x, y, z, o);
+    return {x, y, z, o};
 }
 
-ArgumentStack Encounter::GetMinNumSpawned(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetMinNumSpawned(ArgumentStack&& args)
 {
-    int32_t retVal = 0;
-    if (auto *pEncounter = encounter(args))
-    {
-        retVal = pEncounter->m_nMinNumSpawnedCreatures;
-    }
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_nMinNumSpawnedCreatures;
 
-    return Services::Events::Arguments(retVal);
+    return 0;
 }
 
-ArgumentStack Encounter::GetMaxNumSpawned(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetMaxNumSpawned(ArgumentStack&& args)
 {
-    int32_t retVal = 0;
-    if (auto *pEncounter = encounter(args))
-    {
-        retVal = pEncounter->m_nMaxSpawnedCreatures;
-    }
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_nMaxSpawnedCreatures;
 
-    return Services::Events::Arguments(retVal);
+    return 0;
 }
 
-ArgumentStack Encounter::GetCurrentNumSpawned(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetCurrentNumSpawned(ArgumentStack&& args)
 {
-    int32_t retVal = 0;
-    if (auto *pEncounter = encounter(args))
-    {
-        retVal = pEncounter->m_nNumSpawnedCreatures;
-    }
+    if (auto *pEncounter = Utils::PopEncounter(args))
+        return pEncounter->m_nNumSpawnedCreatures;
 
-    return Services::Events::Arguments(retVal);
+    return 0;
 }
 
+NWNX_EXPORT ArgumentStack GetGeometry(ArgumentStack&& args)
+{
+    std::string retVal;
+
+    if (auto *pEncounter = Utils::PopEncounter(args))
+    {
+        retVal.reserve(32 * pEncounter->m_nNumActivateVertices);
+
+        for(int i = 0; i < pEncounter->m_nNumActivateVertices; i++)
+        {
+            retVal += "{" + std::to_string(pEncounter->m_pvActivateVertices[i].x) + ", " +
+                            std::to_string(pEncounter->m_pvActivateVertices[i].y) + ", " +
+                            std::to_string(pEncounter->m_pvActivateVertices[i].z) + "}";
+        }
+    }
+    return retVal;
+}
+
+NWNX_EXPORT ArgumentStack SetGeometry(ArgumentStack&& args)
+{
+    if (auto *pEncounter = Utils::PopEncounter(args))
+    {
+        const auto sGeometry = args.extract<std::string>();
+
+        auto str = sGeometry.c_str();
+        std::vector<Vector> vecVerts;
+        Vector vec = {};
+
+        do {
+            int cnt = std::sscanf(str, "{%f,%f,%f", &vec.x, &vec.y, &vec.z);
+
+            if (cnt != 2 && cnt != 3)
+            {
+                LOG_NOTICE("NWNX_Encounter_SetGeometry() invalid geometry string at: %s", str);
+                break;
+            }
+
+            if (cnt == 2)
+                vec.z = pEncounter->GetArea()->ComputeHeight(vec);
+
+            vecVerts.push_back(vec);
+        } while ((str = std::strstr(str + 1, "{")));
+
+        if (vecVerts.size() > 2)
+        {
+            CNWSArea *pArea = pEncounter->GetArea();
+            pEncounter->RemoveFromArea();
+
+            delete[] pEncounter->m_pvActivateVertices;
+            delete[] pEncounter->m_pnOutlineVertices;
+            
+            pEncounter->m_nNumActivateVertices = vecVerts.size();
+            pEncounter->m_nNumOutlineVertices = vecVerts.size();
+
+            pEncounter->m_pvActivateVertices = new Vector[pEncounter->m_nNumActivateVertices];
+            pEncounter->m_pnOutlineVertices = new int32_t[pEncounter->m_nNumActivateVertices];
+
+            for(int i = 0; i < pEncounter->m_nNumActivateVertices; i++)
+            {
+                pEncounter->m_pvActivateVertices[i] = vecVerts[i];
+                pEncounter->m_pnOutlineVertices[i] = i;
+            }
+
+            Utils::AddToArea(pEncounter, pArea, pEncounter->m_pvActivateVertices[0].x, pEncounter->m_pvActivateVertices[0].y, pEncounter->m_pvActivateVertices[0].z);
+        }
+        else
+        {
+            LOG_WARNING("NWNX_Encounter_SetGeometry() called with less than 3 vertices.");
+        }
+    }
+    return {};
 }

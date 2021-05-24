@@ -58,7 +58,7 @@ struct CVirtualMachine
 
     CVirtualMachine();
     ~CVirtualMachine();
-    BOOL RunScript(CExoString * psFileName, OBJECT_ID oid, BOOL bOidValid = true);
+    BOOL RunScript(CExoString * psFileName, OBJECT_ID oid, BOOL bOidValid = true, int32_t nScriptEventID = 0);
     int32_t RunScriptChunk(const CExoString & sScriptChunk, OBJECT_ID oid, BOOL bOidValid = true, BOOL bWrapIntoMain = true);
     BOOL RunScriptSituation(void * pScriptSituation, OBJECT_ID oid, BOOL bOidValid = true);
     BOOL GetRunScriptReturnValue(int32_t * nParameterType, void * * pParameter);
@@ -83,11 +83,10 @@ struct CVirtualMachine
     int32_t ExecuteCode(int32_t * nInstructionPointer, DataBlockRef pCode, CVirtualMachineDebuggingContext * pDebugContext = nullptr);
     BOOL Test_RunAllScriptsInDirectory(CExoString & sRunDirectoryAlias);
     BOOL DeleteScript(CVirtualMachineScript * pScript);
-    int32_t ExecuteInstructions(int32_t nRecursionLevel, int32_t nNodeLocation);
     void InitializeScript(CVirtualMachineScript * pScript, DataBlockRef pData);
     BOOL PopInstructionPtr(int32_t * nInstructionPointer);
     BOOL PushInstructionPtr(int32_t nInstructionPointer);
-    int32_t ReadScriptFile(CExoString * sFileName);
+    int32_t ReadScriptFile(CExoString * sFileName, int32_t nScriptEvent = 0);
     int32_t RunScriptFile(int32_t nInstructionPointer);
     int32_t SetUpJITCompiledScript(const CExoString & sScriptChunk, BOOL bWrapIntoMain);
     int32_t SetUpScriptSituation(CVirtualMachineScript * pScript);
