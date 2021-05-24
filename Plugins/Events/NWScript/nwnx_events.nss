@@ -61,10 +61,10 @@ _______________________________________
 
     Event Data Tag        | Type   | Notes
     ----------------------|--------|-------
-    FACTION_ID            | int    | Not the STANDARD_FACTION_* constants. See nwnx_creature->GetFaction().
-    SUBJECT_FACTION_ID    | int    | Not the STANDARD_FACTION_* constants. See nwnx_creature->GetFaction().
-    PREVIOUS_REPUTATION   | int    |
-    NEW_REPUTATION        | int    | Not yet clamped between 0-100. In the AFTER event, this will equal the EventResult set in the BEFORE event.
+    FACTION_ID            | int    | Not the STANDARD_FACTION_* constants. See nwnx_creature->GetFaction(). |
+    SUBJECT_FACTION_ID    | int    | Not the STANDARD_FACTION_* constants. See nwnx_creature->GetFaction(). |
+    PREVIOUS_REPUTATION   | int    | |
+    NEW_REPUTATION        | int    | Not yet clamped between 0-100. In the AFTER event, this will equal the EventResult set in the BEFORE event. |
 
 _______________________________________
     ## Validate Use Item Events
@@ -174,6 +174,9 @@ _______________________________________
     ITEM                  | object | Convert to object with StringToObject()|
     SLOT                  | int    | |
 
+    @note This event does not run on login as the base game OnPlayerEquipItem event does. (Because this event hooks CNWSCreature::RunEquip which calls CNWSCreature::EquipItem. When the player character is first loaded, EquipItem is called directly.)
+    @note If the goal is to prevent items from being equiped under certain conditions, and since this event does not run on login, it could be helpful to additionally use NWNX_Creature_RunUnequip() in the OnClientEnter (or similar) event.
+
 _______________________________________
     ## Item Unequip Events
     - NWNX_ON_ITEM_UNEQUIP_BEFORE
@@ -267,7 +270,7 @@ _______________________________________
 
 _______________________________________
     ## Has Feat Events
-    - NWNX_ON_HASFEAT_BEFORE
+    - NWNX_ON_HAS_FEAT_BEFORE
     - NWNX_ON_HAS_FEAT_AFTER
 
     `OBJECT_SELF` = The player being checked for the feat
@@ -1070,21 +1073,21 @@ _______________________________________
 
     Event Data Tag        | Type   | Notes
     ----------------------|--------|-------
-    TARGET                | object | Convert to object with StringToObject()
-    SPELL_ID              | int    |
-    MULTICLASS            | int    |
-    DOMAIN_LEVEL          | int    |
-    META_TYPE             | int    |
-    INSTANT               | int    | TRUE / FALSE
-    PROJECTILE_PATH       | int    |
-    SPONTANEOUS           | int    | TRUE / FALSE
-    FAKE                  | int    | TRUE / FALSE
-    FEAT                  | int    | -1 when not cast from a feat
-    CASTER_LEVEL          | int    |
-    IS_AREA_TARGET        | int    | TRUE / FALSE
-    POS_X                 | float  |
-    POS_Y                 | float  |
-    POS_Z                 | float  |
+    TARGET                | object | Convert to object with StringToObject() |
+    SPELL_ID              | int    | |
+    MULTICLASS            | int    | |
+    DOMAIN_LEVEL          | int    | |
+    META_TYPE             | int    | |
+    INSTANT               | int    | TRUE / FALSE |
+    PROJECTILE_PATH       | int    | |
+    SPONTANEOUS           | int    | TRUE / FALSE |
+    FAKE                  | int    | TRUE / FALSE |
+    FEAT                  | int    | -1 when not cast from a feat |
+    CASTER_LEVEL          | int    | |
+    IS_AREA_TARGET        | int    | TRUE / FALSE |
+    POS_X                 | float  | |
+    POS_Y                 | float  | |
+    POS_Z                 | float  | |
 
     @note This event runs the moment a creature starts casting
 
@@ -1141,10 +1144,10 @@ _______________________________________
 
     Event Data Tag        | Type   | Notes
     ----------------------|--------|-------
-    DOOR                  | object | Convert to object with StringToObject()
-    THIEVES_TOOL          | object | Convert to object with StringToObject()
-    ACTIVE_PROPERTY_INDEX | int    |
-    ACTION_RESULT         | int    | TRUE/FALSE, only in _AFTER events
+    DOOR                  | object | Convert to object with StringToObject() |
+    THIEVES_TOOL          | object | Convert to object with StringToObject() |
+    ACTIVE_PROPERTY_INDEX | int    | |
+    ACTION_RESULT         | int    | TRUE/FALSE, only in _AFTER events |
 
 _______________________________________
     ## UUID Collision Events

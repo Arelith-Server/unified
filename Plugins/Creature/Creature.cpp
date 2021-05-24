@@ -27,9 +27,16 @@
 #include "API/CEffectIconObject.hpp"
 #include "API/CNWSArea.hpp"
 #include "API/CPathfindInformation.hpp"
+#include "API/CServerAIMaster.hpp"
+#include "API/CNWSSpellScriptData.hpp"
+#include "API/CNWSpellArray.hpp"
+#include "API/CNWSpell.hpp"
+#include "API/CVirtualMachine.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "API/Functions.hpp"
+
+#include <cmath>
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
@@ -647,7 +654,7 @@ NWNX_EXPORT ArgumentStack GetMaxSpellSlots(ArgumentStack&& args)
         {
             auto& classInfo = pCreature->m_pStats->m_ClassInfo[i];
             if (classInfo.m_nClass == classId)
-                return pCreature->m_pStats->GetSpellGainWithBonus(i, level) + classInfo.m_nBonusSpellsList[level];
+                return (int32_t)(pCreature->m_pStats->GetSpellGainWithBonus(i, level) + classInfo.m_nBonusSpellsList[level]);
         }
     }
     return -1;
@@ -2964,3 +2971,114 @@ NWNX_EXPORT ArgumentStack SetLastKiller(ArgumentStack&& args)
     return {};
 }
 
+NWNX_EXPORT ArgumentStack DoItemCastSpell(ArgumentStack&& args)
+{
+    if (auto *pCaster = Utils::PopCreature(args))
+    {
+        auto oidTarget = args.extract<ObjectID>();
+        auto oidArea = args.extract<ObjectID>();
+        auto x = args.extract<float>();
+          ASSERT_OR_THROW(x >= 0.0f);
+        auto y = args.extract<float>();
+          ASSERT_OR_THROW(y >= 0.0f);
+        auto z = args.extract<float>();
+          ASSERT_OR_THROW(z >= 0.0f);
+        auto spellID = args.extract<int32_t>();
+          ASSERT_OR_THROW(spellID >= 0);
+        auto casterLevel = args.extract<int32_t>();
+          ASSERT_OR_THROW(casterLevel >= 0);
+        auto delay = args.extract<float>();
+          ASSERT_OR_THROW(delay >= 0.0f);
+        auto projectilePathType = args.extract<int32_t>();
+        auto projectileSpellID = args.extract<int32_t>();
+
+        auto *pSpell = Globals::Rules()->m_pSpellArray->GetSpell(spellID);
+        auto *pTarget = Utils::AsNWSObject(Utils::GetGameObject(oidTarget));
+        auto *pArea = Utils::AsNWSArea(Utils::GetGameObject(oidArea));
+
+        if (!pSpell || (!pTarget && !pArea))
+            return {};
+
+        ObjectID oidTargetArea = pTarget ? pTarget->m_oidArea : pArea->m_idSelf;
+
+        if (pCaster->m_oidArea != oidTargetArea)
+            return {};
+
+        Vector vTargetPosition = pTarget ? pTarget->m_vPosition : Vector(x, y, z);
+        auto delayMs = (int32_t)(delay * 1000);
+
+        if (delayMs > 0)
+        {
+            switch (projectilePathType)
+            {
+                case 0: case 1:  case 2: case 3: break;
+                case 4: projectilePathType = 5; break;
+                default: projectilePathType = 0; break;
+            }
+
+            pCaster->BroadcastSafeProjectile(pCaster->m_idSelf, pTarget ? pTarget->m_idSelf : Constants::OBJECT_INVALID,
+                                             pCaster->m_vPosition, vTargetPosition, delayMs,
+                                             projectilePathType == 0 ? 6 : 7,
+                                             Globals::Rules()->m_pSpellArray->GetSpell(projectileSpellID) ? projectileSpellID : spellID,
+                                             1, projectilePathType);
+        }
+
+        auto *pSpellScriptData = new CNWSSpellScriptData;
+        pSpellScriptData->m_nSpellId = spellID;
+        pSpellScriptData->m_nFeatId = 0xFFFF;
+        pSpellScriptData->m_oidCaster = pCaster->m_idSelf;
+        pSpellScriptData->m_oidTarget = pTarget ? pTarget->m_idSelf : Constants::OBJECT_INVALID;
+        pSpellScriptData->m_oidItem = Constants::OBJECT_INVALID;
+        pSpellScriptData->m_vTargetPosition = vTargetPosition;
+        pSpellScriptData->m_sScript = pSpell->m_sImpactScript;
+        pSpellScriptData->m_oidArea = oidTargetArea;
+        pSpellScriptData->m_nItemCastLevel = casterLevel;
+
+        Globals::AppManager()->m_pServerExoApp->GetServerAIMaster()->AddEventDeltaTime(
+                0, delayMs, pCaster->m_idSelf, pCaster->m_idSelf, Constants::Event::ItemOnHitSpellImpact, (void*)pSpellScriptData);
+    }
+
+    return {};
+}
+
+NWNX_EXPORT ArgumentStack RunEquip(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto oidItem = args.extract<ObjectID>();
+          ASSERT_OR_THROW(oidItem != Constants::OBJECT_INVALID);
+        auto inventorySlot = args.extract<int32_t>();
+          ASSERT_OR_THROW(inventorySlot >= 0);
+          ASSERT_OR_THROW(inventorySlot <= Constants::InventorySlot::MAX);
+
+        if (auto *pItem = Utils::AsNWSItem(Utils::GetGameObject(oidItem)))
+        {
+            inventorySlot = (int32_t)std::pow(2, inventorySlot);
+            return pCreature->RunEquip(pItem->m_idSelf, inventorySlot);
+        }
+    }
+    return false;
+}
+
+NWNX_EXPORT ArgumentStack RunUnequip(ArgumentStack&& args)
+{
+    int32_t retVal = false;
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto oidItem = args.extract<ObjectID>();
+          ASSERT_OR_THROW(oidItem != Constants::OBJECT_INVALID);
+
+        if (auto *pItem = Utils::AsNWSItem(Utils::GetGameObject(oidItem)))
+        {
+            // The module unequip event runs instantly so we have to temporarily change the event script id of the calling script
+            // otherwise GetCurrentlyRunningEvent() doesn't return the right id
+            int32_t previousScriptEventId = Globals::VirtualMachine()->m_pVirtualMachineScript[0].m_nScriptEventID;
+            Globals::VirtualMachine()->m_pVirtualMachineScript[0].m_nScriptEventID = 3016;
+
+            retVal = pCreature->RunUnequip(pItem->m_idSelf, Constants::OBJECT_INVALID, -1, -1, false);
+
+            Globals::VirtualMachine()->m_pVirtualMachineScript[0].m_nScriptEventID = previousScriptEventId;
+        }
+    }
+    return retVal;
+}
