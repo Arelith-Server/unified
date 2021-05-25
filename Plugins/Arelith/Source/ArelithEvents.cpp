@@ -11,9 +11,7 @@
 #include "API/Constants.hpp"
 #include "API/CGameEffect.hpp"
 #include "API/Globals.hpp"
-#include "Plugin.hpp"
 #include "Arelith.hpp"
-#include "Utils.hpp"
 #include "API/Functions.hpp"
 
 namespace Arelith {
@@ -22,18 +20,15 @@ using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
-static NWNXLib::Hooking::FunctionHook* m_CanEquipWeaponHook=nullptr;
-static NWNXLib::Hooking::FunctionHook* m_CanUnEquipWeaponHook=nullptr;
-static NWNXLib::Hooking::FunctionHook* m_OnApplyDisarmHook=nullptr;
+static Hooks::Hook m_CanEquipWeaponHook;
+static Hooks::Hook m_CanUnEquipWeaponHook;
 
 
-ArelithEvents::ArelithEvents(Services::HooksProxy* hooker)
+ArelithEvents::ArelithEvents()
 {
-    Arelith::InitOnFirstSubscribe("NWNX_ARELITH_.*", [hooker]() {
-        hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer, unsigned char, CNWSCreature*, CNWSItem*, int32_t*, int32_t, int32_t, CNWSPlayer*>(&CanEquipWeaponHook);
-        m_CanEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer);
-        hooker->RequestExclusiveHook<Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem, unsigned char, CNWSCreature*, CNWSItem*>(&CanUnEquipWeaponHook);
-        m_CanUnEquipWeaponHook =  hooker->FindHookByAddress(Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem);
+    Arelith::InitOnFirstSubscribe("NWNX_ARELITH_.*", []() {
+        m_CanEquipWeaponHook =  Hooks::HookFunction(Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer, (void*)&CanEquipWeaponHook, Hooks::Order::Early);
+        m_CanUnEquipWeaponHook =  Hooks::HookFunction(Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem, (void*)&CanUnEquipWeaponHook, Hooks::Order::Early);
     });
 }
 
@@ -63,7 +58,7 @@ unsigned char ArelithEvents::CanUnEquipWeaponHook( CNWSCreature *pCreature, CNWS
     {
         Arelith::PushEventData("WEAPON_OBJECT_ID", Utils::ObjectIDToString(pItem->m_idSelf)); //oidWeapon
         Arelith::PushEventData("CANUNEQUIPWEAPON_RESULT", std::to_string((unsigned char)retVal)); //original result
- 
+
         Arelith::SignalEvent("NWNX_ARELITH_CANUNEQUIPWEAPON", pCreature->m_idSelf, &sResult);
     }
 

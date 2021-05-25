@@ -8,8 +8,8 @@
 #include "API/CNWSCreatureStats.hpp"
 #include "API/Globals.hpp"
 #include "Source/ArelithEvents.hpp"
-#include "Services/Config/Config.hpp"
-#include "Services/Messaging/Messaging.hpp"
+//#include "Services/Config/Config.hpp"
+//#include "Services/Messaging/Messaging.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "API/CNWRules.hpp"
@@ -22,21 +22,24 @@
 #include <regex>
 #include <cstring>
 #include "API/CNWSModule.hpp"
-#include "Services/Tasks/Tasks.hpp"
-#include "Services/Messaging/Messaging.hpp"
-#include "Encoding.hpp"
+//#include "Services/Tasks/Tasks.hpp"
+//#include "Services/Messaging/Messaging.hpp"
+//#include "Encoding.hpp"
 #include "API/CNWItemProperty.hpp"
 #include <cmath>
 #include <sstream>
 #include <iomanip>
 #include "External/httplib.h"
 #include "API/CNWSInventory.hpp"
+#include "API/CNWSAreaOfEffectObject.hpp"
+#include "API/CNWSpellArray.hpp"
 
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
 static Arelith::Arelith* g_plugin;
+
 
 NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
@@ -56,15 +59,23 @@ std::string Arelith::s_sOrigPath;
 std::string Arelith::s_sAdden;
 uint8_t Arelith::s_iMaterial;
 std::unordered_multimap<int32_t, bypassRed> Arelith::m_bypass;
+static Hooks::Hook s_GetEffectImmunityHook;
+static Hooks::Hook s_GetUseMonkAbilitiesHook;
+static Hooks::Hook s_WriteToLogFileHook;
+static Hooks::Hook s_ReportErrorHook;
+static Hooks::Hook s_OnApplyEffectImmunityHook;
+static Hooks::Hook s_OnItemPropertyAppliedHook;
+static Hooks::Hook s_SetCreatorHook;
 
 Arelith::Arelith(Services::ProxyServiceList* services)
     : Plugin(services), m_eventDepth(0)
 {
+
     if (g_plugin == nullptr) // :(
         g_plugin = this;
 
 #define REGISTER(func) \
-    GetServices()->m_events->RegisterEvent(#func, \
+    Events::RegisterEvent(PLUGIN_NAME, #func, \
         [this](ArgumentStack&& args){ return func(std::move(args)); })
     REGISTER(OnSubscribeEvent);
     REGISTER(OnPushEventData);
@@ -77,59 +88,55 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     REGISTER(GetAttackModifierVersus);
     REGISTER(ResolveDefensiveEffects);
     REGISTER(SetWebhook);
-    REGISTER(SetDamageReductionBypass);
-    REGISTER(SetEffectImmunityBypass);
-    REGISTER(GetTrueEffectCount);
-    REGISTER(GetTrueEffect);
-    REGISTER(RemoveEffectById);
-    REGISTER(ReplaceEffect);
+    //REGISTER(SetDamageReductionBypass);
     REGISTER(SetDisableMonkAbilitiesPolymorph);
 #undef REGISTER
 
-    GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_SIGNAL_EVENT",
+    MessageBus::Subscribe("NWNX_ARELITH_SIGNAL_EVENT",
         [](const std::vector<std::string> message)
         {
             ASSERT(message.size() == 2);
             SignalEvent(message[0], std::strtoul(message[1].c_str(), nullptr, 16));
         });
 
-    GetServices()->m_messaging->SubscribeMessage("NWNX_ARELITH_PUSH_EVENT_DATA",
+    MessageBus::Subscribe("NWNX_ARELITH_PUSH_EVENT_DATA",
         [](const std::vector<std::string> message)
         {
             ASSERT(message.size() == 2);
             PushEventData(message[0], message[1]);
         });
-    auto hooker = GetServices()->m_hooks.get();
-
-    m_arelithEvents   = std::make_unique<ArelithEvents>(hooker);
 
 
-    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN25CNWVirtualMachineCommands11ReportErrorER10CExoStringi, int32_t>(&ReportErrorHook);
+    m_arelithEvents   = std::make_unique<ArelithEvents>();
 
-    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
-        void, CExoDebugInternal*, CExoString*>(&WriteToLogFileHook);
+    s_ReportErrorHook = Hooks::HookFunction(Functions::_ZN25CNWVirtualMachineCommands11ReportErrorER10CExoStringi,
+                                                        (void*)&ReportErrorHook, Hooks::Order::VeryEarly);
 
-    m_GetEffectImmunityHook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei>(&GetEffectImmunityHook);
+    s_WriteToLogFileHook = Hooks::HookFunction(Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
+                                                        (void*)&WriteToLogFileHook, Hooks::Order::VeryEarly);
 
-    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN15CServerAIMaster21OnItemPropertyAppliedEP8CNWSItemP15CNWItemPropertyP12CNWSCreatureji, bool, CServerAIMaster*, CNWSItem*, CNWItemProperty*, CNWSCreature*, uint32_t, BOOL>(&OnItemPropertyAppliedHook);
+    s_GetEffectImmunityHook = Hooks::HookFunction(Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei,
+        (void*)&GetEffectImmunityHook, Hooks::Order::Final);
 
-    GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler21OnApplyEffectImmunityEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyEffectImmunityHook);
-
-    if(GetServices()->m_config->Get<bool>("DMG_RED", false))
+    s_SetCreatorHook =
+            Hooks::HookFunction(Functions::_ZN11CGameEffect10SetCreatorEj,
+        (void*)&SetCreatorHook, Hooks::Order::Latest);
+   /* if(GetServices()->m_config->Get<bool>("DMG_RED", false))
     {
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN10CNWSObject17DoDamageReductionEP12CNWSCreatureihii, bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL>(&DoDamageReductionHook);
-    }
+    }*/
 
-    if(GetServices()->m_config->Get<bool>("POLYMORPH", false))
+    if (Config::Get<bool>("POLYMORPH", false))
     {
-        pGetUseMonkAbilities_hook = GetServices()->m_hooks->RequestExclusiveHook<Functions::_ZN12CNWSCreature19GetUseMonkAbilitiesEv>(&CNWSCreature__GetUseMonkAbilities_hook);
+        s_GetUseMonkAbilitiesHook = Hooks::HookFunction(Functions::_ZN12CNWSCreature19GetUseMonkAbilitiesEv,
+        (void*)&CNWSCreature__GetUseMonkAbilities_hook, Hooks::Order::Early);
     }
-    s_sHost = GetServices()->m_config->Get<std::string>("HOST", "");
-    s_sOrigPath = GetServices()->m_config->Get<std::string>("PATH", "");
-    s_sAdden = GetServices()->m_config->Get<std::string>("ROLE", "");
+    s_sHost = Config::Get<std::string>("HOST", "");
+    s_sOrigPath = Config::Get<std::string>("PATH", "");
+    s_sAdden = Config::Get<std::string>("ROLE", "");
 
-    g_plugin->bypassEffectImm=0;
+
 }
 
 Arelith::~Arelith()
@@ -194,8 +201,8 @@ bool Arelith::SignalEvent(const std::string& eventName, const ObjectID target, s
     }
 
 
-    g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_RESULT",  { eventName, result ? *result : ""});
-    g_plugin->GetServices()->m_messaging->BroadcastMessage("NWNX_ARELITH_SIGNAL_EVENT_SKIPPED", { eventName, skipped ? "1" : "0"});
+    MessageBus::Broadcast("NWNX_ARELITH_SIGNAL_EVENT_RESULT",  { eventName, result ? *result : ""});
+    MessageBus::Broadcast("NWNX_ARELITH_SIGNAL_EVENT_SKIPPED", { eventName, skipped ? "1" : "0"});
     g_plugin->m_eventData.pop();
     return !skipped;
 }
@@ -225,10 +232,10 @@ void Arelith::RunEventInit(const std::string& eventName)
 
 }
 
-Services::Events::ArgumentStack Arelith::OnSubscribeEvent(Services::Events::ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnSubscribeEvent(ArgumentStack&& args)
 {
-    const auto event = Services::Events::ExtractArgument<std::string>(args);
-    auto script = Services::Events::ExtractArgument<std::string>(args);
+    const auto event = Events::ExtractArgument<std::string>(args);
+    auto script = Events::ExtractArgument<std::string>(args);
 
     RunEventInit(event);
     auto& eventVector = m_eventMap[event];
@@ -241,32 +248,32 @@ Services::Events::ArgumentStack Arelith::OnSubscribeEvent(Services::Events::Argu
     LOG_INFO("Script '%s' subscribed to event '%s'.", script, event);
     eventVector.emplace_back(std::move(script));
 
-    return Services::Events::Arguments();
+    return {};
 }
 
-Services::Events::ArgumentStack Arelith::OnPushEventData(Services::Events::ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnPushEventData(ArgumentStack&& args)
 {
-    const auto tag = Services::Events::ExtractArgument<std::string>(args);
-    const auto data = Services::Events::ExtractArgument<std::string>(args);
+    const auto tag = Events::ExtractArgument<std::string>(args);
+    const auto data = Events::ExtractArgument<std::string>(args);
     PushEventData(tag, data);
-    return Services::Events::Arguments();
+    return {};
 }
 
-Services::Events::ArgumentStack Arelith::OnSignalEvent(Services::Events::ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnSignalEvent(ArgumentStack&& args)
 {
-    const auto event = Services::Events::ExtractArgument<std::string>(args);
-    const auto object = Services::Events::ExtractArgument<ObjectID>(args);
+    const auto event = Events::ExtractArgument<std::string>(args);
+    const auto object = Events::ExtractArgument<ObjectID>(args);
     bool signalled = SignalEvent(event, object);
-    return Services::Events::Arguments(signalled ? 1 : 0);
+    return Events::Argument(signalled ? 1 : 0);
 }
 
-Services::Events::ArgumentStack Arelith::OnGetEventData(Services::Events::ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnGetEventData(ArgumentStack&& args)
 {
-    std::string data = GetEventData(Services::Events::ExtractArgument<std::string>(args));
-    return Services::Events::Arguments(data);
+    std::string data = GetEventData(Events::ExtractArgument<std::string>(args));
+    return Events::Argument(data);
 }
 
-Services::Events::ArgumentStack Arelith::OnSkipEvent(Services::Events::ArgumentStack&&)
+NWNX_EXPORT ArgumentStack Arelith::OnSkipEvent(ArgumentStack&&)
 {
     if (m_eventDepth == 0 || m_eventData.empty())
     {
@@ -276,25 +283,25 @@ Services::Events::ArgumentStack Arelith::OnSkipEvent(Services::Events::ArgumentS
 
     LOG_DEBUG("Skipping last event.");
 
-    return Services::Events::Arguments();
+    return {};
 }
 
-Services::Events::ArgumentStack Arelith::OnEventResult(Services::Events::ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::OnEventResult(ArgumentStack&& args)
 {
     if (m_eventDepth == 0 || m_eventData.empty())
     {
         throw std::runtime_error("Attempted to skip event in an invalid context.");
     }
-    const auto data = Services::Events::ExtractArgument<std::string>(args);
+    const auto data = Events::ExtractArgument<std::string>(args);
 
     m_eventData.top().m_Result = data;
 
     LOG_DEBUG("Received event result '%s'.", data);
 
-    return Services::Events::Arguments();
+    return {};
 }
 
-Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::ArgumentStack&&)
+NWNX_EXPORT ArgumentStack Arelith::OnGetCurrentEvent(ArgumentStack&&)
 {
     if (m_eventDepth == 0 || m_eventData.empty())
     {
@@ -304,7 +311,7 @@ Services::Events::ArgumentStack Arelith::OnGetCurrentEvent(Services::Events::Arg
 
 
     std::string eventName = g_plugin->m_eventData.top().m_EventName;
-    return Services::Events::Arguments(eventName);
+    return Events::Argument(eventName);
 }
 
 void Arelith::CreateNewEventDataIfNeeded()
@@ -319,7 +326,7 @@ void Arelith::CreateNewEventDataIfNeeded()
 
 CNWSObject *Arelith::object(ArgumentStack& args)
 {
-    const auto objectId = Services::Events::ExtractArgument<ObjectID>(args);
+    const auto objectId = Events::ExtractArgument<ObjectID>(args);
 
     if (objectId == Constants::OBJECT_INVALID)
     {
@@ -332,7 +339,7 @@ CNWSObject *Arelith::object(ArgumentStack& args)
 }
 CNWSCreature *Arelith::creature(ArgumentStack& args)
 {
-    const auto creatureId = Services::Events::ExtractArgument<ObjectID>(args);
+    const auto creatureId = Events::ExtractArgument<ObjectID>(args);
 
     if (creatureId == Constants::OBJECT_INVALID)
     {
@@ -342,7 +349,7 @@ CNWSCreature *Arelith::creature(ArgumentStack& args)
 
     return Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(creatureId);
 }
-ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
 {
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
@@ -350,16 +357,16 @@ ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
 
         if (auto *versus = object(args))
         {
-            const auto isOffhand = Services::Events::ExtractArgument<int32_t>(args);
+            const auto isOffhand = Events::ExtractArgument<int32_t>(args);
             retVal = pCreature->GetWeaponPower(versus, isOffhand);
         }
 
 
     }
-    return Services::Events::Arguments(retVal);
+    return Events::Argument(retVal);
 }
 
-ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
 {
     int32_t retVal = -1;
     if (auto *pCreature = creature(args))
@@ -368,41 +375,44 @@ ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
             retVal = pCreature->m_pStats->GetAttackModifierVersus(versus);
 
     }
-    return Services::Events::Arguments(retVal);
+    return Events::Argument(retVal);
 }
-ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 {
     int32_t retVal = 0;
     if (auto *pCreature = creature(args))
     {
         if (auto *versus = object(args))
         {
-            const auto isAttackHit = Services::Events::ExtractArgument<int32_t>(args);
+            const auto isAttackHit = Events::ExtractArgument<int32_t>(args);
             retVal = pCreature->ResolveDefensiveEffects(versus, isAttackHit);
         }
     }
-    return Services::Events::Arguments(retVal);
+    return Events::Argument(retVal);
 }
 
 
-void Arelith::ReportErrorHook(bool before, CNWVirtualMachineCommands*, CExoString, int32_t)
+void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *message, int32_t error)
 {
+    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, message, error);
     if(s_sHost.empty() || s_sOrigPath.empty())
     {
         LOG_INFO("Host or path was empty.");
         return;
     }
-    if(before) s_bSendError=true;
+    s_bSendError=true;
 }
 
-void Arelith::WriteToLogFileHook(bool before, CExoDebugInternal*, CExoString* message)
+void Arelith::WriteToLogFileHook(CExoDebugInternal* pExoDebugInternal, CExoString* message)
 {
 
-    if(before && s_bSendError)
+    if(s_bSendError)
     {
         SendWebHookHTTPS(message->CStr());
         s_bSendError=false;
     }
+
+    s_WriteToLogFileHook->CallOriginal<void>(pExoDebugInternal, message);
 }
 
 std::string escape_json(const std::string &s) {
@@ -424,7 +434,7 @@ void Arelith::SendWebHookHTTPS(const char* messagec)
     std::string host = s_sHost;
     std::string origPath = s_sOrigPath;
     std::string message(messagec);
-    message = Utils::trim(message);
+    message = String::Trim(message);
     message = message + " " + s_sAdden;
     message = R"({"text": ")" + message + "\"";
     message = message +  R"(, "mrkdwn": false)";
@@ -433,7 +443,7 @@ void Arelith::SendWebHookHTTPS(const char* messagec)
     // For Discord, will wait for a response
     auto path = origPath + "?wait=true";
 
-    message = Encoding::ToUTF8(message);
+    message = String::ToUTF8(message);
     escape_json(message);
 
     static std::unordered_map<std::string, std::unique_ptr<httplib::SSLClient>> s_ClientCache;
@@ -460,23 +470,23 @@ void Arelith::SendWebHookHTTPS(const char* messagec)
     }
     else
     {
-        g_plugin->GetServices()->m_tasks->QueueOnAsyncThread([cli, message, host, path, origPath]()
+        Tasks::QueueOnAsyncThread([cli, message, host, path, origPath]()
         {
             auto res = cli->second->post(path.c_str(), message, "application/json");
-            g_plugin->GetServices()->m_tasks->QueueOnMainThread([message, host, path, origPath, res]()
+            Tasks::QueueOnMainThread([message, host, path, origPath, res]()
             {
                 if (Core::g_CoreShuttingDown)
                     return;
 
-                auto messaging = g_plugin->GetServices()->m_messaging.get();
+              ;
                 auto moduleOid = NWNXLib::Utils::ObjectIDToString(Utils::GetModule()->m_idSelf);
 
                 if (res)
                 {
-                    messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"STATUS", std::to_string(res->status)});
-                    messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"MESSAGE", message});
-                    messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"HOST", host});
-                    messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"PATH", origPath});
+                    MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"STATUS", std::to_string(res->status)});
+                    MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"MESSAGE", message});
+                    MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"HOST", host});
+                    MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"PATH", origPath});
                     if (res->status == 200 || res->status == 201 || res->status == 204 || res->status == 429)
                     {
                         // Discord sends your rate limit information even on success so you can stagger calls if you want
@@ -484,40 +494,40 @@ void Arelith::SendWebHookHTTPS(const char* messagec)
                         // in milliseconds and Slack sends it as seconds.
                         if (!res->get_header_value("X-RateLimit-Limit").empty())
                         {
-                            messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"RATELIMIT_LIMIT", res->get_header_value("X-RateLimit-Limit")});
-                            messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"RATELIMIT_REMAINING", res->get_header_value("X-RateLimit-Remaining")});
-                            messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"RATELIMIT_RESET", res->get_header_value("X-RateLimit-Reset")});
+                            MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"RATELIMIT_LIMIT", res->get_header_value("X-RateLimit-Limit")});
+                            MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"RATELIMIT_REMAINING", res->get_header_value("X-RateLimit-Remaining")});
+                            MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"RATELIMIT_RESET", res->get_header_value("X-RateLimit-Reset")});
                             if (!res->get_header_value("Retry-After").empty())
-                                messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"RETRY_AFTER", res->get_header_value("Retry-After")});
+                                MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"RETRY_AFTER", res->get_header_value("Retry-After")});
                         }
                             // Slack rate limited
                         else if (!res->get_header_value("Retry-After").empty())
                         {
                             float fSlackRetry = stof(res->get_header_value("Retry-After")) * 1000.0f;
-                            messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"RETRY_AFTER", std::to_string(fSlackRetry)});
+                            MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"RETRY_AFTER", std::to_string(fSlackRetry)});
                         }
                         if (res->status != 429)
                         {
-                            messaging->BroadcastMessage("NWNX_EVENT_SIGNAL_EVENT", {"NWNX_ON_ARE_WEBHOOK_SUCCESS", moduleOid});
+                            MessageBus::Broadcast("NWNX_EVENT_SIGNAL_EVENT", {"NWNX_ON_ARE_WEBHOOK_SUCCESS", moduleOid});
                             LOG_INFO("Sent webhook '%s' to '%s%s'.", message, host, path);
                         }
                         else
                         {
-                            messaging->BroadcastMessage("NWNX_EVENT_SIGNAL_EVENT", {"NWNX_ON_ARE_WEBHOOK_FAILED", moduleOid});
+                            MessageBus::Broadcast("NWNX_EVENT_SIGNAL_EVENT", {"NWNX_ON_ARE_WEBHOOK_FAILED", moduleOid});
                             LOG_WARNING("Failed to send WebHook (HTTPS) message '%s' to '%s%s'. Rate Limited.", message, host, path);
                         }
                     }
                     else
                     {
-                        messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"FAIL_INFO", res->body});
-                        messaging->BroadcastMessage("NWNX_EVENT_SIGNAL_EVENT", {"NWNX_ON_ARE_WEBHOOK_FAILED", moduleOid});
+                        MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"FAIL_INFO", res->body});
+                        MessageBus::Broadcast("NWNX_EVENT_SIGNAL_EVENT", {"NWNX_ON_ARE_WEBHOOK_FAILED", moduleOid});
                         LOG_WARNING("Failed to send WebHook (HTTPS) message '%s' to '%s%s', status code '%d'.", message, host, path, res->status);
                     }
                 }
                 else
                 {
-                    messaging->BroadcastMessage("NWNX_EVENT_PUSH_EVENT_DATA", {"FAIL_INFO", "Failed to post to server. Is the url correct?"});
-                    messaging->BroadcastMessage("NWNX_EVENT_SIGNAL_EVENT", {"NWNX_ON_ARE_WEBHOOK_FAILED", moduleOid});
+                    MessageBus::Broadcast("NWNX_EVENT_PUSH_EVENT_DATA", {"FAIL_INFO", "Failed to post to server. Is the url correct?"});
+                    MessageBus::Broadcast("NWNX_EVENT_SIGNAL_EVENT", {"NWNX_ON_ARE_WEBHOOK_FAILED", moduleOid});
                     LOG_WARNING("Failed to send WebHook (HTTPS) to '%s%s'.", host, path);
                 }
             });
@@ -525,44 +535,25 @@ void Arelith::SendWebHookHTTPS(const char* messagec)
     }
 
 }
-ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
 {
-    s_sAdden = Services::Events::ExtractArgument<std::string>(args);
-    s_sHost = Services::Events::ExtractArgument<std::string>(args);
-    s_sOrigPath = Services::Events::ExtractArgument<std::string>(args);
-    return Services::Events::Arguments();
+    s_sAdden = Events::ExtractArgument<std::string>(args);
+    s_sHost = Events::ExtractArgument<std::string>(args);
+    s_sOrigPath = Events::ExtractArgument<std::string>(args);
+    return {};
 }
 
-void Arelith::OnItemPropertyAppliedHook(bool before, CServerAIMaster*, CNWSItem*, CNWItemProperty *pItemProperty, CNWSCreature*, uint32_t, BOOL)
-{
-   if(before)
-   {
-       if(pItemProperty->m_nParam1Value > 0 && pItemProperty->m_nParam1Value != 255)
-       {
-        if(pItemProperty->m_nPropertyName==Constants::ItemProperty::DamageReduction || pItemProperty->m_nPropertyName==Constants::ItemProperty::ImmunityMiscellaneous)
-        {
-          s_iMaterial=pItemProperty->m_nParam1Value;
-        }
-       }
-   }
-}
-void Arelith::OnApplyDamageReductionHook(bool before, CNWSEffectListHandler*, CNWSObject*, CGameEffect* pEffect, BOOL)
+
+/*void Arelith::OnApplyDamageReductionHook(bool before, CNWSEffectListHandler*, CNWSObject*, CGameEffect* pEffect, BOOL)
 {
     if(before && s_iMaterial > 0)
     {
         pEffect->SetInteger(3, s_iMaterial);
         s_iMaterial=0;
     }
-}
-void Arelith::OnApplyEffectImmunityHook(bool before, CNWSEffectListHandler*, CNWSObject *, CGameEffect * pEffect, BOOL)
-{
-    if(before && s_iMaterial > 0)
-    {
-        pEffect->SetInteger(4, s_iMaterial);
-        s_iMaterial=0;
-    }
-}
-void Arelith::DoDamageReductionHook(bool before, CNWSObject *pObject, CNWSCreature *pCreature, int32_t, uint8_t, BOOL, BOOL)
+}*/
+
+/*void Arelith::DoDamageReductionHook(bool before, CNWSObject *pObject, CNWSCreature *pCreature, int32_t, uint8_t, BOOL, BOOL)
 {
     static std::unordered_map<uint64_t, int32_t> s_mEffects;
 
@@ -645,12 +636,12 @@ void Arelith::DoDamageReductionHook(bool before, CNWSObject *pObject, CNWSCreatu
 }
 ArgumentStack Arelith::SetDamageReductionBypass(ArgumentStack&& args)
 {
-    auto material = Services::Events::ExtractArgument<int32_t>(args);
-    auto propType = Services::Events::ExtractArgument<int32_t>(args);
-    auto subType =  Services::Events::ExtractArgument<int32_t>(args);
-    auto costValue = Services::Events::ExtractArgument<int32_t>(args);
-    auto param1Value =  Services::Events::ExtractArgument<int32_t>(args);
-    auto reverse =  Services::Events::ExtractArgument<int32_t>(args);
+    auto material = Events::ExtractArgument<int32_t>(args);
+    auto propType = Events::ExtractArgument<int32_t>(args);
+    auto subType =  Events::ExtractArgument<int32_t>(args);
+    auto costValue = Events::ExtractArgument<int32_t>(args);
+    auto param1Value =  Events::ExtractArgument<int32_t>(args);
+    auto reverse =  Events::ExtractArgument<int32_t>(args);
     bypassRed ip;
     ip.m_nPropertyName=propType;
     ip.m_nSubType=subType;
@@ -658,218 +649,71 @@ ArgumentStack Arelith::SetDamageReductionBypass(ArgumentStack&& args)
     ip.m_nCostTableValue=costValue;
     ip.bReverse=reverse;
     m_bypass.insert(std::make_pair(material, ip));
-    return Services::Events::Arguments();
+    return Events::Argument();
+}*/
+
+NWNX_EXPORT ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args)
+{
+    g_plugin->polymorph.push_back(Events::ExtractArgument<int32_t>(args));
+    return {};
 }
 BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats)
 {
-    if(g_plugin->bypassEffectImm > 0)
-        return false;
-
-    if(nType == Constants::ImmunityType::CriticalHit || nType == Constants::ImmunityType::SneakAttack)
+    if(bConsiderFeats)
     {
-        if(bConsiderFeats && pStats->HasFeat(Constants::Feat::DeathlessMastery))
+        if((nType == Constants::ImmunityType::CriticalHit || nType == Constants::ImmunityType::SneakAttack) && pStats->HasFeat(Constants::Feat::DeathlessMastery))
             return true;
+        else if(nType == Constants::ImmunityType::MindSpells && pStats->HasFeat(Constants::Feat::PerfectSelf))
+            return true;
+        else if(nType == Constants::ImmunityType::Fear && pStats->HasFeat(Constants::Feat::AuraOfCourage))
+            return true;
+        else if(nType == Constants::ImmunityType::Paralysis && (pStats->HasFeat(Constants::Feat::DragonImmuneParalysis) || pStats->HasFeat(Constants::Feat::ToughAsBone)))
+            return true;
+        else if(nType == Constants::ImmunityType::Stun && pStats->HasFeat(Constants::Feat::ToughAsBone))
+            return true;
+        else if(nType == Constants::ImmunityType::Poison && (pStats->HasFeat(Constants::Feat::DiamondBody) || pStats->HasFeat(Constants::Feat::VenomImmunity) || pStats->HasFeat(Constants::Feat::EpicPerfectHealth)))
+            return true;
+        else if(nType == Constants::ImmunityType::Disease && (pStats->HasFeat(Constants::Feat::DivineHealth) || pStats->HasFeat(Constants::Feat::PurityOfBody) || pStats->HasFeat(Constants::Feat::EpicPerfectHealth)))
+            return true;
+        else if(nType == Constants::ImmunityType::Sleep && pStats->HasFeat(Constants::Feat::ImmunityToSleep))
+            return true;
+    }
 
-        auto effectList = pStats->m_pBaseCreature->m_appliedEffects;
+    auto effectList = pStats->m_pBaseCreature->m_appliedEffects;
 
-        int32_t highest = 0;
+    int32_t highest = 0;
 
-        for (int32_t i = 0; i < effectList.num; i++)
+    for (auto *eff : effectList)
+    {
+        //auto *eff = effectList.element[i];
+
+        if(eff->m_nType==Constants::EffectTrueType::Immunity && eff->m_nParamInteger[0]==nType)
         {
-            auto *eff = effectList.element[i];
-
-            if(eff->m_nType==Constants::EffectTrueType::Immunity && eff->m_nParamInteger[0]==nType)
+            if((eff->m_nParamInteger[1] == Constants::RacialType::All || (pVersus != nullptr && eff->m_nParamInteger[1] == pVersus->m_pStats->m_nRace)) && //race check
+                (eff->m_nParamInteger[2] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[2] == pVersus->m_pStats->GetSimpleAlignmentLawChaos())) &&
+                (eff->m_nParamInteger[3] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[3] == pVersus->m_pStats->GetSimpleAlignmentGoodEvil())))
             {
-                if((eff->m_nParamInteger[1] == Constants::RacialType::All || (pVersus != nullptr && eff->m_nParamInteger[1] == pVersus->m_pStats->m_nRace)) && //race check
-                   (eff->m_nParamInteger[2] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[2] == pVersus->m_pStats->m_nAlignmentLawChaos)) &&
-                   (eff->m_nParamInteger[3] == Constants::Alignment::All || (pVersus != nullptr && eff->m_nParamInteger[3] == pVersus->m_pStats->m_nAlignmentGoodEvil)))
-                {
 
-                    if(eff->m_nParamInteger[4] <= 0 || eff->m_nParamInteger[4] >= 100)
-                        return true;
+                if(eff->m_nParamInteger[4] <= 0 || eff->m_nParamInteger[4] >= 100)
+                    return true;
 
-                    if(eff->m_nParamInteger[4] > highest)
-                        highest = eff->m_nParamInteger[4];
-                }
-
+                if(eff->m_nParamInteger[4] > highest)
+                    highest = eff->m_nParamInteger[4];
             }
 
         }
 
-        if(highest > 0 && Globals::Rules()->RollDice(1, 100) <= highest)
-            return true;
-
-        return false;
-    }
-    return g_plugin->m_GetEffectImmunityHook->CallOriginal<BOOL>(pStats, nType, pVersus, bConsiderFeats);
-}
-ArgumentStack Arelith::SetEffectImmunityBypass(ArgumentStack&& args)
-{
-    g_plugin->bypassEffectImm = Services::Events::ExtractArgument<int32_t>(args);
-    return Services::Events::Arguments();
-}
-
-ArgumentStack Arelith::GetTrueEffectCount(ArgumentStack&& args)
-{
-    int32_t ret = 0;
-    if (auto *pObject = object(args))
-    {
-        ret = pObject->m_appliedEffects.num;
-    }
-    return Services::Events::Arguments(ret);
-}
-ArgumentStack Arelith::GetTrueEffect(ArgumentStack&& args)
-{
-    ArgumentStack stack;
-    CGameEffect *eff;
-    auto *pObject = object(args);
-      ASSERT_OR_THROW(pObject);
-    auto it = Services::Events::ExtractArgument<int32_t>(args);
-      ASSERT_OR_THROW(it >= 0);
-      ASSERT_OR_THROW(it < pObject->m_appliedEffects.num);
-    eff = pObject->m_appliedEffects.element[it];
-
-
-    Services::Events::InsertArgument(stack, std::to_string(eff->m_nID));
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_nType);
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_nSubType);
-    Services::Events::InsertArgument(stack, (float)eff->m_fDuration);
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_nExpiryCalendarDay);
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_nExpiryTimeOfDay);
-    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidCreator);
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_nSpellId);
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_bExpose);
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_bShowIcon);
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_nCasterLevel);
-
-    // The DestroyGameEffect at the end of this function will delete any linked effects
-    // as well so we make a copy of the linked effects and send those for unpacking
-   /* CGameEffect *leftLinkEff = nullptr;
-    if (eff->m_pLinkLeft != nullptr)
-    {
-        leftLinkEff = new CGameEffect(true);
-        leftLinkEff->CopyEffect(eff->m_pLinkLeft, 0);
-    }
-    Services::Events::InsertArgument(stack, leftLinkEff);
-    Services::Events::InsertArgument(stack, eff->m_pLinkLeft != nullptr);
-
-    CGameEffect *rightLinkEff = nullptr;
-    if (eff->m_pLinkRight != nullptr)
-    {
-        rightLinkEff = new CGameEffect(true);
-        rightLinkEff->CopyEffect(eff->m_pLinkRight, 0);
-    }*/
-    Services::Events::InsertArgument(stack, (int32_t)eff->m_nNumIntegers);
-    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 0 ? eff->m_nParamInteger[0] : -1));
-    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 1 ? eff->m_nParamInteger[1] : -1));
-    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 2 ? eff->m_nParamInteger[2] : -1));
-    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 3 ? eff->m_nParamInteger[3] : -1));
-    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 4 ? eff->m_nParamInteger[4] : -1));
-    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 5 ? eff->m_nParamInteger[5] : -1));
-    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 6 ? eff->m_nParamInteger[6] : -1));
-    Services::Events::InsertArgument(stack, (int32_t)(eff->m_nNumIntegers > 7 ? eff->m_nParamInteger[7] : -1));
-
-    Services::Events::InsertArgument(stack, (float)eff->m_nParamFloat[0]);
-    Services::Events::InsertArgument(stack, (float)eff->m_nParamFloat[1]);
-    Services::Events::InsertArgument(stack, (float)eff->m_nParamFloat[2]);
-    Services::Events::InsertArgument(stack, (float)eff->m_nParamFloat[3]);
-
-    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[0].CStr()));
-    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[1].CStr()));
-    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[2].CStr()));
-    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[3].CStr()));
-    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[4].CStr()));
-    Services::Events::InsertArgument(stack, std::string(eff->m_sParamString[5].CStr()));
-
-    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[0]);
-    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[1]);
-    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[2]);
-    Services::Events::InsertArgument(stack, (ObjectID)eff->m_oidParamObjectID[3]);
-
-    Services::Events::InsertArgument(stack, std::to_string(eff->m_nItemPropertySourceId));
-
-    Services::Events::InsertArgument(stack, std::string(eff->m_sCustomTag.CStr()));
-
-    return stack;
-}
-
-ArgumentStack Arelith::RemoveEffectById(ArgumentStack&& args)
-{
-   int32_t ret = 0;
-   if (auto *pObject = object(args))
-   {
-        auto id = Services::Events::ExtractArgument<std::string>(args);
-        ret = pObject->RemoveEffectById(std::stoi(id));
-   }
-
-   return Services::Events::Arguments(ret);
-}
-
-ArgumentStack Arelith::ReplaceEffect(ArgumentStack&& args)
-{
-   // auto eff = Services::Events::ExtractArgument<CGameEffect*>(args);
-    if(auto *pObject = object(args))
-    {
-        auto element = Services::Events::ExtractArgument<int32_t>(args);
-          ASSERT_OR_THROW(element >= 0);
-          ASSERT_OR_THROW(element < pObject->m_appliedEffects.num);
-        auto eff = pObject->m_appliedEffects.element[element];
-
-        eff->m_sCustomTag = Services::Events::ExtractArgument<std::string>(args).c_str();
-
-        auto vector1z = Services::Events::ExtractArgument<float>(args);
-        auto vector1y = Services::Events::ExtractArgument<float>(args);
-        auto vector1x = Services::Events::ExtractArgument<float>(args);
-        eff->m_vParamVector[1] = {vector1x, vector1y, vector1z};
-
-        auto vector0z = Services::Events::ExtractArgument<float>(args);
-        auto vector0y = Services::Events::ExtractArgument<float>(args);
-        auto vector0x = Services::Events::ExtractArgument<float>(args);
-        eff->m_vParamVector[0] = {vector0x, vector0y, vector0z};
-
-        eff->m_oidParamObjectID[3] = Services::Events::ExtractArgument<ObjectID>(args);
-        eff->m_oidParamObjectID[2] = Services::Events::ExtractArgument<ObjectID>(args);
-        eff->m_oidParamObjectID[1] = Services::Events::ExtractArgument<ObjectID>(args);
-        eff->m_oidParamObjectID[0] = Services::Events::ExtractArgument<ObjectID>(args);
-
-        eff->m_sParamString[5] = Services::Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[4] = Services::Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[3] = Services::Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[2] = Services::Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[1] = Services::Events::ExtractArgument<std::string>(args).c_str();
-        eff->m_sParamString[0] = Services::Events::ExtractArgument<std::string>(args).c_str();
-
-        eff->m_nParamFloat[3] = Services::Events::ExtractArgument<float>(args);
-        eff->m_nParamFloat[2] = Services::Events::ExtractArgument<float>(args);
-        eff->m_nParamFloat[1] = Services::Events::ExtractArgument<float>(args);
-        eff->m_nParamFloat[0] = Services::Events::ExtractArgument<float>(args);
-
-        eff->m_nParamInteger[7] = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[6] = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[5] = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[4] = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[3] = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[2] = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[1] = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nParamInteger[0] = Services::Events::ExtractArgument<int32_t>(args);
-
-        eff->m_nCasterLevel       = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_bShowIcon          = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_bExpose            = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nSpellId           = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_oidCreator         = Services::Events::ExtractArgument<ObjectID>(args);
-        eff->m_nExpiryTimeOfDay   = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_nExpiryCalendarDay = Services::Events::ExtractArgument<int32_t>(args);
-        eff->m_fDuration          = Services::Events::ExtractArgument<float>(args);
-        eff->m_nSubType           = Services::Events::ExtractArgument<int32_t>(args);
     }
 
+    if(highest > 0 && Globals::Rules()->RollDice(1, 100) <= highest)
+        return true;
 
-    return Services::Events::Arguments();
+    return false;
+
 }
-
-int32_t Arelith::CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature *pThis)
+int32_t Arelith::CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature* pThis)
 {
+
     if ( pThis->m_bIsPolymorphed)
     {
         if(g_plugin->polymorph.empty())
@@ -884,17 +728,154 @@ int32_t Arelith::CNWSCreature__GetUseMonkAbilities_hook(CNWSCreature *pThis)
                 {
                     auto it = std::find (g_plugin->polymorph.begin(), g_plugin->polymorph.end(), eff->m_nParamInteger[0]);
                     if(it != g_plugin->polymorph.end())
-                        return false;
+                    return false;
                 }
 
             }
         }
     }
-    return g_plugin->pGetUseMonkAbilities_hook->CallOriginal<int32_t>(pThis);
+
+    return s_GetUseMonkAbilitiesHook->CallOriginal<int32_t>(pThis);
 }
-ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args)
+
+void Arelith::SetCreatorHook(CGameEffect *pThis, ObjectID oidCreator)
 {
-    g_plugin->polymorph.push_back(Services::Events::ExtractArgument<int32_t>(args));
-    return Services::Events::Arguments();
+    auto* pCreator = Utils::GetGameObject(oidCreator);
+    pThis->m_oidCreator = oidCreator;
+
+    if (auto* pCreatorObject = Utils::AsNWSObject(pCreator))
+    {
+        pThis->m_nSpellId = pCreatorObject->GetEffectSpellId();
+
+        if (auto* pAoE = Utils::AsNWSAreaOfEffectObject(pCreatorObject))
+        {
+            pThis->m_oidCreator = pAoE->m_oidCreator;
+        }
+        else if (auto* pCreature = Utils::AsNWSCreature(pCreatorObject))
+        {
+            if (pCreature->m_bLastSpellCast)
+            {
+                if (auto* pSpell = Globals::Rules()->m_pSpellArray->GetSpell(pCreature->m_nLastSpellId))
+                {
+                    if (pCreature->m_bLastItemCastSpell)
+                    {
+                        pThis->m_nCasterLevel = 150+pCreature->m_nLastItemCastSpellLevel;
+                    }
+                    else if (pCreature->m_nLastSpellCastMulticlass == Constants::ClassType::MAX)
+                    {
+                        pThis->m_nCasterLevel = pCreature->m_pStats->GetSpellLikeAbilityCasterLevel(pCreature->m_nLastSpellId);
+                    }
+                    else
+                    {
+                        auto disMod = pCreature->nwnxGet<int>("DISPELRESIST_MODIFIER" + std::to_string(pCreature->m_pStats->m_ClassInfo[pCreature->m_nLastSpellCastMulticlass].m_nClass));
+                        if(disMod)
+                            pThis->m_nCasterLevel = pCreature->m_pStats->GetClassLevel(pCreature->m_nLastSpellCastMulticlass, 0) + disMod.value();
+                        else
+                            pThis->m_nCasterLevel = pCreature->m_pStats->GetClassLevel(pCreature->m_nLastSpellCastMulticlass, 0);
+                    }
+                }
+            }
+        }
+    }
 }
+
+NWNX_EXPORT ArgumentStack SetDispelResistanceModifier(ArgumentStack&& args)
+{
+
+    if (auto* pCreature = Utils::PopCreature(args))
+    {
+        const auto nClass = args.extract<int32_t>();
+        ASSERT_OR_THROW(nClass >= 0);
+        ASSERT_OR_THROW(nClass <= Constants::ClassType::MAX);
+        const auto nModifier = args.extract<int32_t>();
+        const bool bPersist = !!args.extract<int32_t>();
+
+        if (nModifier)
+            pCreature->nwnxSet("DISPELRESIST_MODIFIER" + std::to_string(nClass), nModifier, bPersist);
+        else
+            pCreature->nwnxRemove("DISPELRESIST_MODIFIER" + std::to_string(nClass));
+    }
+    return {};
+}
+
+void ResolvePack(CGameEffect *eff, ArgumentStack& args)
+{
+    eff->m_nItemPropertySourceId = std::stoull(args.extract<std::string>());
+
+    eff->m_sCustomTag = args.extract<std::string>().c_str();
+
+    auto vector1z = args.extract<float>();
+    auto vector1y = args.extract<float>();
+    auto vector1x = args.extract<float>();
+    eff->m_vParamVector[1] = {vector1x, vector1y, vector1z};
+
+    auto vector0z = args.extract<float>();
+    auto vector0y = args.extract<float>();
+    auto vector0x = args.extract<float>();
+    eff->m_vParamVector[0] = {vector0x, vector0y, vector0z};
+
+    eff->m_oidParamObjectID[3] = args.extract<ObjectID>();
+    eff->m_oidParamObjectID[2] = args.extract<ObjectID>();
+    eff->m_oidParamObjectID[1] = args.extract<ObjectID>();
+    eff->m_oidParamObjectID[0] = args.extract<ObjectID>();
+
+    eff->m_sParamString[5] = args.extract<std::string>().c_str();
+    eff->m_sParamString[4] = args.extract<std::string>().c_str();
+    eff->m_sParamString[3] = args.extract<std::string>().c_str();
+    eff->m_sParamString[2] = args.extract<std::string>().c_str();
+    eff->m_sParamString[1] = args.extract<std::string>().c_str();
+    eff->m_sParamString[0] = args.extract<std::string>().c_str();
+
+    eff->m_nParamFloat[3] = args.extract<float>();
+    eff->m_nParamFloat[2] = args.extract<float>();
+    eff->m_nParamFloat[1] = args.extract<float>();
+    eff->m_nParamFloat[0] = args.extract<float>();
+
+    eff->SetNumIntegers(8); // allocate array
+    eff->m_nParamInteger[7] = args.extract<int32_t>();
+    eff->m_nParamInteger[6] = args.extract<int32_t>();
+    eff->m_nParamInteger[5] = args.extract<int32_t>();
+    eff->m_nParamInteger[4] = args.extract<int32_t>();
+    eff->m_nParamInteger[3] = args.extract<int32_t>();
+    eff->m_nParamInteger[2] = args.extract<int32_t>();
+    eff->m_nParamInteger[1] = args.extract<int32_t>();
+    eff->m_nParamInteger[0] = args.extract<int32_t>();
+    // Overwrite num integers from 8
+    eff->m_nNumIntegers = args.extract<int32_t>();
+
+    auto bRightLinkValid = args.extract<int32_t>();
+    auto *pRightLink = args.extract<CGameEffect*>();
+    eff->m_pLinkRight = (bRightLinkValid) ? pRightLink : nullptr;
+    auto bLeftLinkValid = args.extract<int32_t>();
+    auto *pLeftLink = args.extract<CGameEffect*>();
+    eff->m_pLinkLeft = (bLeftLinkValid) ? pLeftLink : nullptr;
+
+
+    eff->m_nCasterLevel       = args.extract<int32_t>();
+    eff->m_bShowIcon          = args.extract<int32_t>();
+    eff->m_bExpose            = args.extract<int32_t>();
+    eff->m_nSpellId           = args.extract<int32_t>();
+    eff->m_oidCreator         = args.extract<ObjectID>();
+    eff->m_nExpiryTimeOfDay   = args.extract<int32_t>();
+    eff->m_nExpiryCalendarDay = args.extract<int32_t>();
+    eff->m_fDuration          = args.extract<float>();
+    eff->m_nSubType           = args.extract<int32_t>();
+
+    eff->m_nType = args.extract<int32_t>();
+
+    eff->m_nID = std::stoull(args.extract<std::string>());
+
+    if(bLeftLinkValid || bRightLinkValid)
+        eff->UpdateLinked();
+}
+
+NWNX_EXPORT ArgumentStack PackEffect(ArgumentStack&& args)
+{
+    CGameEffect *eff = new CGameEffect(false);
+
+    ResolvePack(eff, args);
+
+    return eff;
+}
+
 }

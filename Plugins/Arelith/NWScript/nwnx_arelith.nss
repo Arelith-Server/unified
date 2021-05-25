@@ -1,5 +1,5 @@
 #include "nwnx"
-
+#include "nwnx_effect"
 // Scripts can subscribe to events.
 // Some events are dispatched via the NWNX plugin (see NWNX_Arelith_EVENT_* constants).
 // Others can be signaled via script code (see NWNX_Arelith_SignalEvent).
@@ -61,107 +61,45 @@ int NWNX_Arelith_ResolveDefensiveEffects(object attacker, object versus, int att
 //you may set up multiple properties to bypass a material
 void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int subType=-1, int costValue=-1, int paramValue=-1, int reverse=FALSE);
 
-//bypass -> true bypasses all (effect level) immunities
-//false stops bypassing immunities
-void NWNX_Arelith_SetEffectImmunityBypass(int bypass);
-
-
-int NWNX_Arelith_GetTrueEffectCount(object oObject);
-
-//the id can be gained from unpacking the effect
-//nay only work on spell-based/effects applied through ApplyEffectToObject, test other instances throughly.
-int NWNX_Arelith_RemoveEffectById(object oObject,  string sID);
-
-// Replaces effect at array with new effect struct e on object oObject
-void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUnpackedAre e);
-
-
 // Disables monk abilities under polymorph.
 void NWNX_Arelith_SetDisableMonkAbilitiesPolymorph(int nPolymorphType);
 
-struct NWNX_EffectUnpackedAre
-{
-    string sID;
-    int nType; ///< @todo Describe
-    int nSubType; ///< @todo Describe
+void NWNX_Arelith_SetDispelResistanceModifier(object oCreature, int nClass, int nModifier, int bPersist = FALSE);
 
-    float fDuration; ///< @todo Describe
-    int nExpiryCalendarDay; ///< @todo Describe
-    int nExpiryTimeOfDay; ///< @todo Describe
-
-    object oCreator; ///< @todo Describe
-    int nSpellId; ///< @todo Describe
-    int bExpose; ///< @todo Describe
-    int bShowIcon; ///< @todo Describe
-    int nCasterLevel; ///< @todo Describe
-
-    int nNumIntegers; ///< @todo Describe
-    int nParam0; ///< @todo Describe
-    int nParam1; ///< @todo Describe
-    int nParam2; ///< @todo Describe
-    int nParam3; ///< @todo Describe
-    int nParam4; ///< @todo Describe
-    int nParam5; ///< @todo Describe
-    int nParam6; ///< @todo Describe
-    int nParam7; ///< @todo Describe
-    float fParam0; ///< @todo Describe
-    float fParam1; ///< @todo Describe
-    float fParam2; ///< @todo Describe
-    float fParam3; ///< @todo Describe
-    string sParam0; ///< @todo Describe
-    string sParam1; ///< @todo Describe
-    string sParam2; ///< @todo Describe
-    string sParam3; ///< @todo Describe
-    string sParam4; ///< @todo Describe
-    string sParam5; ///< @todo Describe
-    object oParam0; ///< @todo Describe
-    object oParam1; ///< @todo Describe
-    object oParam2; ///< @todo Describe
-    object oParam3; ///< @todo Describe
-    vector vParam0; ///< @todo Describe
-    vector vParam1; ///< @todo Describe
-
-    string sItemPropId;
-
-    string sTag; ///< @todo Describe
-};
-
-//Gets the true effect at array spot effectNumbr, will loop through item proeprties and effects.
-struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int effectNumber);
 
 const string ARELITH_PLUGIN = "NWNX_Arelith";
 
 void NWNX_Arelith_SubscribeEvent(string evt, string script)
 {
     string sFunc = "OnSubscribeEvent";
-    NWNX_PushArgumentString("NWNX_Arelith", sFunc, script);
-    NWNX_PushArgumentString("NWNX_Arelith", sFunc, evt);
-    NWNX_CallFunction("NWNX_Arelith", sFunc);
+    NWNX_PushArgumentString(script);
+    NWNX_PushArgumentString(evt);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }
 
 void NWNX_Arelith_PushEventData(string tag, string data)
 {
     string sFunc = "OnPushEventData";
-    NWNX_PushArgumentString("NWNX_Arelith", sFunc, data);
-    NWNX_PushArgumentString("NWNX_Arelith", sFunc, tag);
-    NWNX_CallFunction("NWNX_Arelith", sFunc);
+    NWNX_PushArgumentString(data);
+    NWNX_PushArgumentString(tag);
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }
 
 int NWNX_Arelith_SignalEvent(string evt, object target)
 {
     string sFunc = "OnSignalEvent";
-    NWNX_PushArgumentObject("NWNX_Arelith", sFunc, target);
-    NWNX_PushArgumentString("NWNX_Arelith", sFunc, evt);
+    NWNX_PushArgumentObject(target);
+    NWNX_PushArgumentString(evt);
     NWNX_CallFunction("NWNX_Arelith", sFunc);
-    return NWNX_GetReturnValueInt("NWNX_Arelith", sFunc);
+    return NWNX_GetReturnValueInt();
 }
 
 string NWNX_Arelith_GetEventData(string tag)
 {
     string sFunc = "OnGetEventData";
-    NWNX_PushArgumentString("NWNX_Arelith", sFunc, tag);
+    NWNX_PushArgumentString(tag);
     NWNX_CallFunction("NWNX_Arelith", sFunc);
-    return NWNX_GetReturnValueString("NWNX_Arelith", sFunc);
+    return NWNX_GetReturnValueString();
 }
 
 void NWNX_Arelith_SkipEvent()
@@ -171,202 +109,154 @@ void NWNX_Arelith_SkipEvent()
 
 void NWNX_Arelith_SetEventResult(string data)
 {
-    NWNX_PushArgumentString("NWNX_Arelith", "OnEventResult", data);
+    NWNX_PushArgumentString(data);
     NWNX_CallFunction("NWNX_Arelith", "OnEventResult");
 }
 
 string NWNX_Arelith_GetCurrentEvent()
 {
     NWNX_CallFunction("NWNX_Arelith", "OnGetCurrentEvent");
-    return NWNX_GetReturnValueString("NWNX_Arelith", "OnGetCurrentEvent");
+    return NWNX_GetReturnValueString();
 }
 
 int NWNX_Arelith_GetAttackModifierVersus(object attacker, object versus=OBJECT_INVALID)
 {
-    NWNX_PushArgumentObject("NWNX_Arelith", "GetAttackModifierVersus", versus);
-    NWNX_PushArgumentObject("NWNX_Arelith", "GetAttackModifierVersus", attacker);
+    NWNX_PushArgumentObject(versus);
+    NWNX_PushArgumentObject(attacker);
     NWNX_CallFunction("NWNX_Arelith", "GetAttackModifierVersus");
 
-    return NWNX_GetReturnValueInt("NWNX_Arelith", "GetAttackModifierVersus");
+    return NWNX_GetReturnValueInt();
 }
 
 int NWNX_Arelith_GetWeaponPower(object attacker, object versus, int offHand=FALSE)
 {
-    NWNX_PushArgumentInt("NWNX_Arelith", "GetWeaponPower", offHand);
-    NWNX_PushArgumentObject("NWNX_Arelith", "GetWeaponPower", versus);
-    NWNX_PushArgumentObject("NWNX_Arelith", "GetWeaponPower", attacker);
+    NWNX_PushArgumentInt(offHand);
+    NWNX_PushArgumentObject(versus);
+    NWNX_PushArgumentObject(attacker);
     NWNX_CallFunction("NWNX_Arelith", "GetWeaponPower");
 
-    return NWNX_GetReturnValueInt("NWNX_Arelith", "GetWeaponPower");
+    return NWNX_GetReturnValueInt();
 }
 
 int NWNX_Arelith_ResolveDefensiveEffects(object attacker, object versus, int attackHit=TRUE)
 {
-    NWNX_PushArgumentInt("NWNX_Arelith", "ResolveDefensiveEffects", attackHit);
-    NWNX_PushArgumentObject("NWNX_Arelith", "ResolveDefensiveEffects", versus);
-    NWNX_PushArgumentObject("NWNX_Arelith", "ResolveDefensiveEffects", attacker);
+    NWNX_PushArgumentInt(attackHit);
+    NWNX_PushArgumentObject(versus);
+    NWNX_PushArgumentObject(attacker);
     NWNX_CallFunction("NWNX_Arelith", "ResolveDefensiveEffects");
 
-    return NWNX_GetReturnValueInt("NWNX_Arelith", "ResolveDefensiveEffects");
+    return NWNX_GetReturnValueInt();
 }
 
 void NWNX_Arelith_SetWebhook(string host, string path, string addendum="")
 {
     string sFunc = "SetWebhook";
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, path);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, host);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, addendum);
+    NWNX_PushArgumentString(path);
+    NWNX_PushArgumentString(host);
+    NWNX_PushArgumentString(addendum);
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }
 
 void NWNX_Arelith_SetDamageReductionBypass(int material, int propertyType, int subType=-1, int costValue=-1, int paramValue=-1, int reverse=FALSE)
 {
     string sFunc = "SetDamageReductionBypass";
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, reverse);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, paramValue);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, costValue);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, subType);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, propertyType);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, material);
+    NWNX_PushArgumentInt(reverse);
+    NWNX_PushArgumentInt(paramValue);
+    NWNX_PushArgumentInt(costValue);
+    NWNX_PushArgumentInt(subType);
+    NWNX_PushArgumentInt(propertyType);
+    NWNX_PushArgumentInt(material);
 
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
 }
 
-void NWNX_Arelith_SetEffectImmunityBypass(int bypass)
-{
-    string sFunc = "SetEffectImmunityBypass";
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, bypass);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-}
-
-int NWNX_Arelith_GetTrueEffectCount(object oObject)
-{
-    string sFunc = "GetTrueEffectCount";
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-
-    return  NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-}
-
-struct NWNX_EffectUnpackedAre NWNX_Arelith_GetTrueEffect(object oObject, int effectNumber)
-{
-    string sFunc = "GetTrueEffect";
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, effectNumber);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-
-    struct NWNX_EffectUnpackedAre n;
-    n.sTag = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-
-    n.sItemPropId = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-
-    n.oParam3 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
-    n.oParam2 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
-    n.oParam1 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
-    n.oParam0 = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
-    n.sParam5 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-    n.sParam4 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-    n.sParam3 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-    n.sParam2 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-    n.sParam1 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-    n.sParam0 = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-    n.fParam3 = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
-    n.fParam2 = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
-    n.fParam1 = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
-    n.fParam0 = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
-    n.nParam7 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nParam6 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nParam5 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nParam4 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nParam3 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nParam2 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nParam1 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nParam0 = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nNumIntegers = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-
-
-    n.nCasterLevel = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.bShowIcon = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.bExpose = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nSpellId = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.oCreator = NWNX_GetReturnValueObject(ARELITH_PLUGIN, sFunc);
-
-    n.nExpiryTimeOfDay = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nExpiryCalendarDay = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.fDuration = NWNX_GetReturnValueFloat(ARELITH_PLUGIN, sFunc);
-
-    n.nSubType = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.nType = NWNX_GetReturnValueInt(ARELITH_PLUGIN, sFunc);
-    n.sID = NWNX_GetReturnValueString(ARELITH_PLUGIN, sFunc);
-    return n;
-}
-
-int NWNX_Arelith_RemoveEffectById(object oObject,  string sID)
-{
-    string sFunc = "RemoveEffectById";
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, sID);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-
-    return  NWNX_GetReturnValueInt(ARELITH_PLUGIN,sFunc);
-}
-
-void NWNX_Arelith_ReplaceEffect(object oObject, int array, struct  NWNX_EffectUnpackedAre e)
-{
-    string sFunc = "ReplaceEffect";
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nType);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nSubType);
-
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fDuration);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nExpiryCalendarDay);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nExpiryTimeOfDay);
-
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oCreator);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nSpellId);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.bExpose);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.bShowIcon);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nCasterLevel);
-
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam0);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam1);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam2);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam3);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam4);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam5);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam6);
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, e.nParam7);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fParam0);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fParam1);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fParam2);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.fParam3);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam0);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam1);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam2);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam3);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam4);
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sParam5);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam0);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam1);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam2);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, e.oParam3);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam0.x);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam0.y);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam0.z);
-
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam1.x);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam1.y);
-    NWNX_PushArgumentFloat(ARELITH_PLUGIN, sFunc, e.vParam1.z);
-
-    NWNX_PushArgumentString(ARELITH_PLUGIN, sFunc, e.sTag);
-
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, array);
-    NWNX_PushArgumentObject(ARELITH_PLUGIN, sFunc, oObject);
-    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
-}
 
 void NWNX_Arelith_SetDisableMonkAbilitiesPolymorph(int nPolymorphType)
 {
     string sFunc = "SetDisableMonkAbilitiesPolymorph";
-    NWNX_PushArgumentInt(ARELITH_PLUGIN, sFunc, nPolymorphType);
+    NWNX_PushArgumentInt(nPolymorphType);
     NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+}
+
+void NWNX_Arelith_SetDispelResistanceModifier(object oCreature, int nClass, int nModifier, int bPersist = FALSE)
+{
+    string sFunc = "SetDispelResistanceModifier";
+
+    NWNX_PushArgumentInt(bPersist);
+    NWNX_PushArgumentInt(nModifier);
+    NWNX_PushArgumentInt(nClass);
+    NWNX_PushArgumentObject(oCreature);
+
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+}
+
+void __NWNX_Arelith_ResolvePack(string sFunc, struct NWNX_EffectUnpacked e)
+{
+
+    NWNX_PushArgumentString(e.sID);
+    NWNX_PushArgumentInt(e.nType);
+
+    NWNX_PushArgumentInt(e.nSubType);
+
+    NWNX_PushArgumentFloat(e.fDuration);
+    NWNX_PushArgumentInt(e.nExpiryCalendarDay);
+    NWNX_PushArgumentInt(e.nExpiryTimeOfDay);
+
+    NWNX_PushArgumentObject(e.oCreator);
+    NWNX_PushArgumentInt(e.nSpellId);
+    NWNX_PushArgumentInt(e.bExpose);
+    NWNX_PushArgumentInt(e.bShowIcon);
+    NWNX_PushArgumentInt(e.nCasterLevel);
+
+    NWNX_PushArgumentEffect(e.eLinkLeft);
+    NWNX_PushArgumentInt(e.bLinkLeftValid);
+    NWNX_PushArgumentEffect(e.eLinkRight);
+    NWNX_PushArgumentInt(e.bLinkRightValid);
+
+
+    NWNX_PushArgumentInt(e.nNumIntegers);
+    NWNX_PushArgumentInt(e.nParam0);
+    NWNX_PushArgumentInt(e.nParam1);
+    NWNX_PushArgumentInt(e.nParam2);
+    NWNX_PushArgumentInt(e.nParam3);
+    NWNX_PushArgumentInt(e.nParam4);
+    NWNX_PushArgumentInt(e.nParam5);
+    NWNX_PushArgumentInt(e.nParam6);
+    NWNX_PushArgumentInt(e.nParam7);
+    NWNX_PushArgumentFloat(e.fParam0);
+    NWNX_PushArgumentFloat(e.fParam1);
+    NWNX_PushArgumentFloat(e.fParam2);
+    NWNX_PushArgumentFloat(e.fParam3);
+    NWNX_PushArgumentString(e.sParam0);
+    NWNX_PushArgumentString(e.sParam1);
+    NWNX_PushArgumentString(e.sParam2);
+    NWNX_PushArgumentString(e.sParam3);
+    NWNX_PushArgumentString(e.sParam4);
+    NWNX_PushArgumentString(e.sParam5);
+    NWNX_PushArgumentObject(e.oParam0);
+    NWNX_PushArgumentObject(e.oParam1);
+    NWNX_PushArgumentObject(e.oParam2);
+    NWNX_PushArgumentObject(e.oParam3);
+
+    NWNX_PushArgumentFloat(e.vParam0.x);
+    NWNX_PushArgumentFloat(e.vParam0.y);
+    NWNX_PushArgumentFloat(e.vParam0.z);
+
+    NWNX_PushArgumentFloat(e.vParam1.x);
+    NWNX_PushArgumentFloat(e.vParam1.y);
+    NWNX_PushArgumentFloat(e.vParam1.z);
+
+    NWNX_PushArgumentString(e.sTag);
+
+    NWNX_PushArgumentString(e.sItemProp);
+}
+
+effect NWNX_Arelith_PackEffect(struct NWNX_EffectUnpacked e)
+{
+    string sFunc = "PackEffect";
+
+    __NWNX_Arelith_ResolvePack(sFunc, e);
+
+    NWNX_CallFunction(ARELITH_PLUGIN, sFunc);
+    return NWNX_GetReturnValueEffect();
 }
