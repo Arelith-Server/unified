@@ -2,6 +2,7 @@
 #include "nwn_api.hpp"
 
 #include <string>
+#include <vector>
 
 
 #ifdef NWN_API_PROLOGUE
@@ -27,7 +28,7 @@ struct CExoString
     CExoString(int32_t value);
     CExoString(const std::string & other);
     CExoString & operator=(const std::string & other);
-    void string() const;
+    operator std::string() const;
     ~CExoString();
     CExoString & operator=(const CExoString & string);
     CExoString & operator=(const char * string);
@@ -51,7 +52,7 @@ struct CExoString
     int32_t Find(const CExoString & string, int32_t position = 0) const;
     int32_t Find(char ch, int32_t position = 0) const;
     int32_t FindNot(char ch, int32_t position = 0) const;
-    void Format(const char * format);
+    void Format(const char * format, ...);
     int32_t GetLength() const;
     void Insert(const CExoString & string, int32_t position);
     BOOL IsEmpty() const;
@@ -65,6 +66,7 @@ struct CExoString
     BOOL StripNonAlphaNumeric(BOOL bFileName = true, BOOL bEmail = false, BOOL bMasterServer = false);
     CExoString Strip(bool leading = true, bool trailing = true, const char * set = " \t\v\r\n\f") const;
     CExoString AsTAG() const;
+    std::vector<CExoString> Split(const CExoString & delimiter) const;
 
 
 #ifdef NWN_CLASS_EXTENSION_CExoString
