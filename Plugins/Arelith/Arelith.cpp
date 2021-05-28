@@ -110,10 +110,10 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     m_arelithEvents   = std::make_unique<ArelithEvents>();
 
     s_ReportErrorHook = Hooks::HookFunction(Functions::_ZN25CNWVirtualMachineCommands11ReportErrorER10CExoStringi,
-                                                        (void*)&ReportErrorHook, Hooks::Order::VeryEarly);
+                                                        (void*)&ReportErrorHook, Hooks::Order::Earliest);
 
     s_WriteToLogFileHook = Hooks::HookFunction(Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
-                                                        (void*)&WriteToLogFileHook, Hooks::Order::VeryEarly);
+                                                        (void*)&WriteToLogFileHook, Hooks::Order::Earliest);
 
     s_GetEffectImmunityHook = Hooks::HookFunction(Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei,
         (void*)&GetEffectImmunityHook, Hooks::Order::Final);
@@ -394,13 +394,15 @@ NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 
 void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *message, int32_t error)
 {
-    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, message, error);
     if(s_sHost.empty() || s_sOrigPath.empty())
     {
         LOG_INFO("Host or path was empty.");
-        return;
+        //Do not put a return here or mvoe the call original to the top of the script it messes with the timing
     }
-    s_bSendError=true;
+    else 
+        s_bSendError=true;
+
+    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, message, error);
 }
 
 void Arelith::WriteToLogFileHook(CExoDebugInternal* pExoDebugInternal, CExoString* message)
@@ -408,8 +410,8 @@ void Arelith::WriteToLogFileHook(CExoDebugInternal* pExoDebugInternal, CExoStrin
 
     if(s_bSendError)
     {
-        SendWebHookHTTPS(message->CStr());
         s_bSendError=false;
+        SendWebHookHTTPS(message->CStr());
     }
 
     s_WriteToLogFileHook->CallOriginal<void>(pExoDebugInternal, message);
