@@ -111,7 +111,7 @@ NWNX_EXPORT ArgumentStack GetAsciiTableString(ArgumentStack&&)
     if (table[0] == 0)
     {
         table[0] = 1; // Can't pass NULL or it will terminate the string
-        for (size_t i = 1; i < 0xFF; i++)
+        for (size_t i = 1; i <= 0xFF; i++)
             table[i] = i;
     }
 
@@ -748,3 +748,11 @@ NWNX_EXPORT ArgumentStack GetTTY(ArgumentStack&&)
     return retval;
 }
 
+NWNX_EXPORT ArgumentStack SetCurrentlyRunningEvent(ArgumentStack&& args)
+{
+    const auto eventId = args.extract<int32_t>();
+
+    Globals::VirtualMachine()->m_pVirtualMachineScript[0].m_nScriptEventID = eventId;
+
+    return {};
+}
