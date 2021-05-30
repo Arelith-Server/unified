@@ -16,6 +16,7 @@ https://github.com/nwnxee/unified/compare/build8193.23...HEAD
 ##### New NWScript Functions
 - Creature: RunEquip()
 - Creature: RunUnequip()
+- Util: SetCurrentlyRunningEvent()
 
 ### Changed
 - N/A
@@ -28,6 +29,7 @@ https://github.com/nwnxee/unified/compare/build8193.23...HEAD
 
 ### Fixed
 - Core: {Get|Set}LocalCassowary() actually work and no longer throw asserts.
+- Events: InputEvents: NWNX_ON_INPUT_FORCE_MOVE_TO_OBJECT_* now uses the right hook.
 
 ## 8193.22
 https://github.com/nwnxee/unified/compare/build8193.22...build8193.23
