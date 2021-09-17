@@ -101,6 +101,27 @@ NWNX_EXPORT ArgumentStack RemoveFeat(ArgumentStack&& args)
     return {};
 }
 
+NWNX_EXPORT ArgumentStack RemoveFeatByLevel(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto feat  = args.extract<int32_t>();
+          ASSERT_OR_THROW(feat >= Constants::Feat::MIN);
+          ASSERT_OR_THROW(feat <= Constants::Feat::MAX);
+        const auto level = args.extract<int32_t>();
+          ASSERT_OR_THROW(level >= 1);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
+
+        if (level > 0 && level <= pCreature->m_pStats->m_lstLevelStats.num)
+        {
+            auto *pLevelStats = pCreature->m_pStats->m_lstLevelStats.element[level-1];
+            ASSERT_OR_THROW(pLevelStats);
+            pLevelStats->m_lstFeats.Remove(static_cast<uint16_t>(feat));
+        }
+    }
+    return {};
+}
+
 NWNX_EXPORT ArgumentStack GetKnowsFeat(ArgumentStack&& args)
 {
     if (auto *pCreature = Utils::PopCreature(args))
@@ -1041,6 +1062,51 @@ NWNX_EXPORT ArgumentStack SetSkillRank(ArgumentStack&& args)
     return {};
 }
 
+NWNX_EXPORT ArgumentStack GetSkillRankByLevel(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto skill = args.extract<int32_t>();
+        const auto level = args.extract<int32_t>();
+          ASSERT_OR_THROW(skill >= Constants::Skill::MIN);
+          ASSERT_OR_THROW(skill <= Constants::Skill::MAX);
+          ASSERT_OR_THROW(level >= 1);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
+
+        if (level > 0 && level <= pCreature->m_pStats->m_lstLevelStats.num)
+        {
+            auto *pLevelStats = pCreature->m_pStats->m_lstLevelStats.element[level-1];
+            ASSERT_OR_THROW(pLevelStats);
+            return pLevelStats->m_lstSkillRanks[skill];
+        }
+    }
+    return -1;
+}
+
+NWNX_EXPORT ArgumentStack SetSkillRankByLevel(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto skill = args.extract<int32_t>();
+        const auto rank = args.extract<int32_t>();
+        const auto level = args.extract<int32_t>();
+          ASSERT_OR_THROW(skill >= Constants::Skill::MIN);
+          ASSERT_OR_THROW(skill <= Constants::Skill::MAX);
+          ASSERT_OR_THROW(rank >= -127);
+          ASSERT_OR_THROW(rank <= 128);
+          ASSERT_OR_THROW(level >= 1);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
+
+        if (level > 0 && level <= pCreature->m_pStats->m_lstLevelStats.num)
+        {
+            auto *pLevelStats = pCreature->m_pStats->m_lstLevelStats.element[level-1];
+            ASSERT_OR_THROW(pLevelStats);
+            pLevelStats->m_lstSkillRanks[skill] = rank;
+        }
+    }
+    return {};
+}
+
 NWNX_EXPORT ArgumentStack SetClassByPosition(ArgumentStack&& args)
 {
     if (auto *pCreature = Utils::PopCreature(args))
@@ -1777,11 +1843,7 @@ NWNX_EXPORT ArgumentStack DeserializeQuickbar(ArgumentStack&& args)
         CResGFF resGff;
         CResStruct resStruct{};
 
-        // resGff/resman will claim ownership of this pointer and free it in resGff destructor,
-        // so need a copy for them to play with since the vector can't relinquish its own.
-        auto *data = new uint8_t[serialized.size()];
-        memcpy(data, serialized.data(), serialized.size());
-        if (resGff.GetDataFromPointer((void *) data, (int32_t) serialized.size()))
+        if (resGff.GetDataFromPointer((void *) serialized.data(), (int32_t) serialized.size(), false))
         {
             resGff.InitializeForWriting();
 
@@ -2993,11 +3055,8 @@ NWNX_EXPORT ArgumentStack DoItemCastSpell(ArgumentStack&& args)
         auto oidTarget = args.extract<ObjectID>();
         auto oidArea = args.extract<ObjectID>();
         auto x = args.extract<float>();
-          ASSERT_OR_THROW(x >= 0.0f);
         auto y = args.extract<float>();
-          ASSERT_OR_THROW(y >= 0.0f);
         auto z = args.extract<float>();
-          ASSERT_OR_THROW(z >= 0.0f);
         auto spellID = args.extract<int32_t>();
           ASSERT_OR_THROW(spellID >= 0);
         auto casterLevel = args.extract<int32_t>();
@@ -3050,7 +3109,7 @@ NWNX_EXPORT ArgumentStack DoItemCastSpell(ArgumentStack&& args)
         pSpellScriptData->m_nItemCastLevel = casterLevel;
 
         Globals::AppManager()->m_pServerExoApp->GetServerAIMaster()->AddEventDeltaTime(
-                0, delayMs, pCaster->m_idSelf, pCaster->m_idSelf, Constants::Event::ItemOnHitSpellImpact, (void*)pSpellScriptData);
+                0, delayMs, pCaster->m_idSelf, pCaster->m_idSelf, Constants::AIMasterEvent::ItemOnHitSpellImpact, (void*)pSpellScriptData);
     }
 
     return {};
