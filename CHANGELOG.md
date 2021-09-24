@@ -4,17 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 8193.31-HEAD
-https://github.com/nwnxee/unified/compare/build8193.31...HEAD
+## 8193.32-HEAD
+https://github.com/nwnxee/unified/compare/build8193.32...HEAD
 
 ### Added
-- N/A
+- Events: added event `NWNX_ON_CLIENT_SET_DEVICE_PROPERTY_BEFORE__*` which fires when a player changes a device property (window size/gui scale). 
 
 ##### New Plugins
 - N/A
 
 ##### New NWScript Functions
-- N/A
+- Util: GetModuleMtime()
 
 ### Changed
 - ***ABI BREAKING*** Creature: SetClassByPosition by default replaces all occurrences of the old class in CNWLevelStats. This can be disabled with the argument 'bUpdateLevels'.
@@ -26,7 +26,16 @@ https://github.com/nwnxee/unified/compare/build8193.31...HEAD
 - N/A
 
 ### Fixed
-- N/A
+- N/a
+
+## 8193.32
+https://github.com/nwnxee/unified/compare/build8193.31...build8193.32
+
+### Added
+- Administration: added `NWNX_ADMINISTRATION_OPTION_PLAYER_PARTY_CONTROL` to {Get|Set}PlayOption() to toggle player party control.
+
+### Fixed
+- Util: fixed a memory leak in GetFirstResRef()
 
 ## 8193.31
 https://github.com/nwnxee/unified/compare/build8193.30...build8193.31
