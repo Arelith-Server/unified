@@ -144,7 +144,7 @@ string GetTableName(string tag, object obj=OBJECT_INVALID, int bare=FALSE) {
     }
 
     // Table name wraped in quotes to avoid token expansion.
-    return "\""+sCleansed+"\"";
+    return GetLocalString(GetModule(), "GS_DOUBLE_QUOTE")+sCleansed+GetLocalString(GetModule(), "GS_DOUBLE_QUOTE");
 }
 
 string GetTableCreateString(string tag, object obj=OBJECT_INVALID) {
