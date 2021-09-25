@@ -110,6 +110,14 @@ void NWNX_Creature_AddFeatByLevel(object creature, int feat, int level);
 /// @param feat The feat id.
 void NWNX_Creature_RemoveFeat(object creature, int feat);
 
+/// @brief Removes the creature a feat assigned at a level
+/// @param creature The creature object.
+/// @param feat The feat id.
+/// @param level The level they gained the feat.
+/// @remark Removes the feat from the stat list at the provided level. Does not remove the feat from the creature, use
+/// NWNX_Creature_RemoveFeat for this.
+void NWNX_Creature_RemoveFeatByLevel(object creature, int feat, int level);
+
 /// @brief Determines if the creature knows a feat.
 /// @note This differs from native @nwn{GetHasFeat} which returns FALSE if the feat has no more uses per day.
 /// @param creature The creature object.
@@ -382,6 +390,21 @@ void NWNX_Creature_SetSoundset(object creature, int soundset);
 /// @param skill The skill id.
 /// @param rank The value to set as the skill rank.
 void NWNX_Creature_SetSkillRank(object creature, int skill, int rank);
+
+/// @brief Get the ranks in a skill for creature assigned at a level.
+/// @param creature The creature object.
+/// @param skill The skill id.
+/// @param level The level they gained skill ranks.
+/// @return The rank in a skill assigned at a level (-1 on error).
+int NWNX_Creature_GetSkillRankByLevel(object creature, int skill, int level);
+
+/// @brief Set the ranks in a skill for creature assigned at a level.
+/// @note It only affect the leveling array, to know what to do on level-down. To effectivly change the skill rank on the current level, NWNX_Creature_SetSkillRank is also needed.
+/// @param creature The creature object.
+/// @param skill The skill id.
+/// @param level The level they gained skill ranks.
+/// @param rank The value to set as the skill rank.
+void NWNX_Creature_SetSkillRankByLevel(object creature, int skill, int rank, int level);
 
 /// @brief Set the class ID in a particular position for a creature.
 /// @param creature The creature object.
@@ -982,6 +1005,17 @@ void NWNX_Creature_RemoveFeat(object creature, int feat)
     NWNX_CallFunction(NWNX_Creature, sFunc);
 }
 
+void NWNX_Creature_RemoveFeatByLevel(object creature, int feat, int level)
+{
+    string sFunc = "RemoveFeatByLevel";
+
+    NWNX_PushArgumentInt(level);
+    NWNX_PushArgumentInt(feat);
+    NWNX_PushArgumentObject(creature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+}
+
 int NWNX_Creature_GetKnowsFeat(object creature, int feat)
 {
     string sFunc = "GetKnowsFeat";
@@ -1457,6 +1491,30 @@ void NWNX_Creature_SetSoundset(object creature, int soundset)
 void NWNX_Creature_SetSkillRank(object creature, int skill, int rank)
 {
     string sFunc = "SetSkillRank";
+    NWNX_PushArgumentInt(rank);
+    NWNX_PushArgumentInt(skill);
+    NWNX_PushArgumentObject(creature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+}
+
+int NWNX_Creature_GetSkillRankByLevel(object creature, int skill, int level)
+{
+    string sFunc = "GetSkillRankByLevel";
+
+    NWNX_PushArgumentInt(level);
+    NWNX_PushArgumentInt(skill);
+    NWNX_PushArgumentObject(creature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+    return NWNX_GetReturnValueInt();
+}
+
+void NWNX_Creature_SetSkillRankByLevel(object creature, int skill, int rank, int level)
+{
+    string sFunc = "SetSkillRankByLevel";
+
+    NWNX_PushArgumentInt(level);
     NWNX_PushArgumentInt(rank);
     NWNX_PushArgumentInt(skill);
     NWNX_PushArgumentObject(creature);
