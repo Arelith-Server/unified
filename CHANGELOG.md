@@ -4,19 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 8193.23-HEAD
-https://github.com/nwnxee/unified/compare/build8193.23...HEAD
+## 8193.32-HEAD
+https://github.com/nwnxee/unified/compare/build8193.32...HEAD
 
 ### Added
-- N/A
+- Events: added event `NWNX_ON_CLIENT_SET_DEVICE_PROPERTY_BEFORE__*` which fires when a player changes a device property (window size/gui scale). 
 
 ##### New Plugins
 - N/A
 
 ##### New NWScript Functions
-- Creature: RunEquip()
-- Creature: RunUnequip()
-- Util: SetCurrentlyRunningEvent()
+- Util: GetModuleMtime()
 
 ### Changed
 - ***ABI BREAKING*** Creature: SetClassByPosition by default replaces all occurrences of the old class in CNWLevelStats. This can be disabled with the argument 'bUpdateLevels'.
@@ -28,7 +26,96 @@ https://github.com/nwnxee/unified/compare/build8193.23...HEAD
 - N/A
 
 ### Fixed
+- N/a
+
+## 8193.32
+https://github.com/nwnxee/unified/compare/build8193.31...build8193.32
+
+### Added
+- Administration: added `NWNX_ADMINISTRATION_OPTION_PLAYER_PARTY_CONTROL` to {Get|Set}PlayOption() to toggle player party control.
+
+### Fixed
+- Util: fixed a memory leak in GetFirstResRef()
+
+## 8193.31
+https://github.com/nwnxee/unified/compare/build8193.30...build8193.31
+
+### Added
+- Events: Added NWNX_ON_ITEM_MERGE_BEFORE and NWNX_ON_ITEM_MERGE_AFTER.
+- ELC: added `NWNX_ELC_ENFORCE_CASTER_PRIMARY_STAT_IS_11`, if enabled, ELC will check when a character's first level class is a spellcaster, if their primary casting stat is >= 11.
+
+##### New NWScript Functions
+- Creature: RemoveFeatByLevel()
+- Creature: GetSkillRankByLevel()
+- Creature: SetSkillRankByLevel()
+- SQL: PreparedNULL()
+
+### Changed
+- Core: **POLICY CHANGE:** Only `stdout` output will be accepted in bug reports.
+- Core: Assert backtraces now show up in the log file.
+- Core: Assert backtraces are now printed to `stdout` instead of `stderr`.
+- Core: Other error messages are now printed to `stdout` instead of `stderr`
+- Core: The default NWN crash handler is no longer called by default. Set `NWNX_CORE_BASE_GAME_CRASH_HANDLER=y` to call it.
+- Core: `nwnx.txt` is no longer created by default. Set `NWNX_CORE_LOG_FILE_PATH="path/to/nwnx.txt"` to use it.
+- Race: The AC modifier now supports specifying the AC type.
+
+### Fixed
+- Core: Fixed a minor memory leak when asserts were triggered.
+- Rename: Fixed SetPCNameOverride() subscribing to `NWNX_CREATURE_ORIGINALNAME_SIGNAL` whenever the function is called, causing bad performance.
+- Player: Fixed a nullptr deref crash in ApplyLoopingVisualEffectToObject()
+
+## 8193.30
+https://github.com/nwnxee/unified/compare/build8193.29...build8193.30
+
+### Added
+
+##### New NWScript Functions
+- Object: SetLastTriggered()
+
+### Changed
+- ***ABI BREAKING*** Creature: SetClassByPosition by default replaces all occurrences of the old class in CNWLevelStats. This can be disabled with the argument 'bUpdateLevels'.
+
+### Deprecated
+- Weapon: SetWeaponIsMonkWeapon()
+
+### Removed
+- CombatModes: plugin has been removed. The NWNX_ON_COMBAT_MODE_* events and NWNX_Weapon_SetWeaponIsMonkWeapon() Flurry of Blows functionality has been preserved.
+- Tweaks: removed `NWNX_TWEAKS_FIX_AOE_OBJECT_POSITION_BUG`, fixed in basegame.
+
+## 8193.29
+https://github.com/nwnxee/unified/compare/build8193.26...build8193.29
+
+### Added
+- Tweaks: added `NWNX_TWEAKS_MATERIAL_NAME_NULL_IS_ALL` to allow setting params on all applicable materials at once.
+- Tweaks: added `NWNX_TWEAKS_FIX_AOE_OBJECT_POSITION_BUG` to stop AreaOfEffect objects (auras, etc) from breaking GetNearestXXX() stuff.
+
+## 8193.26
+https://github.com/nwnxee/unified/compare/build8193.25...build8193.26
+
+- No user facing changes
+
+## 8193.25
+https://github.com/nwnxee/unified/compare/build8193.24...build8193.25
+
+- No user facing changes
+
+## 8193.24
+https://github.com/nwnxee/unified/compare/build8193.23...build8193.24
+
+### Added
+- Feat: added environment variable `NWNX_FEAT_CUSTOM_SPELL_ID` to give a custom spellid to all effects created by this plugin.
+
+##### New NWScript Functions
+- Creature: RunEquip()
+- Creature: RunUnequip()
+- Util: SetCurrentlyRunningEvent()
+
+### Changed
+- Damage: added ToHitRoll and ToHitModifier data to the AttackEvent structure.
+
+### Fixed
 - Core: {Get|Set}LocalCassowary() actually work and no longer throw asserts.
+- Dialog: fixed a crash when calling GetCurrentNodeID() in an OnConversationAborted script.
 - Events: InputEvents: NWNX_ON_INPUT_FORCE_MOVE_TO_OBJECT_* now uses the right hook.
 
 ## 8193.22
