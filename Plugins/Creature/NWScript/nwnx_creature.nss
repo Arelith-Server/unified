@@ -388,9 +388,7 @@ void NWNX_Creature_SetSkillRank(object creature, int skill, int rank);
 /// @param position Should be 0, 1, or 2 depending on how many classes the creature
 /// has and which is to be modified.
 /// @param classID A valid ID number in classes.2da and between 0 and 255.
-/// @param bUpdateLevels determines whether the method will replace all occurrences
-/// of the old class in CNWLevelStats with the new classID.
-void NWNX_Creature_SetClassByPosition(object creature, int position, int classID, int bUpdateLevels = TRUE);
+void NWNX_Creature_SetClassByPosition(object creature, int position, int classID);
 
 /// @brief Set the level at the given position for a creature.
 /// @note A creature should already have a class in that position.
@@ -1464,10 +1462,9 @@ void NWNX_Creature_SetSkillRank(object creature, int skill, int rank)
     NWNX_CallFunction(NWNX_Creature, sFunc);
 }
 
-void NWNX_Creature_SetClassByPosition(object creature, int position, int classID, int bUpdateLevels = TRUE)
+void NWNX_Creature_SetClassByPosition(object creature, int position, int classID)
 {
     string sFunc = "SetClassByPosition";
-    NWNX_PushArgumentInt(bUpdateLevels);
     NWNX_PushArgumentInt(classID);
     NWNX_PushArgumentInt(position);
     NWNX_PushArgumentObject(creature);
