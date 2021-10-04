@@ -4,17 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 8193.32-HEAD
-https://github.com/nwnxee/unified/compare/build8193.32...HEAD
+## 8193.33-HEAD
+https://github.com/nwnxee/unified/compare/build8193.33...HEAD
 
 ### Added
-- Events: added event `NWNX_ON_CLIENT_SET_DEVICE_PROPERTY_BEFORE__*` which fires when a player changes a device property (window size/gui scale). 
+- N/A
 
 ##### New Plugins
 - N/A
 
 ##### New NWScript Functions
-- Util: GetModuleMtime()
+- Object: GetAoEObjectDurationRemaining()
 
 ### Changed
 - ***ABI BREAKING*** Creature: SetClassByPosition by default replaces all occurrences of the old class in CNWLevelStats. This can be disabled with the argument 'bUpdateLevels'.
@@ -26,7 +26,22 @@ https://github.com/nwnxee/unified/compare/build8193.32...HEAD
 - N/A
 
 ### Fixed
-- N/a
+- N/A
+
+## 8193.33
+https://github.com/nwnxee/unified/compare/build8193.32...build8193.33
+
+### Added
+- Events: added event `NWNX_ON_CLIENT_SET_DEVICE_PROPERTY_BEFORE__*` which fires when a player changes a device property (window size/gui scale).
+- Tweaks: added `NWNX_TWEAKS_SUMMON_ASSOCIATE_USE_COMPUTE_SAFE_LOCATION` which makes CNWSCreature::SummonAssociate() will use ComputeSafeLocation() instead of ComputeNonVisibleLocation(), possibly fixing some Familiar/AnimalCompanion summon issues.
+
+##### New NWScript Functions
+- Util: GetModuleMtime()
+
+### Fixed
+- Chat: When using custom hearing distances, broadcast the actual message instead of the tellname.
+- Chat: When using custom hearing distances, check if a player actually has one set and don't just overwrite the distance with 0.0f if not set.
+- Chat: When using custom hearing distances, don't send messages to players that don't have a valid creature object causing a server crash.
 
 ## 8193.32
 https://github.com/nwnxee/unified/compare/build8193.31...build8193.32
