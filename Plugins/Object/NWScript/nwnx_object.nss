@@ -206,7 +206,8 @@ void NWNX_Object_RemoveIconEffect(object obj, int nIcon);
 /// @brief Export an object to the UserDirectory/nwnx folder.
 /// @param sFileName The filename without extension, 16 or less characters.
 /// @param oObject The object to export. Valid object types: Creature, Item, Placeable, Waypoint, Door, Store, Trigger
-void NWNX_Object_Export(object oObject, string sFileName);
+/// @param sAlias The alias of the resource directory to add the .git file to. Default: UserDirectory/nwnx
+void NWNX_Object_Export(object oObject, string sFileName, string sAlias = "NWNX");
 
 /// @brief Get oObject's integer variable sVarName.
 /// @param oObject The object to get the variable from.
@@ -373,6 +374,11 @@ int NWNX_Object_GetLastSpellCastFeat(object oObject);
 /// @param oObject Door or placeable object
 /// @param oLast Object that last triggered trap.
 void NWNX_Object_SetLastTriggered(object oObject, object oLast);
+
+/// @brief Gets the remaining duration of the AoE object.
+/// @param oAoE The AreaOfEffect object.
+/// @return The remaining duration, in seconds, or the zero on failure.
+float NWNX_Object_GetAoEObjectDurationRemaining(object oAoE);
 
 /// @}
 
@@ -636,10 +642,11 @@ void NWNX_Object_RemoveIconEffect(object obj, int nIcon)
     NWNX_CallFunction(NWNX_Object, sFunc);
 }
 
-void NWNX_Object_Export(object oObject, string sFileName)
+void NWNX_Object_Export(object oObject, string sFileName, string sAlias = "NWNX")
 {
     string sFunc = "Export";
 
+    NWNX_PushArgumentString(sAlias);
     NWNX_PushArgumentString(sFileName);
     NWNX_PushArgumentObject(oObject);
     NWNX_CallFunction(NWNX_Object, sFunc);
@@ -929,4 +936,14 @@ void NWNX_Object_SetLastTriggered(object oObject, object oLast)
     NWNX_PushArgumentObject(oObject);
 
     NWNX_CallFunction(NWNX_Object, sFunc);
+}
+
+float NWNX_Object_GetAoEObjectDurationRemaining(object oAoE)
+{
+    string sFunc = "GetAoEObjectDurationRemaining";
+
+    NWNX_PushArgumentObject(oAoE);
+    NWNX_CallFunction(NWNX_Object, sFunc);
+
+    return NWNX_GetReturnValueFloat();
 }
