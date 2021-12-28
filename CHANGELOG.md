@@ -4,23 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## 8193.33-HEAD
-https://github.com/nwnxee/unified/compare/build8193.33...HEAD
+## 8193.34-HEAD
+https://github.com/nwnxee/unified/compare/build8193.34...HEAD
 
 ### Added
-- Tweaks: added `NWNX_TWEAKS_HIDE_HARDCODED_ITEM_VFX` to hide various hardcoded item vfx.
-- Tweaks: added `NWNX_TWEAKS_FIX_RESMAN_MEMLEAK` that fixes a memory leak in Resman / CResGFF.
+- Tweaks: added `NWNX_TWEAKS_CANUSEITEM_CHECK_ILR_FOR_HENCHMEN` to have the CNWSCreature::CanUseItem() function also check ILR for Henchmen.
+- Optimizations: added `NWNX_OPTIMIZATIONS_FIX_PLACEABLE_VFX_REAPPLY_BUG` to fix a bug where VFXs keep getting reapplied to placeables.
 
 ##### New Plugins
 - N/A
 
 ##### New NWScript Functions
-- Area: RotateArea()
-- Creature: OverrideRangedProjectileVFX()
-- Object: GetAoEObjectDurationRemaining()
+- Effect: AccessorizeVisualEffect()
 
 ### Changed
-- ***ABI BREAKING*** Creature: SetClassByPosition by default replaces all occurrences of the old class in CNWLevelStats. This can be disabled with the argument 'bUpdateLevels'.
+- N/A  
 
 ### Deprecated
 - N/A
@@ -30,6 +28,25 @@ https://github.com/nwnxee/unified/compare/build8193.33...HEAD
 
 ### Fixed
 - N/A
+
+## 8193.34
+https://github.com/nwnxee/unified/compare/build8193.33...build8193.34
+
+### Added
+- Tweaks: added `NWNX_TWEAKS_HIDE_HARDCODED_ITEM_VFX` to hide various hardcoded item vfx.
+- Tweaks: added `NWNX_TWEAKS_FIX_RESMAN_MEMLEAK` that fixes a memory leak in Resman / CResGFF.
+- Tweaks: added `NWNX_TWEAKS_FIX_DM_FACTION_BUG` that fixes a DM faction bug when using a non-DMClient BIC file.
+
+##### New NWScript Functions
+- Area: RotateArea()
+- Creature: OverrideRangedProjectileVFX()
+- Object: GetAoEObjectDurationRemaining()
+
+### Changed
+- Object: `NWNX_Object_Export` added argument sAlias, default 'NWNX'
+
+### Removed
+- Tweaks: `NWNX_TWEAKS_FIX_RESMAN_MEMLEAK`, fixed in basegame.
 
 ## 8193.33
 https://github.com/nwnxee/unified/compare/build8193.32...build8193.33
