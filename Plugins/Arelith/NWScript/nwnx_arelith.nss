@@ -238,13 +238,13 @@ void __NWNX_Arelith_ResolvePack(string sFunc, struct NWNX_EffectUnpacked e)
     NWNX_PushArgumentObject(e.oParam2);
     NWNX_PushArgumentObject(e.oParam3);
 
-    NWNX_PushArgumentFloat(e.vParam0.x);
-    NWNX_PushArgumentFloat(e.vParam0.y);
-    NWNX_PushArgumentFloat(e.vParam0.z);
+    NWNX_PushArgumentFloat(e.vParam0x);
+    NWNX_PushArgumentFloat(e.vParam0y);
+    NWNX_PushArgumentFloat(e.vParam0z);
 
-    NWNX_PushArgumentFloat(e.vParam1.x);
-    NWNX_PushArgumentFloat(e.vParam1.y);
-    NWNX_PushArgumentFloat(e.vParam1.z);
+    NWNX_PushArgumentFloat(e.vParam1x);
+    NWNX_PushArgumentFloat(e.vParam1y);
+    NWNX_PushArgumentFloat(e.vParam1z);
 
     NWNX_PushArgumentString(e.sTag);
 

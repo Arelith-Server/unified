@@ -13,8 +13,10 @@ add_plugin(Tweaks
     "FixDispelEffectLevels.cpp"
     "FixGreaterSanctuaryBug.cpp"
     "FixItemNullptrInCItemRepository.cpp"
+    "FixResmanMemleak.cpp"
     "FixUnlimitedPotionsBug.cpp"
     "HideClassesOnCharList.cpp"
+    "HideHardcodedItemVFX.cpp"
     "HidePlayersOnCharList.cpp"
     "ItemChargesCost.cpp"
     "LanguageOverride.cpp"
@@ -27,6 +29,7 @@ add_plugin(Tweaks
     "SendTlkOverrideBeforeChargen.cpp"
     "SneakAttackCritImmunity.cpp"
     "StringToIntBaseToAuto.cpp"
+    "SummonAssociateUseComputeSafeLocation.cpp"
     "TURDByCDKey.cpp"
     "UnhardcodeShields.cpp"
     "PreventAttackBonusBypassingReductions.cpp")
