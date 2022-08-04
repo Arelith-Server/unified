@@ -43,7 +43,12 @@ Tweaks stuff. See below.
 | `NWNX_TWEAKS_HIDE_HARDCODED_ITEM_VFX` | int | See [here](https://github.com/nwnxee/unified/tree/master/Plugins/Tweaks#nwnx_tweaks_hide_hardcoded_item_vfx). |
 | `NWNX_TWEAKS_FIX_DM_FACTION_BUG` | true or false | Fixes a DM faction bug when using a non-DMClient BIC file. |
 | `NWNX_TWEAKS_CANUSEITEM_CHECK_ILR_FOR_HENCHMEN` | true or false | The CNWSCreature::CanUseItem() function will also check ILR for Henchmen. |
-  
+| `NWNX_TWEAKS_FIX_DM_SELECTION_BOX` | true or false | Fixes the DM creature selection box not showing up when player party control is off. |
+| `NWNX_TWEAKS_FIX_TRIGGER_ENTER_DETECTION` | true or false | Adds an additional bounds check for triggers to fix a trigger detection bug. |
+| `NWNX_TWEAKS_FIX_MULTICLASS_XP_PENALTY_BUG` | true or false | Fixes a bug where multiclass xp penalties are calculated incorrectly. |
+| `NWNX_TWEAKS_UNCAP_DAMAGE_RESISTANCE_DAMAGE_FLAGS` | true or false | Uncaps the compounded damage flags of EffectDamageResistance. |
+| `NWNX_TWEAKS_FIX_RESOLVE_SPECIAL_ATTACK_DAMAGE` | true or false | Stops damage from being resolved when a special attack misses. |
+
 ## Environment variable values
 
 ### NWNX_TWEAKS_HIDE_PLAYERS_ON_CHAR_LIST

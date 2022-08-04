@@ -4,4 +4,6 @@ add_plugin(Optimizations
         "LuoLookup.cpp"
         "PlayerLookup.cpp"
         "ReconcileAutoMap.cpp"
+        "CacheScriptChunks.cpp"
+        "ClientGameObjectUpdateTime.cpp"
 )

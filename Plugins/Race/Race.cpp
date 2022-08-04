@@ -621,14 +621,16 @@ void Race::ResolveInitiativeHook(CNWSCreature *pCreature)
         auto *pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(pCreature->m_idSelf);
         if (pPlayer)
         {
-            auto *pData = new CNWCCMessageData;
-            pData->SetInteger(0, diceRoll);
-            pData->SetInteger(1, mod);
-            pData->SetObjectID(0, pCreature->m_idSelf);
-            auto *pMessage = static_cast<CNWSMessage*>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
+            CNWCCMessageData messageData;
+            messageData.SetObjectID(0, pCreature->m_idSelf);
+            messageData.SetInteger(0, diceRoll);
+            messageData.SetInteger(1, mod);
+            auto *pMessage = static_cast<CNWSMessage *>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
             if (pMessage)
             {
-                pMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID, MessageClientSideMsgMinor::Initiative, pData, nullptr);
+                pMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID,
+                                                      Constants::MessageClientSideMsgMinor::Initiative,
+                                                      &messageData, nullptr);
             }
         }
         pCreature->m_bInitiativeExpired = 0;
@@ -643,6 +645,9 @@ int32_t Race::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerR
         return s_ValidateCharacterHook->CallOriginal<int32_t>(pPlayer, bFailedServerRestriction);
 
     auto nRace = pCreature->m_pStats->m_nRace;
+
+    // Need to store the feat usages and set them after we remove/add the feat back to bypass Char Validation
+    std::unordered_map<uint16_t, uint8_t> featUses;
 
     for (auto &featDetails : g_plugin->m_RaceFeat[nRace])
     {
@@ -664,6 +669,8 @@ int32_t Race::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerR
         {
             pLevelStats->AddFeat(feat);
         }
+        if (Globals::Rules()->GetFeat(featId)->m_nUsesPerDay)
+            featUses.emplace(featId, pCreature->m_pStats->GetFeatRemainingUses(featId));
         pCreature->m_pStats->RemoveFeat(featId);
     }
 
@@ -678,6 +685,8 @@ int32_t Race::ValidateCharacterHook(CNWSPlayer *pPlayer, int32_t *bFailedServerR
         auto *pLevelStats = pCreature->m_pStats->m_lstLevelStats.element[featLevel-1];
         pLevelStats->AddFeat(featId);
         pCreature->m_pStats->AddFeat(featId);
+        if (Globals::Rules()->GetFeat(featId)->m_nUsesPerDay)
+            pCreature->m_pStats->SetFeatRemainingUses(featId, featUses[featId]);
     }
 
     return retVal;
