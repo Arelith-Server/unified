@@ -390,6 +390,32 @@ void NWNX_Player_CloseStore(object oPlayer);
 /// @note Overrides will not persist through relogging.
 void NWNX_Player_SetTlkOverride(object oPlayer, int nStrRef, string sOverride, int bRestoreGlobal = TRUE);
 
+/// @brief Update wind for oPlayer only.
+/// @param oPlayer The player.
+/// @param vDirection The Wind's direction.
+/// @param fMagnitude The Wind's magnitude.
+/// @param fYaw The Wind's yaw.
+/// @param fPitch The Wind's pitch.
+void NWNX_Player_UpdateWind(object oPlayer, vector vDirection, float fMagnitude, float fYaw, float fPitch);
+
+/// @brief Update the SkyBox for oPlayer only.
+/// @param oPlayer The player.
+/// @param nSkyBox The Skybox ID.
+void NWNX_Player_UpdateSkyBox(object oPlayer, int nSkyBox);
+
+/// @brief Update Sun and Moon Fog Color for oPlayer only.
+/// @param oPlayer The player.
+/// @param nSunFogColor The int value of Sun Fog color.
+/// @param nMoonFogColor The int value of Moon Fog color.
+void NWNX_Player_UpdateFogColor(object oPlayer, int nSunFogColor, int nMoonFogColor);
+
+
+/// @brief Update Sun and Moon Fog Amount for oPlayer only.
+/// @param oPlayer The player.
+/// @param nSunFogAmount The int value of Sun Fog amount (range 0-255).
+/// @param nMoonFogAmount The int value of Moon Fog amount (range 0-255).
+void NWNX_Player_UpdateFogAmount(object oPlayer, int nSunFogAmount, int nMoonFogAmount);
+
 /// @}
 
 void NWNX_Player_ForcePlaceableExamineWindow(object player, object placeable)
@@ -977,6 +1003,49 @@ void NWNX_Player_SetTlkOverride(object oPlayer, int nStrRef, string sOverride, i
     NWNX_PushArgumentInt(bRestoreGlobal);
     NWNX_PushArgumentString(sOverride);
     NWNX_PushArgumentInt(nStrRef);
+    NWNX_PushArgumentObject(oPlayer);
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_UpdateWind(object oPlayer, vector vDirection, float fMagnitude, float fYaw, float fPitch)
+{
+    string sFunc = "UpdateWind";
+
+    NWNX_PushArgumentFloat(fPitch);
+    NWNX_PushArgumentFloat(fYaw);
+    NWNX_PushArgumentFloat(fMagnitude);
+    NWNX_PushArgumentFloat(vDirection.x);
+    NWNX_PushArgumentFloat(vDirection.y);
+    NWNX_PushArgumentFloat(vDirection.z);
+    NWNX_PushArgumentObject(oPlayer);
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_UpdateSkyBox(object oPlayer, int nSkyBox)
+{
+    string sFunc = "UpdateSkyBox";
+
+    NWNX_PushArgumentInt(nSkyBox);
+    NWNX_PushArgumentObject(oPlayer);
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_UpdateFogColor(object oPlayer, int nSunFogColor, int nMoonFogColor)
+{
+    string sFunc = "UpdateFogColor";
+
+    NWNX_PushArgumentInt(nMoonFogColor);
+    NWNX_PushArgumentInt(nSunFogColor);
+    NWNX_PushArgumentObject(oPlayer);
+    NWNX_CallFunction(NWNX_Player, sFunc);
+}
+
+void NWNX_Player_UpdateFogAmount(object oPlayer, int nSunFogAmount, int nMoonFogAmount)
+{
+    string sFunc = "UpdateFogAmount";
+
+    NWNX_PushArgumentInt(nMoonFogAmount);
+    NWNX_PushArgumentInt(nSunFogAmount);
     NWNX_PushArgumentObject(oPlayer);
     NWNX_CallFunction(NWNX_Player, sFunc);
 }

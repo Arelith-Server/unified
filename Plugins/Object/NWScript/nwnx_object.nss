@@ -15,6 +15,7 @@ const int NWNX_OBJECT_LOCALVAR_TYPE_FLOAT    = 2;
 const int NWNX_OBJECT_LOCALVAR_TYPE_STRING   = 3;
 const int NWNX_OBJECT_LOCALVAR_TYPE_OBJECT   = 4;
 const int NWNX_OBJECT_LOCALVAR_TYPE_LOCATION = 5;
+const int NWNX_OBJECT_LOCALVAR_TYPE_JSON     = 6;
 /// @}
 
 /// @anchor object_internal_types
@@ -61,8 +62,9 @@ int NWNX_Object_GetLocalVariableCount(object obj);
 /// @note As of build 8193.14, this function takes O(n) time, where n is the number
 ///       of locals on the object. Individual variable access with GetLocalXxx()
 ///       is now O(1) though.
-/// @note As of build 8193.14, this function may return variable type UNKNOWN
-///       if the value is the default (0/0.0/""/OBJECT_INVALID) for the type.
+/// @note As of build 8193.14, this function will not return a variable if the value is
+///       the default (0/0.0/""/OBJECT_INVALID/JsonNull()) for the type. They are considered not set.
+/// @note Will return type UNKNOWN for cassowary variables.
 /// @return An NWNX_Object_LocalVariable struct.
 struct NWNX_Object_LocalVariable NWNX_Object_GetLocalVariable(object obj, int index);
 
@@ -318,14 +320,18 @@ int NWNX_Object_GetIsDestroyable(object oObject);
 /// @brief Checks for specific spell immunity. Should only be called in spellscripts
 /// @param oDefender The object defending against the spell.
 /// @param oCaster The object casting the spell.
+/// @param nSpellId The casted spell id. Default value is -1, which corrresponds to the normal game behaviour.
 /// @return -1 if defender has no immunity, 2 if the defender is immune
-int NWNX_Object_DoSpellImmunity(object oDefender, object oCaster);
+int NWNX_Object_DoSpellImmunity(object oDefender, object oCaster, int nSpellId=-1);
 
 /// @brief Checks for spell school/level immunities and mantles. Should only be called in spellscripts
 /// @param oDefender The object defending against the spell.
 /// @param oCaster The object casting the spell.
+/// @param nSpellId The casted spell id. Default value is -1, which corrresponds to the normal game behaviour.
+/// @param nSpellLevel The level of the casted spell. Default value is -1, which corrresponds to the normal game behaviour.
+/// @param nSpellSchool The school of the casted spell (SPELL_SCHOOL_* constant). Default value is -1, which corrresponds to the normal game behaviour.
 /// @return -1 defender no immunity. 2 if immune. 3 if immune, but the immunity has a limit (example: mantles)
-int NWNX_Object_DoSpellLevelAbsorption(object oDefender, object oCaster);
+int NWNX_Object_DoSpellLevelAbsorption(object oDefender, object oCaster, int nSpellId=-1, int nSpellLevel=-1, int nSpellSchool=-1);
 
 /// @brief Sets if a placeable has an inventory.
 /// @param obj The placeable.
@@ -379,6 +385,12 @@ void NWNX_Object_SetLastTriggered(object oObject, object oLast);
 /// @param oAoE The AreaOfEffect object.
 /// @return The remaining duration, in seconds, or the zero on failure.
 float NWNX_Object_GetAoEObjectDurationRemaining(object oAoE);
+
+/// @brief Sets conversations started by oObject to be private or not.
+/// @note ActionStartConversation()'s bPrivateConversation parameter will overwrite this flag.
+/// @param oObject The object.
+/// @param bPrivate TRUE/FALSE.
+void NWNX_Object_SetConversationPrivate(object oObject, int bPrivate);
 
 /// @}
 
@@ -835,9 +847,10 @@ int NWNX_Object_GetIsDestroyable(object oObject)
     return NWNX_GetReturnValueInt();
 }
 
-int NWNX_Object_DoSpellImmunity(object oDefender, object oCaster)
+int NWNX_Object_DoSpellImmunity(object oDefender, object oCaster, int nSpellId=-1)
 {
     string sFunc = "DoSpellImmunity";
+    NWNX_PushArgumentInt(nSpellId);
     NWNX_PushArgumentObject(oCaster);
     NWNX_PushArgumentObject(oDefender);
     NWNX_CallFunction(NWNX_Object, sFunc);
@@ -845,9 +858,12 @@ int NWNX_Object_DoSpellImmunity(object oDefender, object oCaster)
     return  NWNX_GetReturnValueInt();
 }
 
-int NWNX_Object_DoSpellLevelAbsorption(object oDefender, object oCaster)
+int NWNX_Object_DoSpellLevelAbsorption(object oDefender, object oCaster, int nSpellId=-1, int nSpellLevel=-1, int nSpellSchool=-1)
 {
     string sFunc = "DoSpellLevelAbsorption";
+    NWNX_PushArgumentInt(nSpellSchool);
+    NWNX_PushArgumentInt(nSpellLevel);
+    NWNX_PushArgumentInt(nSpellId);
     NWNX_PushArgumentObject(oCaster);
     NWNX_PushArgumentObject(oDefender);
     NWNX_CallFunction(NWNX_Object, sFunc);
@@ -946,4 +962,14 @@ float NWNX_Object_GetAoEObjectDurationRemaining(object oAoE)
     NWNX_CallFunction(NWNX_Object, sFunc);
 
     return NWNX_GetReturnValueFloat();
+}
+
+void NWNX_Object_SetConversationPrivate(object oObject, int bPrivate)
+{
+    string sFunc = "SetConversationPrivate";
+
+    NWNX_PushArgumentInt(bPrivate);
+    NWNX_PushArgumentObject(oObject);
+
+    NWNX_CallFunction(NWNX_Object, sFunc);
 }

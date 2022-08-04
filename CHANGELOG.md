@@ -9,16 +9,56 @@ https://github.com/nwnxee/unified/compare/build8193.34...HEAD
 
 ### Added
 - Tweaks: added `NWNX_TWEAKS_CANUSEITEM_CHECK_ILR_FOR_HENCHMEN` to have the CNWSCreature::CanUseItem() function also check ILR for Henchmen.
+- Tweaks: added `NWNX_TWEAKS_FIX_DM_SELECTION_BOX` to fix the DM creature selection box not showing up when player party control is off.
+- Tweaks: added `NWNX_TWEAKS_FIX_TRIGGER_ENTER_DETECTION` to fix a rare issue where triggers/traps fire enter events without a creature inside.
+- Tweaks: added `NWNX_TWEAKS_FIX_MULTICLASS_XP_PENALTY_BUG` to fix a bug where multiclass xp penalties are calculated incorrectly.
+- Tweaks: added `NWNX_TWEAKS_UNCAP_DAMAGE_RESISTANCE_DAMAGE_FLAGS` to uncap the compounded damage type flags of EffectDamageResistance().
+- Tweaks: added `NWNX_TWEAKS_FIX_RESOLVE_SPECIAL_ATTACK_DAMAGE` to fix special attacks dealing damage on a miss.
 - Optimizations: added `NWNX_OPTIMIZATIONS_FIX_PLACEABLE_VFX_REAPPLY_BUG` to fix a bug where VFXs keep getting reapplied to placeables.
+- Optimizations: added `NWNX_OPTIMIZATIONS_CACHE_SCRIPT_CHUNKS` to cache script chunks after first execution.
+- Optimizations: added `NWNX_OPTIMIZATIONS_CLIENT_GAMEOBJECT_UPDATE_TIME` to change the global client gameobject update time.
+- Optimizations: added `NWNX_OPTIMIZATIONS_CLIENT_GAMEOBJECT_UPDATE_TIME_LOADING` to change the client gameobject update time for players loading an area.
+- Events: added skippable event `NWNX_ON_INPUT_DROP_ITEM_{BEFORE|AFTER}` which fires when a player attempts to drop an item.
+- Events: added skippable event `NWNX_ON_DECREMENT_SPELL_COUNT_{BEFORE|AFTER}` which fires when spell count (Memorized, non-memorized, or spell-like ability) decreases.
+- Events: added skippable event `NWNX_ON_DEBUG_PLAY_VISUAL_EFFECT_{BEFORE|AFTER}` which fires when the dm_visualeffect console command is used.
+- Events: added skippable event `NWNX_ON_RUN_EVENT_SCRIPT_{BEFORE|AFTER}` which fires on all object event scripts.
+- Events: added skippable event `NWNX_ON_BARTER_ADD_ITEM_{BEFORE|AFTER}` which fires when an item is added to the barter window.
 
 ##### New Plugins
 - N/A
 
 ##### New NWScript Functions
+- Area: GetTileInfoByTileIndex()
+- Area: GetPathExists()
+- Area: {Get|Set}AreaFlags()
+- Area: GetAreaWind()
+- Creature: {Get|Set}SkillPointsRemainingByLevel()
+- Creature: {Get|Set}InitiativeModifier()
+- Creature: GetBodyBag()
+- Creature: GetMovementRateFactorCap()
+- Creature: AddCastSpellActions()
+- Creature: GetSpellUsesLeft()
+- Creature: GetMemorizedSpellReadyCount()
 - Effect: AccessorizeVisualEffect()
+- Encounter: Destroy()
+- Events: SubscribeEventScriptChunk()
+- Events: UnsubscribeEventScriptChunk()
+- Events: GetNumSubscribers()
+- Object: SetConversationPrivate()
+- Player: UpdateWind();
+- Player: UpdateSkyBox();
+- Player: UpdateFogColor();
+- Player: UpdateFogAmount();
+- Regex: Match()
 
 ### Changed
-- N/A  
+- Events: added event data `VERSION_MAJOR`/`VERSION_MINOR`/`PLATFORM_ID` to `NWNX_ON_CLIENT_CONNECT_*`
+- Object: DoSpellLevelAbsorption() can now override the spellId, the level and the school of the casted spell
+- Object: DoSpellImmunity() can now override the spellId
+- Events: added event data `STAT`/`VALUE`/`TARGET`/`SET` to `NWNX_ON_DM_SET_STAT_*`
+- Events: added event data `TYPE`/`TARGET`/`KEY` to `NWNX_ON_DM_GET_VARIABLE_*`
+- Events: added event data `TYPE`/`TARGET`/`KEY`/`VALUE` to `NWNX_ON_DM_SET_VARIABLE_*`
+- Events: added event data `TARGET`/`FACTION_ID`/`FACTION_NAME` to `NWNX_ON_DM_SET_FACTION_*`
 
 ### Deprecated
 - N/A
@@ -27,7 +67,14 @@ https://github.com/nwnxee/unified/compare/build8193.34...HEAD
 - N/A
 
 ### Fixed
-- N/A
+- Race: Fixed an issue with feat usages being reset upon character relog
+- Feat: Fixed an issue with an Ability Score feat counting towards the server capped limit when they should not
+- Feat: Fixed an issue with bonus feats not properly being removed
+- Object: GetLocalVariable() now recognizes variables of type json.
+- Tweaks: Language override tweak now works for area names.
+- Events: Fixed a crash when skipping `NWNX_ON_CLIENT_CONNECT_BEFORE`
+- Tweaks: Fixed an issue where lobby PC list viewers would see new characters logged in when those names should be suppressed
+- Tweaks: Classes are not hidden from DMs when using `NWNX_TWEAKS_HIDE_CLASSES_ON_CHAR_LIST`
 
 ## 8193.34
 https://github.com/nwnxee/unified/compare/build8193.33...build8193.34

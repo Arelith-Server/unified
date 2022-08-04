@@ -361,6 +361,12 @@ float NWNX_Creature_GetMovementRateFactor(object creature);
 /// @param rate The rate to set.
 void NWNX_Creature_SetMovementRateFactor(object creature, float rate);
 
+/// @brief Returns the creature's maximum movement rate cap.
+/// @remark Default movement rate cap is 1.5.
+/// @param creature The creature object.
+/// @return The maximum movement rate cap.
+float NWNX_Creature_GetMovementRateFactorCap(object creature);
+
 /// @brief Sets the creature's maximum movement rate cap.
 /// @note Default movement rate cap is 1.5.
 /// @param creature The creature object.
@@ -491,6 +497,18 @@ int NWNX_Creature_GetSkillPointsRemaining(object creature);
 /// @param creature The creature object.
 /// @param skillpoints The value to set.
 void NWNX_Creature_SetSkillPointsRemaining(object creature, int skillpoints);
+
+/// @brief Gets the creature's remaining unspent skill points for level.
+/// @param creature The creature object.
+/// @param level The level.
+/// @return The remaining unspent skill points for level.
+int NWNX_Creature_GetSkillPointsRemainingByLevel(object creature, int level);
+
+/// @brief Sets the creature's remaining unspent skill points for level.
+/// @param creature The creature object.
+/// @param level The level.
+/// @param value The value to set for level.
+void NWNX_Creature_SetSkillPointsRemainingByLevel(object creature, int level, int value);
 
 /// @brief Sets the creature's racial type
 /// @param creature The creature object.
@@ -995,6 +1013,58 @@ int NWNX_Creature_RunUnequip(object oCreature, object oItem);
 /// @note Persistence is enabled after a server reset by the first use of this function. Recommended to trigger on a dummy target OnModuleLoad to enable persistence.
 void NWNX_Creature_OverrideRangedProjectileVFX(object oCreature, int nProjectileVFX, int bPersist = FALSE);
 
+/// @brief Sets a custom Initiative modifier
+/// @param oCreature The affected creature
+/// @param nMod The amount to adjust their initiative (+/-).
+/// @param bPersist Whether the modifier should persist to .bic file (for PCs)
+/// @note Persistence is enabled after a server reset by the first use of this function. Recommended to trigger on a dummy target OnModuleLoad to enable persistence.
+/// @warning This modifier takes precedence over an NWNX_Race Initiative modifier; they're not additive
+void NWNX_Creature_SetInitiativeModifier(object oCreature, int nMod, int bPersist = FALSE);
+
+/// @brief Gets the custom Initiative modifier.
+/// @param oCreature The target creature
+/// @return the current custom initiative modifier for the creature
+int NWNX_Creature_GetInitiativeModifier(object oCreature);
+
+/// @brief Gets the Body Bag of a creature
+/// @param oCreature The target creature
+/// @return The creatures assigned Body Bag
+object NWNX_Creature_GetBodyBag(object oCreature);
+
+/// @brief Add a cast spell action to oCreature's action queue.
+/// @param oCreature The creature casting the spell.
+/// @param oTarget The target, to cast at a location use the area as target.
+/// @param vTargetLocation The target location.
+/// @param nSpellID The spell ID.
+/// @param nMultiClass The character class position to cast the spell as. 0 = First Class, 1 = Second Class, 3 = Third Class. To cast a cheat spell use 255 and to cast a special ability use 254.
+/// @param nMetaMagic A METAMAGIC_* constant, except METAMAGIC_ANY.
+/// @param nDomainLevel The domain level if casting a domain spell.
+/// @param nProjectilePathType A PROJECTILE_PATH_TYPE_* constant.
+/// @param bInstant TRUE to instantly cast the spell.
+/// @param bClearActions TRUE to clear all actions.
+/// @param bAddToFront TRUE to add the cast spell action to the front of the action queue.
+/// @return TRUE if the action was successfully added to oCreature's action queue.
+int NWNX_Creature_AddCastSpellActions(object oCreature, object oTarget, vector vTargetLocation, int nSpellID, int nMultiClass, int nMetaMagic = METAMAGIC_NONE, int nDomainLevel = 0, int nProjectilePathType = PROJECTILE_PATH_TYPE_DEFAULT, int bInstant = FALSE, int bClearActions = FALSE, int bAddToFront = FALSE);
+
+/// @brief Get the number of uses left of a spell.
+/// @note This function is for caster classes that don't need to memorize spells.
+/// @param oCreature The creature.
+/// @param nSpellID The spell ID.
+/// @param nMultiClass The position of the class to check, 0-2
+/// @param nDomainLevel The domain level if checking a domain spell.
+/// @param nMetaMagic A METAMAGIC_* constant.
+/// @return The number of spell uses left or 0 on error.
+int NWNX_Creature_GetSpellUsesLeft(object oCreature, int nSpellID, int nMultiClass, int nDomainLevel = 0, int nMetaMagic = METAMAGIC_NONE);
+
+/// @brief Get the number of memorized ready spells by spellid.
+/// @note This function is for caster classes that need to memorize spells.
+/// @param oCreature The creature.
+/// @param nSpellID The spell ID.
+/// @param nMultiClass The position of the class to check, 0-2
+/// @param nMetaMagic A METAMAGIC_* constant.
+/// @return The number of spell uses left or 0 on error.
+int NWNX_Creature_GetMemorizedSpellReadyCount(object oCreature, int nSpellID, int nMultiClass, int nMetaMagic = METAMAGIC_NONE);
+
 /// @}
 
 void NWNX_Creature_AddFeat(object creature, int feat)
@@ -1459,6 +1529,15 @@ void NWNX_Creature_SetMovementRateFactor(object creature, float factor)
     NWNX_CallFunction(NWNX_Creature, sFunc);
 }
 
+float NWNX_Creature_GetMovementRateFactorCap(object creature)
+{
+    string sFunc = "GetMovementRateFactorCap";
+    NWNX_PushArgumentObject(creature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+    return NWNX_GetReturnValueFloat();
+}
+
 void NWNX_Creature_SetMovementRateFactorCap(object creature, float cap)
 {
     string sFunc = "SetMovementRateFactorCap";
@@ -1648,6 +1727,28 @@ void NWNX_Creature_SetSkillPointsRemaining(object creature, int skillpoints)
 {
     string sFunc = "SetSkillPointsRemaining";
     NWNX_PushArgumentInt(skillpoints);
+    NWNX_PushArgumentObject(creature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+}
+
+int NWNX_Creature_GetSkillPointsRemainingByLevel(object creature, int level)
+{
+    string sFunc = "GetSkillPointsRemainingByLevel";
+
+    NWNX_PushArgumentInt(level);
+    NWNX_PushArgumentObject(creature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+    return NWNX_GetReturnValueInt();
+}
+
+void NWNX_Creature_SetSkillPointsRemainingByLevel(object creature, int level, int value)
+{
+    string sFunc = "SetSkillPointsRemainingByLevel";
+
+    NWNX_PushArgumentInt(value);
+    NWNX_PushArgumentInt(level);
     NWNX_PushArgumentObject(creature);
 
     NWNX_CallFunction(NWNX_Creature, sFunc);
@@ -2530,4 +2631,81 @@ void NWNX_Creature_OverrideRangedProjectileVFX(object oCreature, int nProjectile
     NWNX_PushArgumentInt(nProjectileVFX);
     NWNX_PushArgumentObject(oCreature);
     NWNX_CallFunction(NWNX_Creature, sFunc);
+}
+
+void NWNX_Creature_SetInitiativeModifier(object oCreature, int nMod, int bPersist = FALSE)
+{
+    string sFunc = "SetInitiativeModifier";
+
+    NWNX_PushArgumentInt(bPersist);
+    NWNX_PushArgumentInt(nMod);
+    NWNX_PushArgumentObject(oCreature);
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+}
+
+int NWNX_Creature_GetInitiativeModifier(object oCreature)
+{
+    string sFunc = "GetInitiativeModifier";
+
+    NWNX_PushArgumentObject(oCreature);
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+    return NWNX_GetReturnValueInt();
+}
+
+object NWNX_Creature_GetBodyBag(object oCreature)
+{
+    string sFunc = "GetBodyBag";
+
+    NWNX_PushArgumentObject(oCreature);
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+    return NWNX_GetReturnValueObject();
+}
+
+int NWNX_Creature_AddCastSpellActions(object oCreature, object oTarget, vector vTargetLocation, int nSpellID, int nMultiClass, int nMetaMagic = METAMAGIC_NONE, int nDomainLevel = 0, int nProjectilePathType = PROJECTILE_PATH_TYPE_DEFAULT, int bInstant = FALSE, int bClearActions = FALSE, int bAddToFront = FALSE)
+{
+    string sFunc = "AddCastSpellActions";
+
+    NWNX_PushArgumentInt(bAddToFront);
+    NWNX_PushArgumentInt(bClearActions);
+    NWNX_PushArgumentInt(bInstant);
+    NWNX_PushArgumentInt(nProjectilePathType);
+    NWNX_PushArgumentInt(nDomainLevel);
+    NWNX_PushArgumentInt(nMetaMagic);
+    NWNX_PushArgumentInt(nMultiClass);
+    NWNX_PushArgumentInt(nSpellID);
+    NWNX_PushArgumentFloat(vTargetLocation.z);
+    NWNX_PushArgumentFloat(vTargetLocation.y);
+    NWNX_PushArgumentFloat(vTargetLocation.x);
+    NWNX_PushArgumentObject(oTarget);
+    NWNX_PushArgumentObject(oCreature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+    return NWNX_GetReturnValueInt();
+}
+
+int NWNX_Creature_GetSpellUsesLeft(object oCreature, int nSpellID, int nMultiClass, int nDomainLevel = 0, int nMetaMagic = METAMAGIC_NONE)
+{
+    string sFunc = "GetSpellUsesLeft";
+
+    NWNX_PushArgumentInt(nMetaMagic);
+    NWNX_PushArgumentInt(nDomainLevel);
+    NWNX_PushArgumentInt(nMultiClass);
+    NWNX_PushArgumentInt(nSpellID);
+    NWNX_PushArgumentObject(oCreature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+    return NWNX_GetReturnValueInt();
+}
+
+int NWNX_Creature_GetMemorizedSpellReadyCount(object oCreature, int nSpellID, int nMultiClass, int nMetaMagic = METAMAGIC_NONE)
+{
+    string sFunc = "GetMemorizedSpellReadyCount";
+
+    NWNX_PushArgumentInt(nMetaMagic);
+    NWNX_PushArgumentInt(nMultiClass);
+    NWNX_PushArgumentInt(nSpellID);
+    NWNX_PushArgumentObject(oCreature);
+
+    NWNX_CallFunction(NWNX_Creature, sFunc);
+    return NWNX_GetReturnValueInt();
 }

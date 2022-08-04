@@ -553,6 +553,7 @@ void NWNXCore::CreateServerHandler(CAppManager* app)
             g_core->InitialSetupPlugins();
             g_core->InitialSetupResourceDirectories();
             g_core->InitialSetupCommands();
+            MessageBus::Broadcast("NWNX_CORE_SIGNAL", { "ON_NWNX_LOADED" });
         }
         catch (const std::runtime_error& ex)
         {
@@ -568,8 +569,6 @@ void NWNXCore::DestroyServerHandler(CAppManager* app)
 {
     g_CoreShuttingDown = true;
 
-    MessageBus::Broadcast("NWNX_CORE_SIGNAL", { "ON_DESTROY_SERVER" });
-
     if (auto shutdownScript = Config::Get<std::string>("SHUTDOWN_SCRIPT"))
     {
         if (Globals::AppManager()->m_pServerExoApp->GetServerMode() == 2)
@@ -578,6 +577,8 @@ void NWNXCore::DestroyServerHandler(CAppManager* app)
             Utils::ExecuteScript(*shutdownScript, 0);
         }
     }
+
+    MessageBus::Broadcast("NWNX_CORE_SIGNAL", { "ON_DESTROY_SERVER" });
 
     g_core->m_destroyServerHook.reset();
     app->DestroyServer();

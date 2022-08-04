@@ -31,6 +31,7 @@
 #include "API/CNWSSpellScriptData.hpp"
 #include "API/CNWSpellArray.hpp"
 #include "API/CNWSpell.hpp"
+#include "API/CNWSPlayer.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
@@ -46,6 +47,7 @@ static bool s_bCasterLevelHooksInitialized = false;
 static bool s_bCriticalMultiplierHooksInitialized = false;
 static bool s_bCriticalRangeHooksInitialized = false;
 static bool s_bResolveAttackRollHookInitialized = false;
+static bool s_bResolveInitiativeRollHookInitialized = false;
 static Hooks::Hook s_GetClassLevelHook = nullptr;
 
 static std::unordered_map<uint8_t, std::unordered_map<ObjectID, int16_t>> s_RollModifier;
@@ -902,6 +904,16 @@ NWNX_EXPORT ArgumentStack SetMovementRateFactor(ArgumentStack&& args)
     return {};
 }
 
+NWNX_EXPORT ArgumentStack GetMovementRateFactorCap(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        if(auto pCap = pCreature->nwnxGet<float>("MOVEMENT_RATE_FACTOR_CAP"))
+            return *pCap;
+    }
+    return 0.0f;
+}
+
 NWNX_EXPORT ArgumentStack SetMovementRateFactorCap(ArgumentStack&& args)
 {
     static Hooks::Hook pGetMovementRateFactor_hook =
@@ -1265,6 +1277,46 @@ NWNX_EXPORT ArgumentStack SetSkillPointsRemaining(ArgumentStack&& args)
           ASSERT_OR_THROW(points <= 65535);
 
         pCreature->m_pStats->m_nSkillPointsRemaining = static_cast<uint16_t>(points);
+    }
+    return {};
+}
+
+NWNX_EXPORT ArgumentStack GetSkillPointsRemainingByLevel(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto level = args.extract<int32_t>();
+          ASSERT_OR_THROW(level >= 1);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
+        if (level > 0 && level <= pCreature->m_pStats->m_lstLevelStats.num)
+        {
+            auto *pLevelStats = pCreature->m_pStats->m_lstLevelStats.element[level-1];
+            ASSERT_OR_THROW(pLevelStats);
+
+            return pLevelStats->m_nSkillPointsRemaining;
+        }
+    }
+    return -1;
+}
+
+NWNX_EXPORT ArgumentStack SetSkillPointsRemainingByLevel(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto level = args.extract<int32_t>();
+          ASSERT_OR_THROW(level >= 1);
+          ASSERT_OR_THROW(level <= Globals::AppManager()->m_pServerExoApp->GetServerInfo()->m_JoiningRestrictions.nMaxLevel);
+        const auto value = args.extract<int32_t>();
+          ASSERT_OR_THROW(value >= 0);
+          ASSERT_OR_THROW(value <= 65535);
+
+        if (level > 0 && level <= pCreature->m_pStats->m_lstLevelStats.num)
+        {
+            auto *pLevelStats = pCreature->m_pStats->m_lstLevelStats.element[level-1];
+            ASSERT_OR_THROW(pLevelStats);
+
+            pLevelStats->m_nSkillPointsRemaining = static_cast<uint16_t>(value);
+        }
     }
     return {};
 }
@@ -3194,4 +3246,185 @@ NWNX_EXPORT ArgumentStack OverrideRangedProjectileVFX(ArgumentStack&& args)
     }
 
     return {};
+}
+static void InitInitiativeRollHook()
+{
+    static Hooks::Hook pResolveInitiative_hook = Hooks::HookFunction(Functions::_ZN12CNWSCreature17ResolveInitiativeEv,
+    (void *) +[](CNWSCreature *pCreature) -> void
+    {
+        auto initMod = pCreature->nwnxGet<int32_t>("INITIATIVE_MOD").value_or(0);
+        if (!initMod)
+            return pResolveInitiative_hook->CallOriginal<void>(pCreature);
+
+        if (pCreature->m_bInitiativeExpired == 1)
+        {
+            auto pStats = pCreature->m_pStats;
+            auto diceRoll = Globals::Rules()->RollDice(1, 20);
+            auto mod = pStats->GetDEXMod(0);
+            if (pStats->HasFeat(Constants::Feat::EpicSuperiorInitiative))
+                mod += Globals::Rules()->GetRulesetIntEntry("EPIC_SUPERIOR_INITIATIVE_BONUS", 8);
+            else if (pStats->HasFeat(Constants::Feat::ImprovedInitiative))
+                mod += Globals::Rules()->GetRulesetIntEntry("IMPROVED_INITIATIVE_BONUS", 4);
+            if (pStats->HasFeat(Constants::Feat::Blooded))
+                mod += Globals::Rules()->GetRulesetIntEntry("BLOODED_INITIATIVE_BONUS", 2);
+            if (pStats->HasFeat(Constants::Feat::Thug))
+                mod += Globals::Rules()->GetRulesetIntEntry("THUG_INITIATIVE_BONUS", 2);
+
+            // Add creature bonus
+            mod += initMod;
+
+            pCreature->m_nInitiativeRoll = diceRoll + mod;
+            auto *pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByObjectId(
+                    pCreature->m_idSelf);
+            if (pPlayer)
+            {
+                CNWCCMessageData messageData;
+                messageData.SetObjectID(0, pCreature->m_idSelf);
+                messageData.SetInteger(0, diceRoll);
+                messageData.SetInteger(1, mod);
+                auto *pMessage = static_cast<CNWSMessage *>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
+                if (pMessage)
+                {
+                    pMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID,
+                                                          Constants::MessageClientSideMsgMinor::Initiative,
+                                                          &messageData, nullptr);
+                }
+            }
+            pCreature->m_bInitiativeExpired = 0;
+        }
+    }, Hooks::Order::Latest);
+
+    s_bResolveInitiativeRollHookInitialized = true;
+}
+
+NWNX_EXPORT ArgumentStack SetInitiativeModifier(ArgumentStack&& args)
+{
+    if (!s_bResolveInitiativeRollHookInitialized)
+        InitInitiativeRollHook();
+
+    if (auto* pCreature = Utils::PopCreature(args))
+    {
+        const auto initiativeMod = args.extract<int32_t>();
+        const bool persist = !!args.extract<int32_t>();
+
+        if (initiativeMod)
+            pCreature->nwnxSet("INITIATIVE_MOD", initiativeMod, persist);
+        else
+            pCreature->nwnxRemove("INITIATIVE_MOD");
+    }
+    return {};
+}
+
+NWNX_EXPORT ArgumentStack GetInitiativeModifier(ArgumentStack&& args)
+{
+    if (auto* pCreature = Utils::PopCreature(args))
+    {
+        return pCreature->nwnxGet<int32_t>("INITIATIVE_MOD").value_or(0);
+    }
+    return 0;
+}
+
+NWNX_EXPORT ArgumentStack GetBodyBag(ArgumentStack&& args)
+{
+    if (auto* pCreature = Utils::PopCreature(args))
+        return pCreature->m_oidBodyBag;
+
+    return Constants::OBJECT_INVALID;
+}
+
+NWNX_EXPORT ArgumentStack AddCastSpellActions(ArgumentStack&& args)
+{
+    if (auto* pCreature = Utils::PopCreature(args))
+    {
+        auto oidTarget = args.extract<ObjectID>();
+          ASSERT_OR_THROW(oidTarget != Constants::OBJECT_INVALID);
+        const auto fX = args.extract<float>();
+        const auto fY = args.extract<float>();
+        const auto fZ = args.extract<float>();
+        Vector targetLocation{fX, fY, fZ};
+
+        const auto spellId = args.extract<int32_t>();
+          ASSERT_OR_THROW(spellId >= 0);
+        const auto multiClass = args.extract<int32_t>();
+          ASSERT_OR_THROW(multiClass >= 0);
+        const auto metaType = args.extract<int32_t>();
+          ASSERT_OR_THROW(metaType >= 0);
+          ASSERT_OR_THROW(metaType <= 32);
+        const auto domainLevel = args.extract<int32_t>();
+          ASSERT_OR_THROW(domainLevel >= 0);
+        auto projectilePathType = args.extract<int32_t>();
+          ASSERT_OR_THROW(projectilePathType >= 0);
+          ASSERT_OR_THROW(projectilePathType <= 4);
+        const auto instant = !!args.extract<int32_t>();
+        const auto clearActions = !!args.extract<int32_t>();
+        const auto addToFront = !!args.extract<int32_t>();
+
+        if (projectilePathType == 4)
+            projectilePathType = 5;
+
+        bool areaTarget = false;
+        if (Utils::AsNWSArea(Utils::GetGameObject(oidTarget)))
+        {
+            areaTarget = true;
+            oidTarget = Constants::OBJECT_INVALID;
+        }
+
+        if (clearActions)
+            pCreature->ActionManager(0x00000001);
+
+        uint8_t casterLevel = 0xFF;
+        if (multiClass == 254)
+            casterLevel = pCreature->m_pStats->GetSpellLikeAbilityCasterLevel(spellId);
+        if (multiClass == 254 && casterLevel == 0xFF)
+            return false;
+
+        int32_t retVal = pCreature->AddCastSpellActions(spellId, multiClass, domainLevel, metaType, false,
+                                              targetLocation, oidTarget, areaTarget, addToFront, false,
+                                              projectilePathType, instant, false, -1, casterLevel);
+
+        if (retVal && addToFront && instant && !clearActions)
+            pCreature->m_bLastSpellCast = false;
+
+        return retVal;
+    }
+
+    return false;
+}
+
+NWNX_EXPORT ArgumentStack GetSpellUsesLeft(ArgumentStack&& args)
+{
+    if (auto* pCreature = Utils::PopCreature(args))
+    {
+        auto spellId = args.extract<int32_t>();
+          ASSERT_OR_THROW(spellId >= 0);
+        auto multiClass = args.extract<int32_t>();
+          ASSERT_OR_THROW(multiClass >= 0);
+          ASSERT_OR_THROW(multiClass < 3);
+        auto domainLevel = args.extract<int32_t>();
+          ASSERT_OR_THROW(domainLevel >= 0);
+        auto metaMagic = args.extract<int32_t>();
+          ASSERT_OR_THROW(metaMagic >= 0);
+
+        return pCreature->m_pStats->GetSpellUsesLeft(spellId, multiClass, domainLevel, metaMagic);
+    }
+
+    return 0;
+}
+
+NWNX_EXPORT ArgumentStack GetMemorizedSpellReadyCount(ArgumentStack&& args)
+{
+    if (auto* pCreature = Utils::PopCreature(args))
+    {
+        auto spellId = args.extract<int32_t>();
+          ASSERT_OR_THROW(spellId >= 0);
+        auto multiClass = args.extract<int32_t>();
+          ASSERT_OR_THROW(multiClass >= 0);
+          ASSERT_OR_THROW(multiClass < 3);
+        auto metaMagic = args.extract<int32_t>();
+          ASSERT_OR_THROW(metaMagic >= 0);
+
+        return pCreature->m_pStats->GetMemorizedSpellReadyCount(multiClass, spellId, metaMagic);
+    }
+
+    return 0;
 }
