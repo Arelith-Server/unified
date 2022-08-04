@@ -35,7 +35,7 @@
 						<td id="projectlogo"><img width="80" height="74" alt="Logo" src="logo-transparent.png"/></td>
 						<td id="projectalign" style="padding-left: 0.5em;">
 							<div id="projectname">NWNX:EE
-								&#160;<span id="projectnumber">8193.32</span>
+								&#160;<span id="projectnumber">8193.34</span>
 							</div>
 						</td>
 						<td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -190,9 +190,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga9fb809f301e75d9fcdc64ed0fd8bb4ce"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga9fb809f301e75d9fcdc64ed0fd8bb4ce">NWNX_Object_RemoveIconEffect</a> (object obj, int nIcon)</td></tr>
 <tr class="memdesc:ga9fb809f301e75d9fcdc64ed0fd8bb4ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove an icon effect from an object that was added by the <a class="el" href="group__object.html#ga6536ea0753ecd950170841649053e566" title="Add an effect to an object that displays an icon and has no other effect.">NWNX_Object_AddIconEffect()</a> function.  <a href="group__object.html#ga9fb809f301e75d9fcdc64ed0fd8bb4ce">More...</a><br /></td></tr>
 <tr class="separator:ga9fb809f301e75d9fcdc64ed0fd8bb4ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga248baa30ff85960bf6b559554125fff4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga248baa30ff85960bf6b559554125fff4">NWNX_Object_Export</a> (object oObject, string sFileName)</td></tr>
-<tr class="memdesc:ga248baa30ff85960bf6b559554125fff4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Export an object to the UserDirectory/nwnx folder.  <a href="group__object.html#ga248baa30ff85960bf6b559554125fff4">More...</a><br /></td></tr>
-<tr class="separator:ga248baa30ff85960bf6b559554125fff4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2642eb53f0c96976239265ae8aae0448"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga2642eb53f0c96976239265ae8aae0448">NWNX_Object_Export</a> (object oObject, string sFileName, string sAlias=&quot;NWNX&quot;)</td></tr>
+<tr class="memdesc:ga2642eb53f0c96976239265ae8aae0448"><td class="mdescLeft">&#160;</td><td class="mdescRight">Export an object to the UserDirectory/nwnx folder.  <a href="group__object.html#ga2642eb53f0c96976239265ae8aae0448">More...</a><br /></td></tr>
+<tr class="separator:ga2642eb53f0c96976239265ae8aae0448"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gafed465042375a88ec4194f1da7819813"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#gafed465042375a88ec4194f1da7819813">NWNX_Object_GetInt</a> (object oObject, string sVarName)</td></tr>
 <tr class="memdesc:gafed465042375a88ec4194f1da7819813"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get oObject's integer variable sVarName.  <a href="group__object.html#gafed465042375a88ec4194f1da7819813">More...</a><br /></td></tr>
 <tr class="separator:gafed465042375a88ec4194f1da7819813"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -247,12 +247,12 @@ Functions</h2></td></tr>
 <tr class="memitem:ga78ec105f4a5438d13687f98c294ce228"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga78ec105f4a5438d13687f98c294ce228">NWNX_Object_GetIsDestroyable</a> (object oObject)</td></tr>
 <tr class="memdesc:ga78ec105f4a5438d13687f98c294ce228"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get if oObject is destroyable.  <a href="group__object.html#ga78ec105f4a5438d13687f98c294ce228">More...</a><br /></td></tr>
 <tr class="separator:ga78ec105f4a5438d13687f98c294ce228"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga78eef6c5393f4c24778bee5681514f01"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga78eef6c5393f4c24778bee5681514f01">NWNX_Object_DoSpellImmunity</a> (object oDefender, object oCaster)</td></tr>
-<tr class="memdesc:ga78eef6c5393f4c24778bee5681514f01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks for specific spell immunity. Should only be called in spellscripts.  <a href="group__object.html#ga78eef6c5393f4c24778bee5681514f01">More...</a><br /></td></tr>
-<tr class="separator:ga78eef6c5393f4c24778bee5681514f01"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga0543152520c56d3c3d3d724a38409f7d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga0543152520c56d3c3d3d724a38409f7d">NWNX_Object_DoSpellLevelAbsorption</a> (object oDefender, object oCaster)</td></tr>
-<tr class="memdesc:ga0543152520c56d3c3d3d724a38409f7d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks for spell school/level immunities and mantles. Should only be called in spellscripts.  <a href="group__object.html#ga0543152520c56d3c3d3d724a38409f7d">More...</a><br /></td></tr>
-<tr class="separator:ga0543152520c56d3c3d3d724a38409f7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf1c2f5e0e8b1d1b05df872ab984fabdf"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#gaf1c2f5e0e8b1d1b05df872ab984fabdf">NWNX_Object_DoSpellImmunity</a> (object oDefender, object oCaster, int nSpellId=-1)</td></tr>
+<tr class="memdesc:gaf1c2f5e0e8b1d1b05df872ab984fabdf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks for specific spell immunity. Should only be called in spellscripts.  <a href="group__object.html#gaf1c2f5e0e8b1d1b05df872ab984fabdf">More...</a><br /></td></tr>
+<tr class="separator:gaf1c2f5e0e8b1d1b05df872ab984fabdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga3e7eaa21b014ebadf8f747571bbd994e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga3e7eaa21b014ebadf8f747571bbd994e">NWNX_Object_DoSpellLevelAbsorption</a> (object oDefender, object oCaster, int nSpellId=-1, int nSpellLevel=-1, int nSpellSchool=-1)</td></tr>
+<tr class="memdesc:ga3e7eaa21b014ebadf8f747571bbd994e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks for spell school/level immunities and mantles. Should only be called in spellscripts.  <a href="group__object.html#ga3e7eaa21b014ebadf8f747571bbd994e">More...</a><br /></td></tr>
+<tr class="separator:ga3e7eaa21b014ebadf8f747571bbd994e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab63c89b09324e876db4f5417e430ea31"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#gab63c89b09324e876db4f5417e430ea31">NWNX_Object_SetHasInventory</a> (object obj, int bHasInventory)</td></tr>
 <tr class="memdesc:gab63c89b09324e876db4f5417e430ea31"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets if a placeable has an inventory.  <a href="group__object.html#gab63c89b09324e876db4f5417e430ea31">More...</a><br /></td></tr>
 <tr class="separator:gab63c89b09324e876db4f5417e430ea31"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -277,6 +277,12 @@ Functions</h2></td></tr>
 <tr class="memitem:gac11d2ff17fd0fc98d184fdef3a464040"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#gac11d2ff17fd0fc98d184fdef3a464040">NWNX_Object_SetLastTriggered</a> (object oObject, object oLast)</td></tr>
 <tr class="memdesc:gac11d2ff17fd0fc98d184fdef3a464040"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the last object that triggered door or placeable trap.  <a href="group__object.html#gac11d2ff17fd0fc98d184fdef3a464040">More...</a><br /></td></tr>
 <tr class="separator:gac11d2ff17fd0fc98d184fdef3a464040"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga2009bb51273e2aba083895b9293c1d6b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga2009bb51273e2aba083895b9293c1d6b">NWNX_Object_GetAoEObjectDurationRemaining</a> (object oAoE)</td></tr>
+<tr class="memdesc:ga2009bb51273e2aba083895b9293c1d6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the remaining duration of the AoE object.  <a href="group__object.html#ga2009bb51273e2aba083895b9293c1d6b">More...</a><br /></td></tr>
+<tr class="separator:ga2009bb51273e2aba083895b9293c1d6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1a1f5efc6ea499ee3d2fd59e93f0d67a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga1a1f5efc6ea499ee3d2fd59e93f0d67a">NWNX_Object_SetConversationPrivate</a> (object oObject, int bPrivate)</td></tr>
+<tr class="memdesc:ga1a1f5efc6ea499ee3d2fd59e93f0d67a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets conversations started by oObject to be private or not.  <a href="group__object.html#ga1a1f5efc6ea499ee3d2fd59e93f0d67a">More...</a><br /></td></tr>
+<tr class="separator:ga1a1f5efc6ea499ee3d2fd59e93f0d67a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
@@ -295,6 +301,8 @@ Variables</h2></td></tr>
 <tr class="separator:ga1fd70b82158630ba51168aaaa9964064"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga8a8f56702f7212d7f2de699e50ed2232"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga8a8f56702f7212d7f2de699e50ed2232">NWNX_OBJECT_LOCALVAR_TYPE_LOCATION</a> = 5</td></tr>
 <tr class="separator:ga8a8f56702f7212d7f2de699e50ed2232"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga72f7b91d398fe93e1d87f16ab5974ab8"><td class="memItemLeft" align="right" valign="top">const int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__object.html#ga72f7b91d398fe93e1d87f16ab5974ab8">NWNX_OBJECT_LOCALVAR_TYPE_JSON</a> = 6</td></tr>
+<tr class="separator:ga72f7b91d398fe93e1d87f16ab5974ab8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">Internal Object Types</div></td></tr>
 <tr><td colspan="2"><div class="groupText"><p><a class="anchor" id="object_internal_types"></a></p>
 </div></td></tr>
@@ -340,7 +348,7 @@ Variables</h2></td></tr>
 			<ul>
 				<li class="navelem"><a class="el" href="dir_0b4eaef40a1fe20bedafe9e8e719ce66.html">Plugins</a></li><li class="navelem"><a class="el" href="dir_2584d5990ceee72a96d4fc6f0e6569ed.html">Object</a></li><li class="navelem"><a class="el" href="dir_08af5f1cba7ec2492768fbd3a681eb73.html">NWScript</a></li><li class="navelem"><a class="el" href="nwnx__object_8nss.html">nwnx_object.nss</a></li>
 				<li class="footer">
-					Generated on Sat Sep 25 2021 16:57:10 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
+					Generated on Thu Aug 4 2022 08:57:16 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
 					<img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.17.
 					<a href="../">Light version</a>
 				</li>
