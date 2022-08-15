@@ -1,6 +1,14 @@
 #define VMEM_DEBUG_LEVEL 0
 #include "VMem.cpp"
 
+void CustomAlloc() __attribute__((constructor));
+
+void CustomAlloc()
+{
+	printf("Hoodoo you doo?\n");
+	printf("Custom alloc loaded!\n");
+}
+
 extern "C" void* malloc(size_t size)
 {
 	return VMem::Alloc(size);

@@ -1,1 +1,1 @@
-add_plugin(CustomAlloc CustomAlloc.cpp)
+add_library(CustomAlloc MODULE CustomAlloc.cpp)
