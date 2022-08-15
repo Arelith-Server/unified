@@ -1,8 +1,10 @@
 find_package(OpenSSL)
 
 if (${OPENSSL_FOUND})
-     add_plugin(Arelith    "Arelith.cpp"
-    "Source/ArelithEvents.cpp")
+     add_plugin(Arelith
+        "Arelith.cpp"
+        "Source/ArelithEvents.cpp"
+        "Source/CanUse.cpp")
     target_link_libraries(Arelith ${OPENSSL_LIBRARIES})
     target_include_directories(Arelith PUBLIC ${OPENSSL_INCLUDE_DIR})
 endif()
