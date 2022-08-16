@@ -1,6 +1,7 @@
 #include "nwnx.hpp"
 
 #include "API/CNWSCreature.hpp"
+#include "API/CNWSCreatureStats.hpp"
 #include "API/CNWSItem.hpp"
 
 namespace Arelith {
@@ -14,8 +15,46 @@ static Hooks::Hook s_canUseItemHook;
 // Note: This is run on every item in the inventory when opening the inventory. Be careful! It's heavy!
 int32_t CanUseItemHook(CNWSCreature* thisPtr, CNWSItem* pItem, int32_t bIgnoreIdentifiedFlag)
 {
+    static std::string s_UpdateSkillScript = "arevt_canuse";
+
     static CExoString s_OverrideUsable = "OVERRIDE_USABLE";
-    const int override = pItem->m_ScriptVars.GetInt(s_OverrideUsable);
+    static CExoString s_OverrideUsableLore = "OVERRIDE_USABLE_LORE";
+    static CExoString s_OverrideUsableUMD = "OVERRIDE_USABLE_UMD";
+    static CExoString s_LoreSkillCache = "LORE_SKILL_CACHE";
+    static CExoString s_ArelithUpdating = "NWNX_ARELITH_UPDATING";
+
+    int override = pItem->m_ScriptVars.GetInt(s_OverrideUsable);
+
+    if (override)
+    {
+        // If override is set, let's check if we need to refresh the item. What we do here depends on base type.
+
+        int lastSkill = 0;
+        int curSkill = 0;
+
+        if (pItem->m_nBaseItem == BaseItem::SpellScroll || pItem->m_nBaseItem == BaseItem::EnchantedScroll)
+        {
+            // Scrolls use lore - lore is taken from a cache on the PC.
+            lastSkill = pItem->m_ScriptVars.GetInt(s_OverrideUsableLore);
+            curSkill = thisPtr->m_ScriptVars.GetInt(s_LoreSkillCache);
+        }
+        else if (pItem->m_nBaseItem == BaseItem::MagicWand || pItem->m_nBaseItem == BaseItem::EnchantedWand)
+        {
+            // Wands use UMD, which is taken directgly from the creature stats.
+            lastSkill = pItem->m_ScriptVars.GetInt(s_OverrideUsableUMD);
+            curSkill = thisPtr->m_pStats->GetSkillRank(Skill::UseMagicDevice, nullptr);
+        }
+
+        if (lastSkill != curSkill)
+        {
+            // We need to update the flag since we have a mismatch now, so we call the hardcoded event.
+            thisPtr->m_ScriptVars.SetObject(s_ArelithUpdating, pItem->m_idSelf);
+            Utils::ExecuteScript(s_UpdateSkillScript, thisPtr->m_idSelf);
+
+            // Override might have changed at this point, so we refresh it.
+            override = pItem->m_ScriptVars.GetInt(s_OverrideUsable);
+        }
+    }
 
     if (override == 1) // Force allow, if we're not in polymorph
     {
