@@ -33,7 +33,7 @@ struct CServerAIEventNodeWithIdComparator
     {
         return lhs.m_nCalendarDay == rhs.m_nCalendarDay ? 
             (lhs.m_nTimeOfDay == rhs.m_nTimeOfDay ?
-                lhs.m_nId < rhs.m_nId : // Same TOD, Higher ID first
+                lhs.m_nId > rhs.m_nId : // Same TOD, lower ID first
                 lhs.m_nTimeOfDay > rhs.m_nTimeOfDay) : // Differnt TOD, lower TOD first 
             (lhs.m_nCalendarDay > rhs.m_nCalendarDay); // Different day, lower day first
     }
