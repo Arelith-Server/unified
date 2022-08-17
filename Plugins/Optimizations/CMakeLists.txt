@@ -7,4 +7,5 @@ add_plugin(Optimizations
         "CacheScriptChunks.cpp"
         "ClientGameObjectUpdateTime.cpp"
         "EventMasterPriorityQueue.cpp"
+        "GetObjectByTag.cpp"
 )
