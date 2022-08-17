@@ -22,15 +22,25 @@ namespace Optimizations
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-struct CServerAIEventNodeComparator
+struct CServerAIEventNodeWithId : public CServerAIEventNode
 {
-    bool operator()(const CServerAIEventNode& lhs, const CServerAIEventNode& rhs) const
+    uint64_t m_nId;
+};
+
+struct CServerAIEventNodeWithIdComparator
+{
+    bool operator()(const CServerAIEventNodeWithId& lhs, const CServerAIEventNodeWithId& rhs) const
     {
-        return (lhs.m_nCalendarDay == rhs.m_nCalendarDay) ? (lhs.m_nTimeOfDay > rhs.m_nTimeOfDay) : lhs.m_nCalendarDay > rhs.m_nCalendarDay;
+        return lhs.m_nCalendarDay == rhs.m_nCalendarDay ? 
+            (lhs.m_nTimeOfDay == rhs.m_nTimeOfDay ?
+                lhs.m_nId > rhs.m_nId : // Same TOD, lower ID first
+                lhs.m_nTimeOfDay > rhs.m_nTimeOfDay) : // Differnt TOD, lower TOD first 
+            (lhs.m_nCalendarDay > rhs.m_nCalendarDay); // Different day, lower day first
     }
 };
 
-std::priority_queue<CServerAIEventNode, std::vector<CServerAIEventNode>, CServerAIEventNodeComparator> g_event_queue;
+uint64_t g_next_id = 0;
+std::priority_queue<CServerAIEventNodeWithId, std::vector<CServerAIEventNodeWithId>, CServerAIEventNodeWithIdComparator> g_event_queue;
 
 void ClearEventQueue(CServerAIMaster*)
 {
@@ -39,7 +49,7 @@ void ClearEventQueue(CServerAIMaster*)
 
 BOOL AddEventAbsoluteTime(CServerAIMaster*, uint32_t nCalendarDay, uint32_t nTimeOfDay, OBJECT_ID nCallerObjectId, OBJECT_ID nObjectId, uint32_t nEventId, void *pEventData)
 {
-    g_event_queue.emplace(CServerAIEventNode { nCalendarDay, nTimeOfDay, nCallerObjectId, nObjectId, nEventId, pEventData });
+    g_event_queue.emplace(CServerAIEventNodeWithId { { nCalendarDay, nTimeOfDay, nCallerObjectId, nObjectId, nEventId, pEventData }, g_next_id++ });
     return true;
 }
 
@@ -47,7 +57,7 @@ BOOL EventPending(CServerAIMaster* ai, uint32_t nCalendarDay, uint32_t nTimeOfDa
 {
     if (g_event_queue.empty()) return false;
 
-    const CServerAIEventNode& eventNode = g_event_queue.top();
+    const CServerAIEventNodeWithId& eventNode = g_event_queue.top();
     return ai->m_pExoAppInternal->m_pWorldTimer->CompareWorldTimes(eventNode.m_nCalendarDay, eventNode.m_nTimeOfDay, nCalendarDay, nTimeOfDay) <= 0;
 }
 
@@ -55,7 +65,7 @@ BOOL GetPendingEvent(CServerAIMaster*, uint32_t *nCalendarDay, uint32_t *nTimeOf
 {
     if (g_event_queue.empty()) return false;
 
-    const CServerAIEventNode& eventNode = g_event_queue.top();
+    const CServerAIEventNodeWithId& eventNode = g_event_queue.top();
 
     *nCalendarDay     = eventNode.m_nCalendarDay;
     *nTimeOfDay       = eventNode.m_nTimeOfDay;
