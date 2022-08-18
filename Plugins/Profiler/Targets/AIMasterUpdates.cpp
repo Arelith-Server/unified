@@ -56,7 +56,9 @@ BOOL CItemRepository__CheckFit(CItemRepository* thisPtr, CNWSItem *pItem, uint8_
     }
 
     g_metrics->Push("CItemRepositoryCheckFitCall",
-        { { } },
+        { 
+            { "Calls", "1" } 
+        },
         { 
             { "Type", std::to_string(type) },
             { "Name", std::move(name) },
