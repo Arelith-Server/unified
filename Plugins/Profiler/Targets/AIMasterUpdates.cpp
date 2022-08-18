@@ -73,11 +73,16 @@ AIMasterUpdates::AIMasterUpdates(const bool overkill, MetricsProxy* metrics)
     g_metrics = metrics;
 
     s_UpdateStateHook = Hooks::HookFunction(API::Functions::_ZN15CServerAIMaster11UpdateStateEv, (void*)&AIMasterUpdate, Hooks::Order::Earliest);
-    s_CheckFitHook = Hooks::HookFunction(API::Functions::_ZN15CItemRepository8CheckFitEP8CNWSItemhh, (void*)&CItemRepository__CheckFit, Hooks::Order::Earliest);
+
+    // Enable if you need more info about CheckFit in the future!
+    //s_CheckFitHook = Hooks::HookFunction(API::Functions::_ZN15CItemRepository8CheckFitEP8CNWSItemhh, (void*)&CItemRepository__CheckFit, Hooks::Order::Earliest);
 
     Resamplers::ResamplerFuncPtr resampler = &Resamplers::template Mean<uint32_t>;
     metrics->SetResampler("AIQueuedEvents", resampler, std::chrono::seconds(1));
     metrics->SetResampler("AIUpdateListObjects", resampler, std::chrono::seconds(1));
+
+    Resamplers::ResamplerFuncPtr resamplerSum = &Resamplers::template Sum<uint32_t>;
+    metrics->SetResampler("CItemRepositoryCheckFitCall", resamplerSum, std::chrono::seconds(1));
 
     DEFINE_PROFILER_TARGET(
         AIMasterUpdateState, API::Functions::_ZN15CServerAIMaster11UpdateStateEv,
