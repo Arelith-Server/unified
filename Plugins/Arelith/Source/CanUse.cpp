@@ -23,6 +23,14 @@ int32_t CanUseItemHook(CNWSCreature* thisPtr, CNWSItem* pItem, int32_t bIgnoreId
     static CExoString s_LoreSkillCache = "LORE_SKILL_CACHE";
     static CExoString s_ArelithUpdating = "NWNX_ARELITH_UPDATING";
 
+    // For scrolls, we have a little hardcoded logic.
+    // If the scroll isn't in the calling creature's inventory, it will force it to show up as unusable.
+    // This covers things like stores or containers.
+    if ((pItem->m_nBaseItem == BaseItem::SpellScroll || pItem->m_nBaseItem == BaseItem::EnchantedScroll) && pItem->m_oidPossessor != thisPtr->m_idSelf)
+    {
+        return 0;
+    }
+
     int override = pItem->m_ScriptVars.GetInt(s_OverrideUsable);
 
     if (override)
@@ -64,7 +72,7 @@ int32_t CanUseItemHook(CNWSCreature* thisPtr, CNWSItem* pItem, int32_t bIgnoreId
     {
         return 0;
     }
-    
+
     // No override - fall back to base game logic.
 
     return s_canUseItemHook->CallOriginal<int32_t>(thisPtr, pItem, bIgnoreIdentifiedFlag);
