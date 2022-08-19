@@ -64,9 +64,15 @@ int32_t CanUseItemHook(CNWSCreature* thisPtr, CNWSItem* pItem, int32_t bIgnoreId
         }
     }
 
-    if (override == 1) // Force allow, if we're not in polymorph
+    if (override == 1) // Force allow
     {
-        return thisPtr->m_bIsPolymorphed ? 0 : 1;
+        if (pItem->m_nBaseItem == BaseItem::SpellScroll || pItem->m_nBaseItem == BaseItem::EnchantedScroll || 
+            pItem->m_nBaseItem == BaseItem::MagicWand || pItem->m_nBaseItem == BaseItem::EnchantedWand)
+        {
+            return thisPtr->m_bIsPolymorphed ? 0 : 1; // ... but only if we're not in polymorph
+        }
+
+        return 1;
     }
     else if (override == -1) // Force disallow
     {
