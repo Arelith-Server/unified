@@ -15,6 +15,7 @@
 #include "API/CNWSObject.hpp"
 #include "tsl/robin_map.h"
 #include <algorithm>
+#include <list>
 
 namespace Optimizations
 {
@@ -23,12 +24,12 @@ using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
-tsl::robin_pg_map<CExoString, std::vector<OBJECT_ID>> s_lookup_table;
+tsl::robin_pg_map<CExoString, std::list<OBJECT_ID>> s_lookup_table;
 
 BOOL AddObjectToLookupTable(CNWSModule*, CExoString sTag, OBJECT_ID oidObject)
 {
     auto [iter, _] = s_lookup_table.try_emplace(std::move(sTag));
-    std::vector<OBJECT_ID>& bucket = iter.value();
+    std::list<OBJECT_ID>& bucket = iter.value();
     auto insertIter = std::upper_bound(std::begin(bucket), std::end(bucket), oidObject);
     bucket.insert(insertIter, oidObject);
     return true;
@@ -38,7 +39,7 @@ BOOL RemoveObjectFromLookupTable(CNWSModule*, CExoString sTag, OBJECT_ID oidObje
 {
     if (auto iter = s_lookup_table.find(sTag); iter != std::end(s_lookup_table))
     {
-        std::vector<OBJECT_ID>& bucket = iter.value();
+        std::list<OBJECT_ID>& bucket = iter.value();
         auto eraseIter = std::lower_bound(std::begin(bucket), std::end(bucket), oidObject);
         if (eraseIter != std::end(bucket) && *eraseIter == oidObject)
         {
@@ -56,8 +57,28 @@ OBJECT_ID FindObjectByTagOrdinal(CNWSModule*, const CExoString &sTag, uint32_t n
 
     if (auto iter = s_lookup_table.find(sTag); iter != std::end(s_lookup_table))
     {
-        const std::vector<OBJECT_ID>& bucket = iter->second;
-        return nNth < bucket.size() ? bucket[nNth] : OBJECT_INVALID;
+        static uint32_t s_lastNth;
+        static CExoString s_lastTag;
+        static std::list<OBJECT_ID>::const_iterator s_lastIter;
+
+        const std::list<OBJECT_ID>& bucket = iter->second;
+        std::list<OBJECT_ID>::const_iterator bucketIter;
+
+        if (nNth > 0 && sTag == s_lastTag && s_lastNth == nNth - 1)
+        {
+            bucketIter = std::next(s_lastIter);
+            
+        }
+        else
+        {
+            bucketIter = std::next(std::begin(bucket), nNth);
+        }
+
+        s_lastTag = sTag;
+        s_lastNth = nNth;
+        s_lastIter = bucketIter;
+
+        return nNth < bucket.size() ? *bucketIter: OBJECT_INVALID;
     }
 
     return OBJECT_INVALID;
@@ -70,7 +91,7 @@ OBJECT_ID FindObjectByTagTypeOrdinal(CNWSModule*, const CExoString &sTag, int32_
 
     if (auto iter = s_lookup_table.find(sTag); iter != std::end(s_lookup_table))
     {
-        const std::vector<OBJECT_ID>& bucket = iter->second;
+        const std::list<OBJECT_ID>& bucket = iter->second;
 
         for (OBJECT_ID oid : bucket)
         {
