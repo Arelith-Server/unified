@@ -5,7 +5,8 @@ if (${OPENSSL_FOUND})
         "Arelith.cpp"
         "Source/ArelithEvents.cpp"
         "Source/CanUse.cpp"
-        "Source/GetItemAppearance.cpp")
+        "Source/GetItemAppearance.cpp"
+        "Source/WeaponPower.cpp")
     target_link_libraries(Arelith ${OPENSSL_LIBRARIES})
     target_include_directories(Arelith PUBLIC ${OPENSSL_INCLUDE_DIR})
 endif()
