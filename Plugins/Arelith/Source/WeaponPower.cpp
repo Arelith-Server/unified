@@ -18,10 +18,13 @@ int32_t WeaponPowerHook(CNWSCreature* thisPtr, CNWSObject* pTarget, int32_t bOff
     CNWSItem* pAttackWeapon = nullptr;
     int32_t nWeaponPower = 0;
 
-    pAttackWeapon = (bOffhand) ? thisPtr->m_pcCombatRound->GetCurrentAttackWeapon(2) :  thisPtr->m_pcCombatRound->GetCurrentAttackWeapon(0);
-    if (pAttackWeapon) 
+    if (thisPtr->m_pcCombatRound)
     {
-        nWeaponPower = (int32_t)pAttackWeapon->m_ScriptVars.GetInt(s_WeaponPowerOverride);
+        pAttackWeapon = (bOffhand) ? thisPtr->m_pcCombatRound->GetCurrentAttackWeapon(2) :  thisPtr->m_pcCombatRound->GetCurrentAttackWeapon(0);
+        if (pAttackWeapon) 
+        {
+            nWeaponPower = (int32_t)pAttackWeapon->m_ScriptVars.GetInt(s_WeaponPowerOverride);
+        }
     }
     int32_t nNormalPower = s_getWeaponPower->CallOriginal<int32_t>(thisPtr, pTarget, bOffhand);
 
