@@ -4,6 +4,7 @@ if (${OPENSSL_FOUND})
      add_plugin(Arelith
         "Arelith.cpp"
         "Source/ArelithEvents.cpp"
+        "Source/AttackOfOpportunity.cpp"
         "Source/CanUse.cpp"
         "Source/GetItemAppearance.cpp")
     target_link_libraries(Arelith ${OPENSSL_LIBRARIES})
