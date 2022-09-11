@@ -8,7 +8,7 @@ using namespace NWNXLib::API::Constants;
 
 static Hooks::Hook s_budgeCreaturesHook;
 
-void BudgeCreaturesHook(CNWSArea* thisPtr, const Vector &vPosition, const Vector &vBBMin, const Vector &vBBMax, OBJECT_ID oidNewObject, BOOL bBumpToActionPoint)
+void BudgeCreaturesHook(CNWSArea* thisPtr, const Vector *vPosition, const Vector *vBBMin, const Vector *vBBMax, OBJECT_ID oidNewObject, BOOL bBumpToActionPoint)
 {
     CGameObject* obj = Utils::GetGameObject(oidNewObject);
     if (obj && Utils::AsNWSDoor(obj))
