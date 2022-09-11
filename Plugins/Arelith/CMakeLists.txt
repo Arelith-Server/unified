@@ -6,6 +6,7 @@ if (${OPENSSL_FOUND})
         "Source/ArelithEvents.cpp"
         "Source/AttackOfOpportunity.cpp"
         "Source/CanUse.cpp"
+        "Source/DoorsNoBudge.cpp"
         "Source/GetItemAppearance.cpp"
         "Source/MaxStorePricePerStack.cpp"
         "Source/WeaponPower.cpp")
