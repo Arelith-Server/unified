@@ -1,0 +1,1 @@
+add_library(CustomAlloc MODULE CustomAlloc.cpp)
