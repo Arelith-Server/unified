@@ -2,7 +2,10 @@ var group__feat =
 [
     [ "Readme", "group__feat.html#feat", null ],
     [ "nwnx_feat.nss", "nwnx__feat_8nss.html", null ],
+    [ "nwnx_feat_2da.nss", "nwnx__feat__2da_8nss.html", null ],
     [ "NWNX_Feat_SetFeatModifier", "group__feat.html#ga09ada9e56c591f9ee4d91a2794f6ae8c", null ],
+    [ "NWNX_Feat_GetModifierConstant", "group__feat.html#ga920f57f1281e15b8f671cad69296fa3d", null ],
+    [ "NWNX_Feat_LoadFeatModifiers", "group__feat.html#gac9f962b68e39727e913c3b3c92b4058e", null ],
     [ "NWNX_FEAT_MODIFIER_INVALID", "group__feat.html#gad2027181fcf9388ec1d46fdb559bf6d9", null ],
     [ "NWNX_FEAT_MODIFIER_AB", "group__feat.html#ga80583e6668b92e91464d05a06be108f5", null ],
     [ "NWNX_FEAT_MODIFIER_ABILITY", "group__feat.html#ga310df9b0fd359e4e6da7432302b7b743", null ],
@@ -30,5 +33,7 @@ var group__feat =
     [ "NWNX_FEAT_MODIFIER_SEEINVISIBLE", "group__feat.html#ga69e0fc35546e3ff5d60a5bfb515f2611", null ],
     [ "NWNX_FEAT_MODIFIER_ULTRAVISION", "group__feat.html#gaf8b61065da94987f818070827068e625", null ],
     [ "NWNX_FEAT_MODIFIER_HASTE", "group__feat.html#gac912c96649b21da8f4a9a25bffe3cdb6", null ],
-    [ "NWNX_FEAT_MODIFIER_VISUALEFFECT", "group__feat.html#ga874747e1595f185ee027e4dd7ed6eb87", null ]
+    [ "NWNX_FEAT_MODIFIER_VISUALEFFECT", "group__feat.html#ga874747e1595f185ee027e4dd7ed6eb87", null ],
+    [ "NWNX_FEAT_MODIFIER_SPELLSAVEDCFORSCHOOL", "group__feat.html#ga179f6a354a9753bcf70f0c20894ae82e", null ],
+    [ "NWNX_FEAT_MODIFIER_SPELLSAVEDCFORSPELL", "group__feat.html#gae56723de98fa8920d489fdb4c5cf7e67", null ]
 ];

@@ -35,7 +35,7 @@
 						<td id="projectlogo"><img width="80" height="74" alt="Logo" src="logo-transparent.png"/></td>
 						<td id="projectalign" style="padding-left: 0.5em;">
 							<div id="projectname">NWNX:EE
-								&#160;<span id="projectnumber">8193.34</span>
+								&#160;<span id="projectnumber">8193.35.40</span>
 							</div>
 						</td>
 						<td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -107,7 +107,7 @@ $(document).ready(function(){initNavTree('group__nwnx.html',''); initResizable()
 <div class="contents">
 
 
-<h3><a id="nwnx"></a>Core Functionality</h3><div class="textblock">The core of NWNX:EE that does all the things.<h2><a class="anchor" id="autotoc_md159"></a>
+<h3><a id="nwnx"></a>Core Functionality</h3><div class="textblock">The core of NWNX:EE that does all the things.<h2><a class="anchor" id="autotoc_md181"></a>
 Environment Variables</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -123,9 +123,39 @@ Environment Variables</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>NWNX_CORE_LOAD_EXPERIMENTAL_PLUGIN</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">0 </td><td class="markdownTableBodyNone">Allows loading of NWNX_Experimental, use at your own risk.  </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>NWNX_CORE_LOCALE</code> </td><td class="markdownTableBodyCenter">string </td><td class="markdownTableBodyNone">Unset </td><td class="markdownTableBodyNone">Set the locale NWNX will use when encoding. Supported are cp1250, cp1251, cp1252 (default). Can also use two letter country codes (e.g. &lsquo;'ru&rsquo;<code>)&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowOdd"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_CRASH_ON_ASSERT_FAILURE<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 0&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Sets whether an ASSERT failure hard crashes the server.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowEven"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_SHUTDOWN_SCRIPT<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; string&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Unset&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Sets which NWScript to run when the module shuts down.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowOdd"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_ALLOW_NWNX_FUNCTIONS_IN_EXECUTE_SCRIPT_CHUNK<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 0&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; When enabled, allows the ExecuteScriptChunk() function to call NWScript NWNX functions.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowEven"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_NWNX_RESOURCE_DIRECTORY_PATH<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; string&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; UserDirectory/nwnx&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; The path of the /nwnx resource directory&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowOdd"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_CUSTOM_RESMAN_DEFINITION<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; string&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Unset&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; A path to a file with custom resource directory aliases, see below for more info&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowEven"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_NWNX_RESOURCE_DIRECTORY_PRIORITY<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; int&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 70000000&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Sets the resman priority of the UserDirectory/nwnx folder.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowOdd"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_LOG_TIMESTAMP<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Set whether to show timestamp in logs printed by NWNX.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowEven"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_LOG_DATE<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 0&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Set whether to show date(Y-M-D) in logs printed by NWNX. Timestamps must be enabled.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowOdd"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_LOG_PLUGIN<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Set whether to show plugin name in logs printed by NWNX.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowEven"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_LOG_SOURCE<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Set whether to show source code location in logs printed by NWNX.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowOdd"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_LOG_COLOR<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Set whether to show logs printed by NWNX in color (only when printing to a TTY).&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowEven"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_LOG_FORCE_COLOR<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 0&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Sets whether to force color output.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowOdd"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_LOG_FILE_NAME<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; string&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Unset&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; Sets the secondary (in addition to</code>stdout<code>) log file.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowEven"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_HARD_EXIT<code>&lt;/td&gt; &lt;td class="markdownTableBodyCenter"&gt; 0-1&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; 0&lt;/td&gt; &lt;td class="markdownTableBodyNone"&gt; If set, NWNX will hard kill the process after it unloads.&lt;/td&gt; &lt;/tr&gt; &lt;tr class="markdownTableRowOdd"&gt; &lt;td class="markdownTableBodyNone"&gt;</code>NWNX_CORE_BASE_GAME_CRASH_HANDLER` </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">0 </td><td class="markdownTableBodyNone">Sets whether to also call the base game handler in case of crash.  </td></tr>
+<td class="markdownTableBodyNone"><code>NWNX_CORE_LOCALE</code> </td><td class="markdownTableBodyCenter">string </td><td class="markdownTableBodyNone">Unset </td><td class="markdownTableBodyNone">Set the locale NWNX will use when encoding. Supported are cp1250, cp1251, cp1252 (default). Can also use two letter country codes (e.g. <code>"ru"</code>)  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_CRASH_ON_ASSERT_FAILURE</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">0 </td><td class="markdownTableBodyNone">Sets whether an ASSERT failure hard crashes the server.  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_SHUTDOWN_SCRIPT</code> </td><td class="markdownTableBodyCenter">string </td><td class="markdownTableBodyNone">Unset </td><td class="markdownTableBodyNone">Sets which NWScript to run when the module shuts down.  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_ALLOW_NWNX_FUNCTIONS_IN_EXECUTE_SCRIPT_CHUNK</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">0 </td><td class="markdownTableBodyNone">When enabled, allows the ExecuteScriptChunk() function to call NWScript NWNX functions.  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_NWNX_RESOURCE_DIRECTORY_PATH</code> </td><td class="markdownTableBodyCenter">string </td><td class="markdownTableBodyNone">UserDirectory/nwnx </td><td class="markdownTableBodyNone">The path of the /nwnx resource directory  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_CUSTOM_RESMAN_DEFINITION</code> </td><td class="markdownTableBodyCenter">string </td><td class="markdownTableBodyNone">Unset </td><td class="markdownTableBodyNone">A path to a file with custom resource directory aliases, see below for more info  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_NWNX_RESOURCE_DIRECTORY_PRIORITY</code> </td><td class="markdownTableBodyCenter">int </td><td class="markdownTableBodyNone">70000000 </td><td class="markdownTableBodyNone">Sets the resman priority of the UserDirectory/nwnx folder.  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_LOG_TIMESTAMP</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">1 </td><td class="markdownTableBodyNone">Set whether to show timestamp in logs printed by NWNX.  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_LOG_DATE</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">0 </td><td class="markdownTableBodyNone">Set whether to show date(Y-M-D) in logs printed by NWNX. Timestamps must be enabled.  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_LOG_PLUGIN</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">1 </td><td class="markdownTableBodyNone">Set whether to show plugin name in logs printed by NWNX.  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_LOG_SOURCE</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">1 </td><td class="markdownTableBodyNone">Set whether to show source code location in logs printed by NWNX.  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_LOG_COLOR</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">1 </td><td class="markdownTableBodyNone">Set whether to show logs printed by NWNX in color (only when printing to a TTY).  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_LOG_FORCE_COLOR</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">0 </td><td class="markdownTableBodyNone">Sets whether to force color output.  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_LOG_FILE_NAME</code> </td><td class="markdownTableBodyCenter">string </td><td class="markdownTableBodyNone">Unset </td><td class="markdownTableBodyNone">Sets the secondary (in addition to <code>stdout</code>) log file.  </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_HARD_EXIT</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">0 </td><td class="markdownTableBodyNone">If set, NWNX will hard kill the process after it unloads.  </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>NWNX_CORE_BASE_GAME_CRASH_HANDLER</code> </td><td class="markdownTableBodyCenter">0-1 </td><td class="markdownTableBodyNone">0 </td><td class="markdownTableBodyNone">Sets whether to also call the base game handler in case of crash.  </td></tr>
 </table>
-<h2><a class="anchor" id="autotoc_md160"></a>
+<h2><a class="anchor" id="autotoc_md182"></a>
 Console Commands</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -141,16 +171,16 @@ Console Commands</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>logformat [timestamp\|notimestamp] [plugin\|noplugin] [source\|nosource] [color\|nocolor] [force\|noforce]</code> </td><td class="markdownTableBodyNone">Control the output format of logs. Example: <code>logformat color timestamp noplugin nosource</code>  </td></tr>
 </table>
-<h2><a class="anchor" id="autotoc_md161"></a>
+<h2><a class="anchor" id="autotoc_md183"></a>
 Custom Resman Definition File</h2>
 <p>A file that lets you specify additional resource directories that act the same as the <code>/development</code> and <code>/nwnx</code> folders.</p>
 <p>Each line in the file must contain the following: <code>ALIASNAME /full/path/to/folder &lt;priority&gt;</code></p>
 <p>Example:</p>
 <div class="fragment"><div class="line">TEST /home/nwnx/test 70000001</div>
 <div class="line">STUFF /home/nwnx/stuff 70000002</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md162"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md184"></a>
 Plugin Management</h2>
-<h3><a class="anchor" id="autotoc_md163"></a>
+<h3><a class="anchor" id="autotoc_md185"></a>
 Environment Variable Configuration</h3>
 <p>Configuration of NWNX plugins are controlled by environment variables exported prior to starting the <code>nwserver</code> binary. Typical usage would be in the script used to start the server.</p>
 <p>Basic control of the plugin includes enabling/disabling the plugin and setting the logging level of the plugin. The following format is used for all plugins:</p>
@@ -158,7 +188,7 @@ Environment Variable Configuration</h3>
 <li>NWNX_&lt;x&gt;_LOG_LEVEL</li>
 <li>NWNX_&lt;x&gt;_SKIP</li>
 </ul>
-<h3><a class="anchor" id="autotoc_md164"></a>
+<h3><a class="anchor" id="autotoc_md186"></a>
 Plugin Loading</h3>
 <p>Inclusion or exclusion of the plugin at server startup time is contolled by the environment variable <code>NWNX_&lt;x&gt;_SKIP</code> where &lt;x&gt; is the plugin name (all caps).</p>
 <ul>
@@ -167,16 +197,16 @@ Plugin Loading</h3>
 </ul>
 <p><b>Example</b> </p><div class="fragment"><div class="line"># Load the sql plugin at startup</div>
 <div class="line">export NWNX_SQL_SKIP=N</div>
-</div><!-- fragment --><h3><a class="anchor" id="autotoc_md165"></a>
+</div><!-- fragment --><h3><a class="anchor" id="autotoc_md187"></a>
 Plugin Log Level</h3>
 <p>The default plugin log level is the same as the overall Core logging level.</p>
 <p>It can be changed, however, by assinging a value to <code>NWNX_&lt;x&gt;_LOG_LEVEL</code> (where &lt;x&gt; is the plugin name in all caps) in the same manner as the Core logging level. See the Core documentation for a description of available logging levels.</p>
 <p><b>Example</b> </p><div class="fragment"><div class="line"># Set the sql plugin to warning and above (warning, error, and fatal only)</div>
 <div class="line">export NWNX_SQL_LOG_LEVEL=4</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md166"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md188"></a>
 Core Functions For Plugin Developers</h2>
 <p>The core functions in <a class="el" href="nwnx_8nss.html">nwnx.nss</a> should be called by NWNX plugin developers, who should expose their own, more friendly headers.</p>
-<h4><a class="anchor" id="autotoc_md167"></a>
+<h4><a class="anchor" id="autotoc_md189"></a>
 Sample</h4>
 <p>This following function would wrap a call which passes three parameters, receives three back, and constructs a vector from the result. </p><div class="fragment"><div class="line">vector GetVectorFromCoords(<span class="keywordtype">float</span> x, <span class="keywordtype">float</span> y, <span class="keywordtype">float</span> z)</div>
 <div class="line">{</div>
@@ -261,6 +291,9 @@ Functions</h2></td></tr>
 <tr class="memitem:gac5f2cda8d53f022e974c48687db2b6c8"><td class="memItemLeft" align="right" valign="top">json&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nwnx.html#gac5f2cda8d53f022e974c48687db2b6c8">NWNX_GetReturnValueJson</a> ()</td></tr>
 <tr class="memdesc:gac5f2cda8d53f022e974c48687db2b6c8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the specified type from the c++ side.  <a href="group__nwnx.html#gac5f2cda8d53f022e974c48687db2b6c8">More...</a><br /></td></tr>
 <tr class="separator:gac5f2cda8d53f022e974c48687db2b6c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga8d619f07b8154d06b1f9462d57385fb5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__nwnx.html#ga8d619f07b8154d06b1f9462d57385fb5">NWNX_PluginExists</a> (string sPlugin)</td></tr>
+<tr class="memdesc:ga8d619f07b8154d06b1f9462d57385fb5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines if the given plugin exists and is enabled.  <a href="group__nwnx.html#ga8d619f07b8154d06b1f9462d57385fb5">More...</a><br /></td></tr>
+<tr class="separator:ga8d619f07b8154d06b1f9462d57385fb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
 Variables</h2></td></tr>
@@ -303,7 +336,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00046">46</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00054">54</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -331,7 +364,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00051">51</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00059">59</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -359,7 +392,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00056">56</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00064">64</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -387,7 +420,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00061">61</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00069">69</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -415,7 +448,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00066">66</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00074">74</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -443,7 +476,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00071">71</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00079">79</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -471,7 +504,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00076">76</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00084">84</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -499,7 +532,7 @@ Variables</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00081">81</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00089">89</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -521,7 +554,7 @@ Variables</h2></td></tr>
 <p>Returns the specified type from the c++ side. </p>
 <dl class="section return"><dt>Returns</dt><dd>The value of specified type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00086">86</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00094">94</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -543,7 +576,7 @@ Variables</h2></td></tr>
 <p>Returns the specified type from the c++ side. </p>
 <dl class="section return"><dt>Returns</dt><dd>The value of specified type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00091">91</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00099">99</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -565,7 +598,7 @@ Variables</h2></td></tr>
 <p>Returns the specified type from the c++ side. </p>
 <dl class="section return"><dt>Returns</dt><dd>The value of specified type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00096">96</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00104">104</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -587,7 +620,7 @@ Variables</h2></td></tr>
 <p>Returns the specified type from the c++ side. </p>
 <dl class="section return"><dt>Returns</dt><dd>The value of specified type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00101">101</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00109">109</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -609,7 +642,7 @@ Variables</h2></td></tr>
 <p>Returns the specified type from the c++ side. </p>
 <dl class="section return"><dt>Returns</dt><dd>The value of specified type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00106">106</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00114">114</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -631,7 +664,7 @@ Variables</h2></td></tr>
 <p>Returns the specified type from the c++ side. </p>
 <dl class="section return"><dt>Returns</dt><dd>The value of specified type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00112">112</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00120">120</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -653,7 +686,37 @@ Variables</h2></td></tr>
 <p>Returns the specified type from the c++ side. </p>
 <dl class="section return"><dt>Returns</dt><dd>The value of specified type. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00118">118</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00126">126</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+
+</div>
+</div>
+<a id="ga8d619f07b8154d06b1f9462d57385fb5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga8d619f07b8154d06b1f9462d57385fb5">&#9670;&nbsp;</a></span>NWNX_PluginExists()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int NWNX_PluginExists </td>
+          <td>(</td>
+          <td class="paramtype">string&#160;</td>
+          <td class="paramname"><em>sPlugin</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Determines if the given plugin exists and is enabled. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">sPlugin</td><td>The name of the plugin to check. This is the case sensitive plugin name as used by NWNX_CallFunction, NWNX_PushArgumentX </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Example usage: NWNX_PluginExists("NWNX_Creature"); </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>TRUE if the plugin exists and is enabled, otherwise FALSE. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00131">131</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
@@ -670,20 +733,20 @@ Variables</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00043">43</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx_8nss_source.html#l00051">51</a> of file <a class="el" href="nwnx_8nss_source.html">nwnx.nss</a>.</p>
 
 </div>
 </div>
 </div><!-- contents -->
 </div><!-- doc-content -->
-<div class="ttc" id="agroup__nwnx_html_gaa3dcd61ce351dab1f1766dc8bf693684"><div class="ttname"><a href="group__nwnx.html#gaa3dcd61ce351dab1f1766dc8bf693684">NWNX_GetReturnValueFloat</a></div><div class="ttdeci">float NWNX_GetReturnValueFloat()</div><div class="ttdoc">Returns the specified type from the c++ side.</div><div class="ttdef"><b>Definition:</b> <a href="nwnx_8nss_source.html#l00091">nwnx.nss:91</a></div></div>
-<div class="ttc" id="agroup__nwnx_html_gac59ae51d3e8c4f775ab7d1a18eab3fc4"><div class="ttname"><a href="group__nwnx.html#gac59ae51d3e8c4f775ab7d1a18eab3fc4">NWNX_CallFunction</a></div><div class="ttdeci">void NWNX_CallFunction(string pluginName, string functionName)</div><div class="ttdoc">Scripting interface to NWNX.</div><div class="ttdef"><b>Definition:</b> <a href="nwnx_8nss_source.html#l00046">nwnx.nss:46</a></div></div>
-<div class="ttc" id="agroup__nwnx_html_ga1d63de8f806049fdbf3a7c92670a1e21"><div class="ttname"><a href="group__nwnx.html#ga1d63de8f806049fdbf3a7c92670a1e21">NWNX_PushArgumentFloat</a></div><div class="ttdeci">void NWNX_PushArgumentFloat(float value)</div><div class="ttdoc">Pushes the specified type to the c++ side.</div><div class="ttdef"><b>Definition:</b> <a href="nwnx_8nss_source.html#l00056">nwnx.nss:56</a></div></div>
+<div class="ttc" id="agroup__nwnx_html_gaa3dcd61ce351dab1f1766dc8bf693684"><div class="ttname"><a href="group__nwnx.html#gaa3dcd61ce351dab1f1766dc8bf693684">NWNX_GetReturnValueFloat</a></div><div class="ttdeci">float NWNX_GetReturnValueFloat()</div><div class="ttdoc">Returns the specified type from the c++ side.</div><div class="ttdef"><b>Definition:</b> <a href="nwnx_8nss_source.html#l00099">nwnx.nss:99</a></div></div>
+<div class="ttc" id="agroup__nwnx_html_gac59ae51d3e8c4f775ab7d1a18eab3fc4"><div class="ttname"><a href="group__nwnx.html#gac59ae51d3e8c4f775ab7d1a18eab3fc4">NWNX_CallFunction</a></div><div class="ttdeci">void NWNX_CallFunction(string pluginName, string functionName)</div><div class="ttdoc">Scripting interface to NWNX.</div><div class="ttdef"><b>Definition:</b> <a href="nwnx_8nss_source.html#l00054">nwnx.nss:54</a></div></div>
+<div class="ttc" id="agroup__nwnx_html_ga1d63de8f806049fdbf3a7c92670a1e21"><div class="ttname"><a href="group__nwnx.html#ga1d63de8f806049fdbf3a7c92670a1e21">NWNX_PushArgumentFloat</a></div><div class="ttdeci">void NWNX_PushArgumentFloat(float value)</div><div class="ttdoc">Pushes the specified type to the c++ side.</div><div class="ttdef"><b>Definition:</b> <a href="nwnx_8nss_source.html#l00064">nwnx.nss:64</a></div></div>
 <!-- start footer part -->
 		<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
 			<ul>
 				<li class="footer">
-					Generated on Thu Aug 4 2022 08:57:15 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
+					Generated on Sun May 28 2023 09:30:23 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
 					<img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.17.
 					<a href="dark/">Dark version</a>
 				</li>

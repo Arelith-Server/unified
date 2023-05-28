@@ -35,7 +35,7 @@
 						<td id="projectlogo"><img width="80" height="74" alt="Logo" src="logo-transparent.png"/></td>
 						<td id="projectalign" style="padding-left: 0.5em;">
 							<div id="projectname">NWNX:EE
-								&#160;<span id="projectnumber">8193.34</span>
+								&#160;<span id="projectnumber">8193.35.40</span>
 							</div>
 						</td>
 						<td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -146,6 +146,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ga4fddf862386c3c71adf2bea037b239f7"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__item.html#ga4fddf862386c3c71adf2bea037b239f7">NWNX_Item_GetMinEquipLevel</a> (object oItem)</td></tr>
 <tr class="memdesc:ga4fddf862386c3c71adf2bea037b239f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get an item's minimum level required to equip.  <a href="group__item.html#ga4fddf862386c3c71adf2bea037b239f7">More...</a><br /></td></tr>
 <tr class="separator:ga4fddf862386c3c71adf2bea037b239f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaaa1fb482a60f6b04cf2751653eee24e6"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__item.html#gaaa1fb482a60f6b04cf2751653eee24e6">NWNX_Item_MoveTo</a> (object oItem, object oTarget, int bHideAllFeedback=FALSE)</td></tr>
+<tr class="memdesc:gaaa1fb482a60f6b04cf2751653eee24e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move oItem to oTarget.  <a href="group__item.html#gaaa1fb482a60f6b04cf2751653eee24e6">More...</a><br /></td></tr>
+<tr class="separator:gaaa1fb482a60f6b04cf2751653eee24e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="ga9464b3a05fa000e593e9b5780c16c13e"></a>
@@ -184,7 +187,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00096">96</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00105">105</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -218,7 +221,9 @@ Functions</h2></td></tr>
 <dl class="section remark"><dt>Remarks</dt><dd>Total cost = base_value + additional_value. </dd>
 <dd>
 Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Will not persist through saving. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Will not persist through saving. </dd>
+<dd>
+This value will also revert if item is identified or player relogs into server. </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">oItem</td><td>The item object. </td></tr>
@@ -227,7 +232,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00106">106</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00115">115</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -268,7 +273,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00116">116</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00125">125</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -297,7 +302,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The base gold piece value for the item. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00126">126</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00135">135</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -326,7 +331,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The additional gold piece value for the item. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00136">136</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00145">145</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -366,7 +371,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00146">146</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00155">155</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -421,7 +426,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
 <p>For example, to change the CLOTH1 channel of the torso, nIndex would be: </p><pre class="fragment">6 + (7 * 6) + 2 = 50
 </pre><p>[1] When specifying per-part coloring, the value 255 corresponds with the logical function 'clear colour override', which clears the per-part override for that part. </p>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00156">156</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00165">165</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -451,7 +456,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A string representing the item's appearance. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00169">169</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00178">178</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -490,7 +495,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00179">179</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00188">188</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -519,7 +524,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The base armor class. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00189">189</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00198">198</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -548,7 +553,55 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The minimum level required to equip the item. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00199">199</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00208">208</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
+
+</div>
+</div>
+<a id="gaaa1fb482a60f6b04cf2751653eee24e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaaa1fb482a60f6b04cf2751653eee24e6">&#9670;&nbsp;</a></span>NWNX_Item_MoveTo()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int NWNX_Item_MoveTo </td>
+          <td>(</td>
+          <td class="paramtype">object&#160;</td>
+          <td class="paramname"><em>oItem</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">object&#160;</td>
+          <td class="paramname"><em>oTarget</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>bHideAllFeedback</em> = <code>FALSE</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Move oItem to oTarget. </p>
+<dl class="section remark"><dt>Remarks</dt><dd>Moving items from a container to the inventory of the container's owner (or the other way around) is always "silent" and won't trigger feedback messages </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">oItem</td><td>The item object. </td></tr>
+    <tr><td class="paramname">oTarget</td><td>The target bag/creature/placeable or store object to move oItem to. </td></tr>
+    <tr><td class="paramname">bHideAllFeedback</td><td>Hides all feedback messages generated by losing/acquiring items </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>TRUE if the item was successfully moved to the target, otherwise FALSE </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="nwnx__item_8nss_source.html#l00218">218</a> of file <a class="el" href="nwnx__item_8nss_source.html">nwnx_item.nss</a>.</p>
 
 </div>
 </div>
@@ -558,7 +611,7 @@ Equivalent to SetGoldPieceValue NWNX2 function. </dd></dl>
 		<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
 			<ul>
 				<li class="footer">
-					Generated on Thu Aug 4 2022 08:57:16 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
+					Generated on Sun May 28 2023 09:30:25 for NWNX:EE by <a href="http://www.doxygen.org/index.html">
 					<img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.17.
 					<a href="../">Light version</a>
 				</li>
