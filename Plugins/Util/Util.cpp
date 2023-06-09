@@ -14,6 +14,7 @@
 #include "API/CWorldTimer.hpp"
 #include "API/CGameObjectArray.hpp"
 #include "API/CScriptCompiler.hpp"
+#include "API/CServerExoAppInternal.hpp"
 #include "API/CExoAliasList.hpp"
 #include "API/CExoFile.hpp"
 #include "API/CNWSDoor.hpp"
@@ -34,7 +35,6 @@
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 
-static int32_t s_tickCount;
 static size_t s_resRefIndex;
 static std::vector<std::string> s_listResRefs;
 static std::unique_ptr<CScriptCompiler> s_scriptCompiler;
@@ -64,31 +64,6 @@ static auto s_id = MessageBus::Subscribe("NWNX_CORE_SIGNAL",
             }
         }
     });
-
-static Hooks::Hook s_MainLoopHook = Hooks::HookFunction(API::Functions::_ZN21CServerExoAppInternal8MainLoopEv,
-    (void*)+[](CServerExoAppInternal *pServerExoAppInternal) -> int32_t
-    {
-        static int ticks;
-        static time_t previous;
-
-        auto retVal = s_MainLoopHook->CallOriginal<int32_t>(pServerExoAppInternal);
-
-        time_t current = time(nullptr);
-
-        if (current == previous)
-        {
-            ticks++;
-        }
-        else
-        {
-            s_tickCount = ticks;
-            previous = current;
-            ticks = 1;
-        }
-
-        return retVal;
-    }, Hooks::Order::Earliest);
-
 
 NWNX_EXPORT ArgumentStack GetCurrentScriptName(ArgumentStack&& args)
 {
@@ -189,14 +164,6 @@ NWNX_EXPORT ArgumentStack StripColors(ArgumentStack&& args)
     return retVal;
 }
 
-NWNX_EXPORT ArgumentStack IsValidResRef(ArgumentStack&& args)
-{
-    const auto resRef = args.extract<std::string>();
-    const auto resType = args.extract<int32_t>();
-
-    return Globals::ExoResMan()->Exists(CResRef(resRef.c_str()), resType, nullptr);
-}
-
 NWNX_EXPORT ArgumentStack GetEnvironmentVariable(ArgumentStack&& args)
 {
     std::string retVal;
@@ -259,14 +226,6 @@ NWNX_EXPORT ArgumentStack EncodeStringForURL(ArgumentStack&& args)
     return result;
 }
 
-NWNX_EXPORT ArgumentStack Get2DARowCount(ArgumentStack&& args)
-{
-    const auto twodaRef = args.extract<std::string>();
-    auto *pTwoda = Globals::Rules()->m_p2DArrays->GetCached2DA(twodaRef.c_str(), true);
-
-    return pTwoda ? pTwoda->m_nNumRows : 0;
-}
-
 NWNX_EXPORT ArgumentStack GetFirstResRef(ArgumentStack&& args)
 {
     std::string retVal;
@@ -316,11 +275,6 @@ NWNX_EXPORT ArgumentStack GetNextResRef(ArgumentStack&&)
     }
 
     return retVal;
-}
-
-NWNX_EXPORT ArgumentStack GetServerTicksPerSecond(ArgumentStack&&)
-{
-    return s_tickCount;
 }
 
 NWNX_EXPORT ArgumentStack GetLastCreatedObject(ArgumentStack&& args)
@@ -398,31 +352,6 @@ NWNX_EXPORT ArgumentStack AddScript(ArgumentStack&& args)
         return s_scriptCompiler->m_sCapturedError.CStr();
 
     return "";
-}
-
-NWNX_EXPORT ArgumentStack GetNSSContents(ArgumentStack&& args)
-{
-    std::string retVal;
-
-    const auto scriptName = args.extract<std::string>();
-      ASSERT_OR_THROW(!scriptName.empty());
-      ASSERT_OR_THROW(scriptName.size() <= 16);
-    const auto maxLength = args.extract<int32_t>();
-
-    if (Globals::ExoResMan()->Exists(scriptName.c_str(), Constants::ResRefType::NSS, nullptr))
-    {
-        CScriptSourceFile scriptSourceFile;
-        char *data;
-        uint32_t size = 0;
-
-        if (scriptSourceFile.LoadScript(scriptName, &data, &size) == 0)
-        {
-            retVal.assign(data, maxLength < 0 ? size : (uint32_t)maxLength > size ? size : maxLength);
-            scriptSourceFile.UnloadScript();
-        }
-    }
-
-    return retVal;
 }
 
 NWNX_EXPORT ArgumentStack AddNSSFile(ArgumentStack&& args)
@@ -791,4 +720,41 @@ NWNX_EXPORT ArgumentStack SetCurrentlyRunningEvent(ArgumentStack&& args)
     Globals::VirtualMachine()->m_pVirtualMachineScript[0].m_nScriptEventID = eventId;
 
     return {};
+}
+
+NWNX_EXPORT ArgumentStack GetStringLevenshteinDistance(ArgumentStack&& args)
+{
+    // C++ Levenshtein Distance by Martin Ettl, 2012-10-05
+    // https://rosettacode.org/wiki/Levenshtein_distance#C++
+    auto s1 = args.extract<std::string>();
+    auto s2 = args.extract<std::string>();
+    
+	const size_t m = s1.size();
+    const size_t n = s2.size();
+	
+    if (m == 0)
+        return (int32_t)n;
+	
+    if (n == 0)
+        return (int32_t)m;
+	
+    std::vector<size_t> costs(n + 1);
+    std::iota(costs.begin(), costs.end(), 0);
+    size_t i = 0;
+    for (auto c1 : s1)
+	{
+        costs[0] = i + 1;
+        size_t corner = i;
+        size_t j = 0;
+        for (auto c2 : s2)
+		{
+            size_t upper = costs[j + 1];
+            costs[j + 1] = (c1 == c2) ? corner : 1 + std::min(std::min(upper, corner), costs[j]);
+            corner = upper;
+            ++j;
+        }
+        ++i;
+    }
+
+    return (int32_t)costs[n];
 }
