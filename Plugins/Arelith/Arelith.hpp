@@ -8,7 +8,6 @@
 #include <vector>
 
 using ArgumentStack = NWNXLib::ArgumentStack;
-using Event = NWNXLib::Event
 
 struct bypassRed
 {
