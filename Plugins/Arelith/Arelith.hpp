@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-using ArgumentStack = NWNXLib::Events::ArgumentStack;
+using ArgumentStack = NWNXLib::ArgumentStack;
 struct bypassRed
 {
     uint16_t m_nPropertyName;
