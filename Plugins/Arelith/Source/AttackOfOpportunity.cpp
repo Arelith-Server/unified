@@ -39,8 +39,8 @@ void AttackOfOpportunity() __attribute__((constructor));
 
 void AttackOfOpportunity()
 {
-    s_StartCombatRoundHook = Hooks::HookFunction(API::Functions::_ZN15CNWSCombatRound16StartCombatRoundEj, (void*)&StartCombatRound, Hooks::Order::Final);
-    s_EndCombatRoundHook = Hooks::HookFunction(API::Functions::_ZN15CNWSCombatRound14EndCombatRoundEv, (void*)&EndCombatRound, Hooks::Order::Final);
+    s_StartCombatRoundHook = Hooks::HookFunction(&CNWSCombatRound::StartCombatRound, &StartCombatRound, Hooks::Order::Final);
+    s_EndCombatRoundHook = Hooks::HookFunction(&CNWSCombatRound::EndCombatRound, &EndCombatRound, Hooks::Order::Final);
 }
 
 }

@@ -6,6 +6,7 @@
 #include "API/CNWSCreature.hpp"
 #include "API/CNWSItem.hpp"
 #include "API/CNWSCreatureStats.hpp"
+#include "API/CNWVirtualMachineCommands.hpp"
 #include "API/Globals.hpp"
 #include "Source/ArelithEvents.hpp"
 //#include "Services/Config/Config.hpp"
@@ -109,18 +110,18 @@ Arelith::Arelith(Services::ProxyServiceList* services)
 
     m_arelithEvents   = std::make_unique<ArelithEvents>();
 
-    s_ReportErrorHook = Hooks::HookFunction(Functions::_ZN25CNWVirtualMachineCommands11ReportErrorER10CExoStringi,
-                                                        (void*)&ReportErrorHook, Hooks::Order::Earliest);
+    s_ReportErrorHook = Hooks::HookFunction(&CNWVirtualMachineCommands::ReportError,
+                                                        &ReportErrorHook, Hooks::Order::Earliest);
 
-    s_WriteToLogFileHook = Hooks::HookFunction(Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
-                                                        (void*)&WriteToLogFileHook, Hooks::Order::Earliest);
+    s_WriteToLogFileHook = Hooks::HookFunction(&CNWVirtualMachineCommands::ReportError,
+                                                        &WriteToLogFileHook, Hooks::Order::Earliest);
 
-    s_GetEffectImmunityHook = Hooks::HookFunction(Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei,
-        (void*)&GetEffectImmunityHook, Hooks::Order::Final);
+    s_GetEffectImmunityHook = Hooks::HookFunction(&CNWSCreatureStats::GetEffectImmunity,
+        &GetEffectImmunityHook, Hooks::Order::Final);
 
     s_SetCreatorHook =
-            Hooks::HookFunction(Functions::_ZN11CGameEffect10SetCreatorEj,
-        (void*)&SetCreatorHook, Hooks::Order::Latest);
+            Hooks::HookFunction(&CGameEffect::SetCreator,
+         &SetCreatorHook, Hooks::Order::Latest);
    /* if(GetServices()->m_config->Get<bool>("DMG_RED", false))
     {
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
@@ -129,8 +130,8 @@ Arelith::Arelith(Services::ProxyServiceList* services)
 
     if (Config::Get<bool>("POLYMORPH", false))
     {
-        s_GetUseMonkAbilitiesHook = Hooks::HookFunction(Functions::_ZN12CNWSCreature19GetUseMonkAbilitiesEv,
-        (void*)&CNWSCreature__GetUseMonkAbilities_hook, Hooks::Order::Early);
+        s_GetUseMonkAbilitiesHook = Hooks::HookFunction(&CNWSCreature::GetUseMonkAbilities,
+        &CNWSCreature__GetUseMonkAbilities_hook, Hooks::Order::Early);
     }
     s_sHost = Config::Get<std::string>("HOST", "");
     s_sOrigPath = Config::Get<std::string>("PATH", "");

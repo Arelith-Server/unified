@@ -88,7 +88,7 @@ void CanUse() __attribute__((constructor));
 
 void CanUse()
 {
-    s_canUseItemHook = Hooks::HookFunction(API::Functions::_ZN12CNWSCreature10CanUseItemEP8CNWSItemi, (void*)&CanUseItemHook, Hooks::Order::Earliest);
+    s_canUseItemHook = Hooks::HookFunction(&CNWSCreature::CanUseItem, &CanUseItemHook, Hooks::Order::Earliest);
 }
 
 }

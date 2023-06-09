@@ -52,8 +52,8 @@ void GetItemAppearance() __attribute__((constructor));
 void GetItemAppearance()
 {
     s_getItemAppearanceHook = Hooks::HookFunction(
-        API::Functions::_ZN25CNWVirtualMachineCommands31ExecuteCommandGetItemAppearanceEii,
-        (void*)&ExecuteCommandGetItemAppearanceHook, 
+        &CNWVirtualMachineCommands::ExecuteCommandGetItemAppearance,
+        &ExecuteCommandGetItemAppearanceHook, 
         Hooks::Order::Earliest);
 }
 

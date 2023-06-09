@@ -27,8 +27,8 @@ static Hooks::Hook m_CanUnEquipWeaponHook;
 ArelithEvents::ArelithEvents()
 {
     Arelith::InitOnFirstSubscribe("NWNX_ARELITH_.*", []() {
-        m_CanEquipWeaponHook =  Hooks::HookFunction(Functions::_ZN12CNWSCreature14CanEquipWeaponEP8CNWSItemPjiiP10CNWSPlayer, (void*)&CanEquipWeaponHook, Hooks::Order::Early);
-        m_CanUnEquipWeaponHook =  Hooks::HookFunction(Functions::_ZN12CNWSCreature16CanUnEquipWeaponEP8CNWSItem, (void*)&CanUnEquipWeaponHook, Hooks::Order::Early);
+        m_CanEquipWeaponHook =  Hooks::HookFunction(&CNWSCreature::CanEquipWeapon, &CanEquipWeaponHook, Hooks::Order::Early);
+        m_CanUnEquipWeaponHook =  Hooks::HookFunction(&CNWSCreature::CanUnEquipWeapon, &CanUnEquipWeaponHook, Hooks::Order::Early);
     });
 }
 
