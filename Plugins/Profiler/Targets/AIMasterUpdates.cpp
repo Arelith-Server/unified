@@ -90,7 +90,7 @@ AIMasterUpdates::AIMasterUpdates(const bool overkill, MetricsProxy* metrics)
         void, CServerAIMaster*)
 
     DEFINE_PROFILER_TARGET(
-        CItemRepositoryCheckFit, API::Functions::_ZN15CItemRepository8CheckFitEP8CNWSItemhh,
+        CItemRepositoryCheckFit, &CItemRepository::CheckFit,
         BOOL, CItemRepository*, CNWSItem *, uint8_t, uint8_t)
 
     if (overkill)

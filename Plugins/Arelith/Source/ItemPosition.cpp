@@ -14,13 +14,13 @@ NWNX_EXPORT ArgumentStack GetItemPosition(ArgumentStack&& args)
 
     if (auto *pItem= Utils::PopItem(args))
     {
-        InsertArgument(stack, int32_t(pItem->m_nRepositoryPositionY));
-        InsertArgument(stack, int32_t(pItem->m_nRepositoryPositionX));
+        NWNXLib::ScriptAPI::InsertArgument(stack, int32_t(pItem->m_nRepositoryPositionY));
+        NWNXLib::ScriptAPI::InsertArgument(stack, int32_t(pItem->m_nRepositoryPositionX));
 
         return stack;
     }
-    InsertArgument(stack, int32_t(-1));
-    InsertArgument(stack, int32_t(-1));
+    NWNXLib::ScriptAPI::InsertArgument(stack, int32_t(-1));
+    NWNXLib::ScriptAPI::InsertArgument(stack, int32_t(-1));
     return stack;
 }
 

@@ -35,6 +35,6 @@ void WeaponPower() __attribute__((constructor));
 
 void WeaponPower()
 {
-    s_getWeaponPower = Hooks::HookFunction(Functions::_ZN12CNWSCreature14GetWeaponPowerEP10CNWSObjecti, (void*)&WeaponPowerHook, Hooks::Order::Final);
+    s_getWeaponPower = Hooks::HookFunction(&CNWSCreature::GetWeaponPower, &WeaponPowerHook, Hooks::Order::Final);
 }
 }
