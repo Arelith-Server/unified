@@ -1,6 +1,7 @@
 #include "Arelith.hpp"
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
+#include "API/CExoDebugInternal.hpp"
 #include "API/CExoString.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CNWSCreature.hpp"
@@ -45,6 +46,7 @@ static Arelith::Arelith* g_plugin;
 NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
     g_plugin = new Arelith::Arelith(services);
+
     return g_plugin;
 }
 
@@ -71,12 +73,10 @@ static Hooks::Hook s_SetCreatorHook;
 Arelith::Arelith(Services::ProxyServiceList* services)
     : Plugin(services), m_eventDepth(0)
 {
-
     if (g_plugin == nullptr) // :(
         g_plugin = this;
-
 #define REGISTER(func) \
-    NWNXLib::ScriptAPI::RegisterEvent(PLUGIN_NAME, #func, \
+    ScriptAPI::RegisterEvent(PLUGIN_NAME, #func, \
         [this](ArgumentStack&& args){ return func(std::move(args)); })
     REGISTER(OnSubscribeEvent);
     REGISTER(OnPushEventData);
@@ -92,14 +92,12 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     //REGISTER(SetDamageReductionBypass);
     REGISTER(SetDisableMonkAbilitiesPolymorph);
 #undef REGISTER
-
     MessageBus::Subscribe("NWNX_ARELITH_SIGNAL_EVENT",
         [](const std::vector<std::string> message)
         {
             ASSERT(message.size() == 2);
             SignalEvent(message[0], std::strtoul(message[1].c_str(), nullptr, 16));
         });
-
     MessageBus::Subscribe("NWNX_ARELITH_PUSH_EVENT_DATA",
         [](const std::vector<std::string> message)
         {
@@ -107,18 +105,13 @@ Arelith::Arelith(Services::ProxyServiceList* services)
             PushEventData(message[0], message[1]);
         });
 
-
     m_arelithEvents   = std::make_unique<ArelithEvents>();
-
-    s_ReportErrorHook = Hooks::HookFunction(&CNWVirtualMachineCommands::ReportError,
-                                                        &ReportErrorHook, Hooks::Order::Earliest);
-
-    s_WriteToLogFileHook = Hooks::HookFunction(&CNWVirtualMachineCommands::ReportError,
-                                                        &WriteToLogFileHook, Hooks::Order::Earliest);
-
+   // s_ReportErrorHook = Hooks::HookFunction(&CNWVirtualMachineCommands::ReportError,
+   //                                                   &ReportErrorHook, Hooks::Order::Earliest);
+    s_WriteToLogFileHook = Hooks::HookFunction(&CExoDebugInternal::WriteToLogFile,
+                                                     &WriteToLogFileHook, Hooks::Order::Earliest);
     s_GetEffectImmunityHook = Hooks::HookFunction(&CNWSCreatureStats::GetEffectImmunity,
         &GetEffectImmunityHook, Hooks::Order::Final);
-
     s_SetCreatorHook =
             Hooks::HookFunction(&CGameEffect::SetCreator,
          &SetCreatorHook, Hooks::Order::Latest);
@@ -127,7 +120,6 @@ Arelith::Arelith(Services::ProxyServiceList* services)
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN10CNWSObject17DoDamageReductionEP12CNWSCreatureihii, bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL>(&DoDamageReductionHook);
     }*/
-
     if (Config::Get<bool>("POLYMORPH", false))
     {
         s_GetUseMonkAbilitiesHook = Hooks::HookFunction(&CNWSCreature::GetUseMonkAbilities,
@@ -136,7 +128,6 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     s_sHost = Config::Get<std::string>("HOST", "");
     s_sOrigPath = Config::Get<std::string>("PATH", "");
     s_sAdden = Config::Get<std::string>("ROLE", "");
-
 
 }
 
@@ -395,6 +386,7 @@ NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 
 void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *message, int32_t error)
 {
+	return;
     if(s_sHost.empty() || s_sOrigPath.empty())
     {
         LOG_INFO("Host or path was empty.");
