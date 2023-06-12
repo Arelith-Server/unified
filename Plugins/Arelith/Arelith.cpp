@@ -106,8 +106,8 @@ Arelith::Arelith(Services::ProxyServiceList* services)
         });
 
     m_arelithEvents   = std::make_unique<ArelithEvents>();
-   // s_ReportErrorHook = Hooks::HookFunction(&CNWVirtualMachineCommands::ReportError,
-   //                                                   &ReportErrorHook, Hooks::Order::Earliest);
+    s_ReportErrorHook = Hooks::HookFunction(Functions::_ZN25CNWVirtualMachineCommands11ReportErrorERK10CExoStringiS2_,
+                                                      (void*)&ReportErrorHook, Hooks::Order::Earliest);
     s_WriteToLogFileHook = Hooks::HookFunction(&CExoDebugInternal::WriteToLogFile,
                                                      &WriteToLogFileHook, Hooks::Order::Earliest);
     s_GetEffectImmunityHook = Hooks::HookFunction(&CNWSCreatureStats::GetEffectImmunity,
@@ -384,9 +384,8 @@ NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 }
 
 
-void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *message, int32_t error)
+void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *fileName, int32_t error, CExoString *message)
 {
-	return;
     if(s_sHost.empty() || s_sOrigPath.empty())
     {
         LOG_INFO("Host or path was empty.");
@@ -395,7 +394,7 @@ void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands
     else 
         s_bSendError=true;
 
-    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, message, error);
+    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, fileName, error, message);
 }
 
 void Arelith::WriteToLogFileHook(CExoDebugInternal* pExoDebugInternal, CExoString* message)
