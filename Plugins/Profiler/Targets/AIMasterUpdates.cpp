@@ -4,6 +4,10 @@
 #include "API/CExoLinkedListInternal.hpp"
 #include "API/CExoLinkedList.hpp"
 #include "API/CServerAIMaster.hpp"
+#include "API/CItemRepository.hpp"
+#include "API/CNWSCreature.hpp"
+#include "API/CNWSPlaceable.hpp"
+#include "API/CNWSItem.hpp"
 #include "API/CNWSObject.hpp"
 #include "API/CItemRepository.hpp"
 #include "API/CNWSCreature.hpp"
@@ -90,7 +94,8 @@ AIMasterUpdates::AIMasterUpdates(const bool overkill, MetricsProxy* metrics)
         void, CServerAIMaster*)
 
     DEFINE_PROFILER_TARGET(
-        CItemRepositoryCheckFit, API::Functions::_ZN15CItemRepository8CheckFitEP8CNWSItemhh,
+        CItemRepositoryCheckFit, &CItemRepository::CheckFit,
+
         BOOL, CItemRepository*, CNWSItem *, uint8_t, uint8_t)
 
     if (overkill)

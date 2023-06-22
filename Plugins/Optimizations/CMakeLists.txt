@@ -4,6 +4,8 @@ add_plugin(Optimizations
         "LuoLookup.cpp"
         "PlayerLookup.cpp"
         "CacheScriptChunks.cpp"
+        "EventMasterPriorityQueue.cpp"
+        "GetObjectByTag.cpp"
         "CacheDebuggerInstances.cpp"
         "ClientGameObjectUpdateTime.cpp"
         "EventMasterPriorityQueue.cpp"

@@ -39,5 +39,6 @@ NWNXLIB_FUNCTION(_ZN21CNWSEffectListHandler15OnEffectAppliedEP10CNWSObjectP11CGa
 NWNXLIB_FUNCTION(_ZN21CNWSEffectListHandler15OnEffectRemovedEP10CNWSObjectP11CGameEffect)
 
 NWNXLIB_FUNCTION(_ZN16CNWSAmbientSound15PlayBattleMusicEi)
+NWNXLIB_FUNCTION(_ZN25CNWVirtualMachineCommands11ReportErrorERK10CExoStringiS2_)
 
 // ***

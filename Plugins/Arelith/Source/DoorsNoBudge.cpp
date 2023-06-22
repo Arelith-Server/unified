@@ -1,5 +1,7 @@
 #include "nwnx.hpp"
 
+#include "API/CNWSArea.hpp"
+
 namespace Arelith {
 
 using namespace NWNXLib;
@@ -23,7 +25,7 @@ void DoorsNoBudge() __attribute__((constructor));
 
 void DoorsNoBudge()
 {
-    s_budgeCreaturesHook = Hooks::HookFunction(API::Functions::_ZN8CNWSArea14BudgeCreaturesERK6VectorS2_S2_ji, (void*)&BudgeCreaturesHook, Hooks::Order::Earliest);
+    s_budgeCreaturesHook = Hooks::HookFunction(&CNWSArea::BudgeCreatures, &BudgeCreaturesHook, Hooks::Order::Earliest);
 }
 
 }

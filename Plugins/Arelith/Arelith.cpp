@@ -1,11 +1,14 @@
 #include "Arelith.hpp"
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
+#include "API/CExoDebugInternal.hpp"
+
 #include "API/CExoString.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CNWSCreature.hpp"
 #include "API/CNWSItem.hpp"
 #include "API/CNWSCreatureStats.hpp"
+#include "API/CNWVirtualMachineCommands.hpp"
 #include "API/Globals.hpp"
 #include "Source/ArelithEvents.hpp"
 //#include "Services/Config/Config.hpp"
@@ -70,12 +73,10 @@ static Hooks::Hook s_SetCreatorHook;
 Arelith::Arelith(Services::ProxyServiceList* services)
     : Plugin(services), m_eventDepth(0)
 {
-
     if (g_plugin == nullptr) // :(
         g_plugin = this;
-
 #define REGISTER(func) \
-    Events::RegisterEvent(PLUGIN_NAME, #func, \
+    ScriptAPI::RegisterEvent(PLUGIN_NAME, #func, \
         [this](ArgumentStack&& args){ return func(std::move(args)); })
     REGISTER(OnSubscribeEvent);
     REGISTER(OnPushEventData);
@@ -91,14 +92,12 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     //REGISTER(SetDamageReductionBypass);
     REGISTER(SetDisableMonkAbilitiesPolymorph);
 #undef REGISTER
-
     MessageBus::Subscribe("NWNX_ARELITH_SIGNAL_EVENT",
         [](const std::vector<std::string> message)
         {
             ASSERT(message.size() == 2);
             SignalEvent(message[0], std::strtoul(message[1].c_str(), nullptr, 16));
         });
-
     MessageBus::Subscribe("NWNX_ARELITH_PUSH_EVENT_DATA",
         [](const std::vector<std::string> message)
         {
@@ -106,36 +105,30 @@ Arelith::Arelith(Services::ProxyServiceList* services)
             PushEventData(message[0], message[1]);
         });
 
-
     m_arelithEvents   = std::make_unique<ArelithEvents>();
-
-    s_ReportErrorHook = Hooks::HookFunction(Functions::_ZN25CNWVirtualMachineCommands11ReportErrorER10CExoStringi,
-                                                        (void*)&ReportErrorHook, Hooks::Order::Earliest);
-
-    s_WriteToLogFileHook = Hooks::HookFunction(Functions::_ZN17CExoDebugInternal14WriteToLogFileERK10CExoString,
-                                                        (void*)&WriteToLogFileHook, Hooks::Order::Earliest);
-
-    s_GetEffectImmunityHook = Hooks::HookFunction(Functions::_ZN17CNWSCreatureStats17GetEffectImmunityEhP12CNWSCreaturei,
-        (void*)&GetEffectImmunityHook, Hooks::Order::Final);
-
+    s_ReportErrorHook = Hooks::HookFunction(Functions::_ZN25CNWVirtualMachineCommands11ReportErrorERK10CExoStringiS2_,
+                                                      (void*)&ReportErrorHook, Hooks::Order::Earliest);
+    s_WriteToLogFileHook = Hooks::HookFunction(&CExoDebugInternal::WriteToLogFile,
+                                                     &WriteToLogFileHook, Hooks::Order::Earliest);
+    s_GetEffectImmunityHook = Hooks::HookFunction(&CNWSCreatureStats::GetEffectImmunity,
+        &GetEffectImmunityHook, Hooks::Order::Final);
     s_SetCreatorHook =
-            Hooks::HookFunction(Functions::_ZN11CGameEffect10SetCreatorEj,
-        (void*)&SetCreatorHook, Hooks::Order::Latest);
+            Hooks::HookFunction(&CGameEffect::SetCreator,
+         &SetCreatorHook, Hooks::Order::Latest);
+
    /* if(GetServices()->m_config->Get<bool>("DMG_RED", false))
     {
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN10CNWSObject17DoDamageReductionEP12CNWSCreatureihii, bool, CNWSObject*, CNWSCreature*, int32_t, uint8_t, BOOL, BOOL>(&DoDamageReductionHook);
     }*/
-
     if (Config::Get<bool>("POLYMORPH", false))
     {
-        s_GetUseMonkAbilitiesHook = Hooks::HookFunction(Functions::_ZN12CNWSCreature19GetUseMonkAbilitiesEv,
-        (void*)&CNWSCreature__GetUseMonkAbilities_hook, Hooks::Order::Early);
+        s_GetUseMonkAbilitiesHook = Hooks::HookFunction(&CNWSCreature::GetUseMonkAbilities,
+        &CNWSCreature__GetUseMonkAbilities_hook, Hooks::Order::Early);
     }
     s_sHost = Config::Get<std::string>("HOST", "");
     s_sOrigPath = Config::Get<std::string>("PATH", "");
     s_sAdden = Config::Get<std::string>("ROLE", "");
-
 
 }
 
@@ -234,8 +227,8 @@ void Arelith::RunEventInit(const std::string& eventName)
 
 NWNX_EXPORT ArgumentStack Arelith::OnSubscribeEvent(ArgumentStack&& args)
 {
-    const auto event = Events::ExtractArgument<std::string>(args);
-    auto script = Events::ExtractArgument<std::string>(args);
+    const auto event = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
+    auto script = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
 
     RunEventInit(event);
     auto& eventVector = m_eventMap[event];
@@ -253,24 +246,24 @@ NWNX_EXPORT ArgumentStack Arelith::OnSubscribeEvent(ArgumentStack&& args)
 
 NWNX_EXPORT ArgumentStack Arelith::OnPushEventData(ArgumentStack&& args)
 {
-    const auto tag = Events::ExtractArgument<std::string>(args);
-    const auto data = Events::ExtractArgument<std::string>(args);
+    const auto tag = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
+    const auto data = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
     PushEventData(tag, data);
     return {};
 }
 
 NWNX_EXPORT ArgumentStack Arelith::OnSignalEvent(ArgumentStack&& args)
 {
-    const auto event = Events::ExtractArgument<std::string>(args);
-    const auto object = Events::ExtractArgument<ObjectID>(args);
+    const auto event = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
+    const auto object = NWNXLib::ScriptAPI::ExtractArgument<ObjectID>(args);
     bool signalled = SignalEvent(event, object);
-    return Events::Argument(signalled ? 1 : 0);
+    return NWNXLib::ScriptAPI::Argument(signalled ? 1 : 0);
 }
 
 NWNX_EXPORT ArgumentStack Arelith::OnGetEventData(ArgumentStack&& args)
 {
-    std::string data = GetEventData(Events::ExtractArgument<std::string>(args));
-    return Events::Argument(data);
+    std::string data = GetEventData(NWNXLib::ScriptAPI::ExtractArgument<std::string>(args));
+    return NWNXLib::ScriptAPI::Argument(data);
 }
 
 NWNX_EXPORT ArgumentStack Arelith::OnSkipEvent(ArgumentStack&&)
@@ -292,7 +285,7 @@ NWNX_EXPORT ArgumentStack Arelith::OnEventResult(ArgumentStack&& args)
     {
         throw std::runtime_error("Attempted to skip event in an invalid context.");
     }
-    const auto data = Events::ExtractArgument<std::string>(args);
+    const auto data = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
 
     m_eventData.top().m_Result = data;
 
@@ -311,7 +304,7 @@ NWNX_EXPORT ArgumentStack Arelith::OnGetCurrentEvent(ArgumentStack&&)
 
 
     std::string eventName = g_plugin->m_eventData.top().m_EventName;
-    return Events::Argument(eventName);
+    return NWNXLib::ScriptAPI::Argument(eventName);
 }
 
 void Arelith::CreateNewEventDataIfNeeded()
@@ -326,7 +319,7 @@ void Arelith::CreateNewEventDataIfNeeded()
 
 CNWSObject *Arelith::object(ArgumentStack& args)
 {
-    const auto objectId = Events::ExtractArgument<ObjectID>(args);
+    const auto objectId = NWNXLib::ScriptAPI::ExtractArgument<ObjectID>(args);
 
     if (objectId == Constants::OBJECT_INVALID)
     {
@@ -339,7 +332,8 @@ CNWSObject *Arelith::object(ArgumentStack& args)
 }
 CNWSCreature *Arelith::creature(ArgumentStack& args)
 {
-    const auto creatureId = Events::ExtractArgument<ObjectID>(args);
+    const auto creatureId = NWNXLib::ScriptAPI::ExtractArgument<ObjectID>(args);
+
 
     if (creatureId == Constants::OBJECT_INVALID)
     {
@@ -357,13 +351,13 @@ NWNX_EXPORT ArgumentStack Arelith::GetWeaponPower(ArgumentStack&& args)
 
         if (auto *versus = object(args))
         {
-            const auto isOffhand = Events::ExtractArgument<int32_t>(args);
+            const auto isOffhand = NWNXLib::ScriptAPI::ExtractArgument<int32_t>(args);
             retVal = pCreature->GetWeaponPower(versus, isOffhand);
         }
 
 
     }
-    return Events::Argument(retVal);
+    return NWNXLib::ScriptAPI::Argument(retVal);
 }
 
 NWNX_EXPORT ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
@@ -375,7 +369,7 @@ NWNX_EXPORT ArgumentStack Arelith::GetAttackModifierVersus(ArgumentStack&& args)
             retVal = pCreature->m_pStats->GetAttackModifierVersus(versus);
 
     }
-    return Events::Argument(retVal);
+    return NWNXLib::ScriptAPI::Argument(retVal);
 }
 NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 {
@@ -384,15 +378,16 @@ NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
     {
         if (auto *versus = object(args))
         {
-            const auto isAttackHit = Events::ExtractArgument<int32_t>(args);
+            const auto isAttackHit = NWNXLib::ScriptAPI::ExtractArgument<int32_t>(args);
             retVal = pCreature->ResolveDefensiveEffects(versus, isAttackHit);
         }
     }
-    return Events::Argument(retVal);
+    return NWNXLib::ScriptAPI::Argument(retVal);
 }
 
 
-void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *message, int32_t error)
+void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *fileName, int32_t error, CExoString *message)
+
 {
     if(s_sHost.empty() || s_sOrigPath.empty())
     {
@@ -402,7 +397,7 @@ void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands
     else 
         s_bSendError=true;
 
-    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, message, error);
+    s_ReportErrorHook->CallOriginal<void>(pVirtualMachineCommands, fileName, error, message);
 }
 
 void Arelith::WriteToLogFileHook(CExoDebugInternal* pExoDebugInternal, CExoString* message)
@@ -539,9 +534,9 @@ void Arelith::SendWebHookHTTPS(const char* messagec)
 }
 NWNX_EXPORT ArgumentStack Arelith::SetWebhook(ArgumentStack&& args)
 {
-    s_sAdden = Events::ExtractArgument<std::string>(args);
-    s_sHost = Events::ExtractArgument<std::string>(args);
-    s_sOrigPath = Events::ExtractArgument<std::string>(args);
+    s_sAdden = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
+    s_sHost = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
+    s_sOrigPath = NWNXLib::ScriptAPI::ExtractArgument<std::string>(args);
     return {};
 }
 
@@ -656,7 +651,7 @@ ArgumentStack Arelith::SetDamageReductionBypass(ArgumentStack&& args)
 
 NWNX_EXPORT ArgumentStack Arelith::SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args)
 {
-    g_plugin->polymorph.push_back(Events::ExtractArgument<int32_t>(args));
+    g_plugin->polymorph.push_back(NWNXLib::ScriptAPI::ExtractArgument<int32_t>(args));
     return {};
 }
 BOOL Arelith::GetEffectImmunityHook(CNWSCreatureStats *pStats, uint8_t nType, CNWSCreature * pVersus, BOOL bConsiderFeats)

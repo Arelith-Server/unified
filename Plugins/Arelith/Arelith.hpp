@@ -7,7 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
-using ArgumentStack = NWNXLib::Events::ArgumentStack;
+using ArgumentStack = NWNXLib::ArgumentStack;
+
 struct bypassRed
 {
     uint16_t m_nPropertyName;
@@ -73,7 +74,7 @@ private:
     ArgumentStack SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     CNWSObject *object(ArgumentStack& args);
-    static void ReportErrorHook(CNWVirtualMachineCommands*, CExoString*, int32_t);
+    static void ReportErrorHook(CNWVirtualMachineCommands*, CExoString*, int32_t, CExoString*);
     static void WriteToLogFileHook(CExoDebugInternal*, CExoString*);
     static bool s_bSendError;
     static void SendWebHookHTTPS(const char* message);

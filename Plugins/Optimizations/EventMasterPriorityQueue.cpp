@@ -94,11 +94,11 @@ void EventMasterPriorityQueue()
 
     if (Config::Get<bool>("EVENT_MASTER_PRIORITY_QUEUE", false))
     {
-        static Hooks::Hook _0 = Hooks::HookFunction(API::Functions::_ZN15CServerAIMaster15ClearEventQueueEv, (void*)&ClearEventQueue, Hooks::Order::Early);
-        static Hooks::Hook _1 = Hooks::HookFunction(API::Functions::_ZN15CServerAIMaster20AddEventAbsoluteTimeEjjjjjPv, (void*)&AddEventAbsoluteTime, Hooks::Order::Early);
-        static Hooks::Hook _2 = Hooks::HookFunction(API::Functions::_ZN15CServerAIMaster27AddEventAbsoluteTimeViaTailEjjjjjPv, (void*)&AddEventAbsoluteTime, Hooks::Order::Early);
-        static Hooks::Hook _3 = Hooks::HookFunction(API::Functions::_ZN15CServerAIMaster12EventPendingEjj, (void*)&EventPending, Hooks::Order::Early);
-        static Hooks::Hook _4 = Hooks::HookFunction(API::Functions::_ZN15CServerAIMaster15GetPendingEventEPjS0_S0_S0_S0_PPv, (void*)&GetPendingEvent, Hooks::Order::Early);
+        static Hooks::Hook _0 = Hooks::HookFunction(&CServerAIMaster::ClearEventQueue, &ClearEventQueue, Hooks::Order::Early);
+        static Hooks::Hook _1 = Hooks::HookFunction(&CServerAIMaster::AddEventAbsoluteTime, &AddEventAbsoluteTime, Hooks::Order::Early);
+        static Hooks::Hook _2 = Hooks::HookFunction(&CServerAIMaster::AddEventAbsoluteTimeViaTail, &AddEventAbsoluteTime, Hooks::Order::Early);
+        static Hooks::Hook _3 = Hooks::HookFunction(&CServerAIMaster::EventPending, &EventPending, Hooks::Order::Early);
+        static Hooks::Hook _4 = Hooks::HookFunction(&CServerAIMaster::GetPendingEvent, &GetPendingEvent, Hooks::Order::Early);
     }
 }
 

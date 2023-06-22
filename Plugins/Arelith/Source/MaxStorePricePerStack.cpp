@@ -41,8 +41,8 @@ void MaxStorePricePerStack() __attribute__((constructor));
 void MaxStorePricePerStack()
 {
     static Hooks::Hook _0 = Hooks::HookFunction(
-        API::Functions::_ZN9CNWSStore21CalculateItemBuyPriceEP8CNWSItemj,
-        (void*)&CalculateItemBuyPrice,
+        &CNWSStore::CalculateItemBuyPrice,
+        &CalculateItemBuyPrice,
         Hooks::Order::Earliest);
 }
 
