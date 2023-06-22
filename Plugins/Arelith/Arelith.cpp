@@ -2,6 +2,7 @@
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
 #include "API/CExoDebugInternal.hpp"
+
 #include "API/CExoString.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CNWSCreature.hpp"
@@ -46,7 +47,6 @@ static Arelith::Arelith* g_plugin;
 NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
     g_plugin = new Arelith::Arelith(services);
-
     return g_plugin;
 }
 
@@ -115,6 +115,7 @@ Arelith::Arelith(Services::ProxyServiceList* services)
     s_SetCreatorHook =
             Hooks::HookFunction(&CGameEffect::SetCreator,
          &SetCreatorHook, Hooks::Order::Latest);
+
    /* if(GetServices()->m_config->Get<bool>("DMG_RED", false))
     {
         GetServices()->m_hooks->RequestSharedHook<Functions::_ZN21CNWSEffectListHandler22OnApplyDamageReductionEP10CNWSObjectP11CGameEffecti, bool, CNWSEffectListHandler*, CNWSObject*, CGameEffect*, BOOL>(&OnApplyDamageReductionHook);
@@ -333,6 +334,7 @@ CNWSCreature *Arelith::creature(ArgumentStack& args)
 {
     const auto creatureId = NWNXLib::ScriptAPI::ExtractArgument<ObjectID>(args);
 
+
     if (creatureId == Constants::OBJECT_INVALID)
     {
         LOG_NOTICE("NWNX_Creature function called on OBJECT_INVALID");
@@ -385,6 +387,7 @@ NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 
 
 void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *fileName, int32_t error, CExoString *message)
+
 {
     if(s_sHost.empty() || s_sOrigPath.empty())
     {

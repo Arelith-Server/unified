@@ -1,4 +1,5 @@
 #include "nwnx.hpp"
+
 #include "API/CNWSArea.hpp"
 
 namespace Arelith {

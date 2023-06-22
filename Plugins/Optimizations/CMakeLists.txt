@@ -7,4 +7,7 @@ add_plugin(Optimizations
         "EventMasterPriorityQueue.cpp"
         "GetObjectByTag.cpp"
         "CacheDebuggerInstances.cpp"
+        "ClientGameObjectUpdateTime.cpp"
+        "EventMasterPriorityQueue.cpp"
+        "GetObjectByTag.cpp"
 )

@@ -9,6 +9,10 @@
 #include "API/CNWSPlaceable.hpp"
 #include "API/CNWSItem.hpp"
 #include "API/CNWSObject.hpp"
+#include "API/CItemRepository.hpp"
+#include "API/CNWSCreature.hpp"
+#include "API/CNWSPlaceable.hpp"
+#include "API/CNWSItem.hpp"
 #include "API/Functions.hpp"
 #include "ProfilerMacros.hpp"
 #include "Services/Metrics/Resamplers.hpp"
@@ -91,6 +95,7 @@ AIMasterUpdates::AIMasterUpdates(const bool overkill, MetricsProxy* metrics)
 
     DEFINE_PROFILER_TARGET(
         CItemRepositoryCheckFit, &CItemRepository::CheckFit,
+
         BOOL, CItemRepository*, CNWSItem *, uint8_t, uint8_t)
 
     if (overkill)
