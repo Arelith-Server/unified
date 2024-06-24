@@ -3,7 +3,7 @@
 #include "API/CAppManager.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CNWSItem.hpp"
-#include "API/CNWVirtualMachineCommands.hpp"
+#include "API/CNWSirtualMachineCommands.hpp"
 #include "API/CServerExoApp.hpp"
 #include "API/Globals.hpp"
 

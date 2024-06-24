@@ -8,7 +8,7 @@
 #include "API/CNWSCreature.hpp"
 #include "API/CNWSItem.hpp"
 #include "API/CNWSCreatureStats.hpp"
-#include "API/CNWVirtualMachineCommands.hpp"
+#include "API/CNWSirtualMachineCommands.hpp"
 #include "API/Globals.hpp"
 #include "Source/ArelithEvents.hpp"
 //#include "Services/Config/Config.hpp"
