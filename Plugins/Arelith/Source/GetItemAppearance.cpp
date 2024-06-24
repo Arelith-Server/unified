@@ -3,7 +3,7 @@
 #include "API/CAppManager.hpp"
 #include "API/CVirtualMachine.hpp"
 #include "API/CNWSItem.hpp"
-#include "API/CNWSirtualMachineCommands.hpp"
+#include "API/CNWSVirtualMachineCommands.hpp"
 #include "API/CServerExoApp.hpp"
 #include "API/Globals.hpp"
 
@@ -16,7 +16,7 @@ using namespace NWNXLib::API::Constants;
 static Hooks::Hook s_getItemAppearanceHook;
 
 // Allows GetItemAppearance to work with per part colours.
-int32_t ExecuteCommandGetItemAppearanceHook(CNWVirtualMachineCommands* thisPtr, int32_t nCommandId, int32_t nParameters)
+int32_t ExecuteCommandGetItemAppearanceHook(CNWSVirtualMachineCommands* thisPtr, int32_t nCommandId, int32_t nParameters)
 {
     OBJECT_ID oidObject;
     int32_t iType, iIndex;
