@@ -52,7 +52,7 @@ void GetItemAppearance() __attribute__((constructor));
 void GetItemAppearance()
 {
     s_getItemAppearanceHook = Hooks::HookFunction(
-        &CNWVirtualMachineCommands::ExecuteCommandGetItemAppearance,
+        &CNWSVirtualMachineCommands::ExecuteCommandGetItemAppearance,
         &ExecuteCommandGetItemAppearanceHook, 
         Hooks::Order::Earliest);
 }
