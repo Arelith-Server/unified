@@ -26,7 +26,6 @@ struct CExoLinkedListNode;
 typedef uint16_t RESTYPE;
 typedef uint32_t ObjectID;
 typedef uint32_t PlayerID;
-namespace NWSync { struct CNWSync { void *m_pInternal; char *m_tmp1; uint32_t m_tmp2; }; }
 
 struct DataView;
 using DataViewRef = std::shared_ptr<DataView>;
@@ -171,15 +170,14 @@ namespace Nui::JSON {
     //using EventQueue = std::queue<Event>;
 }
 
-namespace NWSQLite {
-    using Database = void*;
-}
-
 template<typename T>
 struct SharedPtrEngineStructure
 {
     std::shared_ptr<T> m_shared;
     virtual ~SharedPtrEngineStructure() {}
+    virtual bool IsEmpty() const = 0;
+    virtual void Clear() = 0;
+    virtual void Unlink() = 0;
 };
 
 #define NWN_CLASS_EXTENSION_CGameObject \

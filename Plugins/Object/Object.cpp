@@ -27,6 +27,8 @@
 #include "API/CLoopingVisualEffect.hpp"
 #include "API/CNWSpellArray.hpp"
 #include "API/CNWSSpellScriptData.hpp"
+#include "API/CNWSStore.hpp"
+#include "API/CNWSFaction.hpp"
 #include "API/CVirtualMachine.hpp"
 #include <cstring>
 
@@ -381,19 +383,13 @@ NWNX_EXPORT ArgumentStack SetTriggerGeometry(ArgumentStack&& args)
 
                 if (pTrigger->m_pvVertices)
                     delete[] pTrigger->m_pvVertices;
-                if (pTrigger->m_pnOutlineVertices)
-                    delete[] pTrigger->m_pnOutlineVertices;
 
                 pTrigger->m_nVertices = vecVerts.size();
-                pTrigger->m_nOutlineVertices = vecVerts.size();
-
                 pTrigger->m_pvVertices = new Vector[pTrigger->m_nVertices];
-                pTrigger->m_pnOutlineVertices = new int32_t[pTrigger->m_nVertices];
 
                 for(int i = 0; i < pTrigger->m_nVertices; i++)
                 {
                     pTrigger->m_pvVertices[i] = vecVerts[i];
-                    pTrigger->m_pnOutlineVertices[i] = i;
                 }
 
                 Utils::AddToArea(pTrigger, pArea, pTrigger->m_pvVertices[0].x, pTrigger->m_pvVertices[0].y, pTrigger->m_pvVertices[0].z);
@@ -1008,6 +1004,22 @@ NWNX_EXPORT ArgumentStack ForceAssignUUID(ArgumentStack&& args)
     return {};
 }
 
+int32_t GetItemRepositoryCount(CItemRepository *pRepo)
+{
+    auto nItems = 0;
+    for (auto *pNode = pRepo->m_oidItems.m_pcExoLinkedListInternal->pHead; pNode; pNode = pNode->pNext)
+    {
+        if (auto *pItem = pRepo->ItemListGetItem(pNode))
+        {
+            nItems++;
+            if (auto *pItemRepo = pItem->m_pItemRepository)
+                nItems += pItemRepo->m_oidItems.Count();
+            }
+        }
+
+    return nItems;
+}
+
 NWNX_EXPORT ArgumentStack GetInventoryItemCount(ArgumentStack&& args)
 {
     if (auto *pObject = Utils::PopObject(args))
@@ -1020,20 +1032,20 @@ NWNX_EXPORT ArgumentStack GetInventoryItemCount(ArgumentStack&& args)
             pRepo = pPlaceable->m_pcItemRepository;
         else if (auto *pItem = Utils::AsNWSItem(pObject))
             pRepo = pItem->m_pItemRepository;
+        else if (auto *pStore = Utils::AsNWSStore(pObject))
+        {
+            auto nItems = 0;
+            for (int n = 0; n < 5; n++)
+            {
+                pRepo = pStore->m_aInventory[n];
+                nItems += GetItemRepositoryCount (pRepo);
+            }
+            return nItems;
+        }
         else
             return 0;
 
-        auto nItems = 0;
-        for (auto *pNode = pRepo->m_oidItems.m_pcExoLinkedListInternal->pHead; pNode; pNode = pNode->pNext)
-        {
-            if (auto *pItem = pRepo->ItemListGetItem(pNode))
-            {
-                nItems++;
-                if (auto *pItemRepo = pItem->m_pItemRepository)
-                    nItems += pItemRepo->m_oidItems.Count();
-            }
-        }
-
+        auto nItems = GetItemRepositoryCount(pRepo);
         return nItems;
     }
 
@@ -1239,4 +1251,87 @@ NWNX_EXPORT ArgumentStack GetLastSpellInstant(ArgumentStack&&)
     }, Hooks::Order::Late);
 
     return s_LastSpellInstant;
+}
+
+NWNX_EXPORT ArgumentStack SetTrapCreator(ArgumentStack&& args)
+{
+    if (auto *pObject = Utils::PopObject(args))
+    {
+        auto newCreator = Constants::OBJECT_INVALID;
+        auto newFaction = 1; //STANDARD_FACTION_HOSTILE
+
+        if(auto *pCreator = Utils::PopCreature(args))
+        {
+            newCreator = pCreator->m_idSelf;
+            if (auto *pFaction = pCreator->GetFaction())
+                newFaction = pFaction->m_nFactionId;
+        }
+
+        if (auto *pDoor = Utils::AsNWSDoor(pObject))
+        {
+            pDoor->m_oidTrapCreator = newCreator;
+            pDoor->m_nTrapFactionId = newFaction;
+        }
+        else if (auto *pPlaceable = Utils::AsNWSPlaceable(pObject))
+        {
+            pPlaceable->m_oidTrapCreator = newCreator;
+            pPlaceable->m_nTrapFaction = newFaction;
+        }
+        else if (auto *pTrigger = Utils::AsNWSTrigger(pObject))
+        {
+            pTrigger->m_oidCreator = newCreator;
+            pTrigger->m_nFactionId = newFaction;
+        }
+    }
+    return {};
+}
+
+NWNX_EXPORT ArgumentStack GetLocalizedName(ArgumentStack&& args)
+{
+    if (auto *pGameObject = Utils::PopGameObject(args))
+    {
+        const auto nLanguage = args.extract<int32_t>();
+        const auto nGender   = args.extract<int32_t>();
+
+        CExoString myString;
+
+        if (auto *pArea = Utils::AsNWSArea(pGameObject))
+            pArea->m_lsName.GetString(nLanguage, &myString, nGender);
+        else if (auto *pStore = Utils::AsNWSStore(pGameObject))
+            pStore->m_sName.GetString(nLanguage, &myString, nGender);
+        else if (auto *pObject = Utils::AsNWSObject(pGameObject))
+            pObject->GetFirstName().GetString(nLanguage, &myString, nGender);
+
+        return myString;
+    }
+    return {};
+}
+
+NWNX_EXPORT ArgumentStack SetLocalizedName(ArgumentStack&& args)
+{
+    if (auto *pGameObject = Utils::PopGameObject(args))
+    {
+        const auto sName     = args.extract<std::string>();
+        const auto nLanguage = args.extract<int32_t>();
+        const auto nGender   = args.extract<int32_t>();
+
+        CExoString myString(sName);
+        if (auto *pArea = Utils::AsNWSArea(pGameObject))
+        {
+            pArea->m_lsName.RemoveString(nLanguage, nGender);
+            pArea->m_lsName.AddString(nLanguage, myString, nGender);
+        }
+        else if (auto *pStore = Utils::AsNWSStore(pGameObject))
+        {
+            pStore->m_sName.RemoveString(nLanguage, nGender);
+            pStore->m_sName.AddString(nLanguage, myString, nGender);
+        }
+        else if (auto *pObject = Utils::AsNWSObject(pGameObject))
+        {
+            pObject->GetFirstName().RemoveString(nLanguage, nGender);
+            pObject->GetFirstName().AddString(nLanguage, myString, nGender);
+        }
+    }
+
+    return {};
 }

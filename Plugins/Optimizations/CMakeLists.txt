@@ -7,6 +7,5 @@ add_plugin(Optimizations
         "EventMasterPriorityQueue.cpp"
         "GetObjectByTag.cpp"
         "CacheDebuggerInstances.cpp"
-        "EventMasterPriorityQueue.cpp"
-        "GetObjectByTag.cpp"
+        "CacheScripts.cpp"
 )
