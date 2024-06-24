@@ -272,9 +272,33 @@ NWNX_EXPORT ArgumentStack ShowVisualEffect(ArgumentStack&& args)
         pos.y = args.extract<float>();
         pos.x = args.extract<float>();
 
+        float fScale = 1.0;
+        Vector vTranslate = { 0.0, 0.0, 0.0 };
+        Vector vRotation = { 0.0, 0.0, 0.0 };
+        try
+        {
+            fScale = args.extract<float>();
+
+            vTranslate.z = args.extract<float>();
+            vTranslate.y = args.extract<float>();
+            vTranslate.x = args.extract<float>();
+
+            vRotation.z = args.extract<float>();
+            vRotation.y = args.extract<float>();
+            vRotation.x = args.extract<float>();
+        }
+        catch(const std::runtime_error& e)
+        {
+            LOG_WARNING("NWNX_Player_ShowVisualEffect: Missing transformation arguments. Continuing with default values. Please update nwnx_player.nss and recompile your module!");
+        }
+
         if (auto *pMessage = Globals::AppManager()->m_pServerExoApp->GetNWSMessage())
         {
             ObjectVisualTransformData ovtd;
+            ovtd.m_scopes[0].m_scale = Vector{fScale, fScale, fScale};
+            ovtd.m_scopes[0].m_rotate = vRotation;
+            ovtd.m_scopes[0].m_translate = vTranslate;
+            ovtd.m_scopes[0].m_animationSpeed = 1.0f;
             pMessage->SendServerToPlayerArea_VisualEffect(pPlayer, effectId, pos, ovtd);
         }
     }
@@ -411,10 +435,10 @@ NWNX_EXPORT ArgumentStack SetRestDuration(ArgumentStack&& args)
                 {
                     uint8_t creatureLevel = pCreature->m_pStats->GetLevel(0);
                     int32_t originalValue;
-                    Globals::Rules()->m_p2DArrays->m_pRestDurationTable->GetINTEntry(creatureLevel, "DURATION", &originalValue);
-                    Globals::Rules()->m_p2DArrays->m_pRestDurationTable->SetINTEntry(creatureLevel, "DURATION", *restDuration);
+                    Globals::Rules()->m_p2DArrays->GetRestDurationTable()->GetINTEntry(creatureLevel, "DURATION", &originalValue);
+                    Globals::Rules()->m_p2DArrays->GetRestDurationTable()->SetINTEntry(creatureLevel, "DURATION", *restDuration);
                     auto retVal = pAIActionRestHook->CallOriginal<uint32_t>(pCreature, pNode);
-                    Globals::Rules()->m_p2DArrays->m_pRestDurationTable->SetINTEntry(creatureLevel, "DURATION", originalValue);
+                    Globals::Rules()->m_p2DArrays->GetRestDurationTable()->SetINTEntry(creatureLevel, "DURATION", originalValue);
                     return retVal;
                 }
                 else
@@ -448,12 +472,38 @@ NWNX_EXPORT ArgumentStack ApplyInstantVisualEffectToObject(ArgumentStack&& args)
         auto visualEffect = args.extract<int32_t>();
           ASSERT_OR_THROW(visualEffect >= 0); ASSERT_OR_THROW(visualEffect <= 65535);
 
+        float fScale = 1.0;
+        Vector vTranslate = { 0.0, 0.0, 0.0 };
+        Vector vRotation = { 0.0, 0.0, 0.0 };
+        try
+        {
+            fScale = args.extract<float>();
+
+            vTranslate.x = args.extract<float>();
+            vTranslate.y = args.extract<float>();
+            vTranslate.z = args.extract<float>();
+
+            vRotation.x = args.extract<float>();
+            vRotation.y = args.extract<float>();
+            vRotation.z = args.extract<float>();
+        }
+        catch(const std::runtime_error& e)
+        {
+            LOG_WARNING("NWNX_Player_ApplyInstantVisualEffectToObject: Missing transformation arguments. Continuing with default values. Please update nwnx_player.nss and recompile your module!");
+        }
+
         Vector vTargetPosition {};
 
         if (auto *pMessage = Globals::AppManager()->m_pServerExoApp->GetNWSMessage())
         {
+            ObjectVisualTransformData ovtd;
+            ovtd.m_scopes[0].m_scale = Vector{fScale, fScale, fScale};
+            ovtd.m_scopes[0].m_rotate = vRotation;
+            ovtd.m_scopes[0].m_translate = vTranslate;
+            ovtd.m_scopes[0].m_animationSpeed = 1.0f;
+
             pMessage->SendServerToPlayerGameObjUpdateVisEffect(pPlayer, visualEffect, oidTarget, Utils::GetModule()->m_idSelf,
-                                                               0, 0, vTargetPosition, 0.0f);
+                                                               0, 0, vTargetPosition, 0.0f, ovtd);
         }
     }
     return {};
@@ -1214,14 +1264,25 @@ NWNX_EXPORT ArgumentStack FloatingTextStringOnCreature(ArgumentStack&& args)
         auto text = args.extract<std::string>();
           ASSERT_OR_THROW(!text.empty());
 
+        int32_t bChatWindow = true;
+        try
+        {
+            bChatWindow = !!args.extract<int32_t>();
+        }
+        catch(const std::runtime_error&)
+        {
+            LOG_WARNING("NWNX_Player_FloatingTextStringOnCreature() called from NWScript without 'bChatWindow' parameter. Please update nwnx_player.nss");
+        }
+
         if (auto *pCreature = Utils::AsNWSCreature(Utils::GetGameObject(oidCreature)))
         {
-            if (auto *pMessage = static_cast<CNWSMessage*>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage()))
+            if (auto *pMessage = Globals::AppManager()->m_pServerExoApp->GetNWSMessage())
             {
                 CNWCCMessageData messageData;
                 messageData.SetObjectID(0, pCreature->m_idSelf);
                 messageData.SetInteger(9, 94);
                 messageData.SetString(0, text);
+                messageData.SetInteger(0, bChatWindow);
 
                 pMessage->SendServerToPlayerCCMessage(pPlayer->m_nPlayerID, Constants::MessageClientSideMsgMinor::Feedback, &messageData, nullptr);
             }
@@ -1240,7 +1301,7 @@ NWNX_EXPORT ArgumentStack ToggleDM(ArgumentStack&& args)
 
         if (auto *pPlayerInfo = pNetLayer->GetPlayerInfo(pPlayer->m_nPlayerID))
         {
-            if (!pPlayerInfo->SatisfiesBuild(8193, 14))
+            if (!pPlayerInfo->SatisfiesBuild(8193, 14, 0))
             {
                 LOG_WARNING("ToggleDM: Target player's client does not support PlayerDM functionality");
                 return {};
@@ -1661,6 +1722,30 @@ NWNX_EXPORT ArgumentStack SetTlkOverride(ArgumentStack&& args)
     return {};
 }
 
+NWNX_EXPORT ArgumentStack ReloadTlk(ArgumentStack&& args)
+{
+    if (auto *pPlayer = Utils::PopPlayer(args))
+    {
+        if (auto *pMessage = Globals::AppManager()->m_pServerExoApp->GetNWSMessage())
+        {
+            pMessage->CreateWriteMessage(4, pPlayer->m_nPlayerID, 1);
+            pMessage->WriteDWORD(0x10);
+            uint8_t *buffer;
+            uint32_t size;
+            if (pMessage->GetWriteMessage(&buffer, &size))
+            {
+                pMessage->SendServerToPlayerMessage(pPlayer->m_nPlayerID,
+                                                    Constants::MessageMajor::Resman,
+                                                    0x4,
+                                                    buffer, size);
+            }
+        }
+    }
+
+    return {};
+}
+
+
 NWNX_EXPORT ArgumentStack UpdateWind(ArgumentStack&& args)
 {
     if (auto *pPlayer = Utils::PopPlayer(args))
@@ -1896,6 +1981,46 @@ NWNX_EXPORT ArgumentStack SendPartyInvite(ArgumentStack&& args)
                 {
                     pMessageUI->SendServerToPlayerPopUpGUIPanel(pInvitedCreature->m_idSelf, 1/*GUI_PANEL_PARTY_INVITE*/, 0, 0, 0, pInvitingCreature->m_pStats->GetFullName());
                 }
+            }
+        }
+    }
+
+    return {};
+}
+
+NWNX_EXPORT ArgumentStack GetTURD(ArgumentStack&& args)
+{
+    const auto oidPlayer = args.extract<OBJECT_ID>();
+
+    if (CExoLinkedListInternal* pTURDS = Utils::GetModule()->m_lstTURDList.m_pcExoLinkedListInternal)
+    {
+        for (CExoLinkedListPosition pNode = pTURDS->pHead; pNode; pNode = pNode->pNext)
+        {
+            auto* pTURD = static_cast<CNWSPlayerTURD*>(pNode->pObject);
+            if ((pTURD) && (pTURD->m_oidPlayer == oidPlayer))
+                return pTURD->m_idSelf;
+        }
+    }
+
+    return Constants::OBJECT_INVALID;
+}
+
+NWNX_EXPORT ArgumentStack ReloadColorPalettes(ArgumentStack&& args)
+{
+    if (auto* pPlayer = Utils::PopPlayer(args))
+    {
+        if (auto* pMessage = Globals::AppManager()->m_pServerExoApp->GetNWSMessage())
+        {
+            pMessage->CreateWriteMessage(4, pPlayer->m_nPlayerID, 1);
+            pMessage->WriteDWORD(0x20);
+            uint8_t* buffer;
+            uint32_t size;
+            if (pMessage->GetWriteMessage(&buffer, &size))
+            {
+                pMessage->SendServerToPlayerMessage(pPlayer->m_nPlayerID,
+                    Constants::MessageMajor::Resman,
+                    0x4,
+                    buffer, size);
             }
         }
     }

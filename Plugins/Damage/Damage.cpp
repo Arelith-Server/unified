@@ -22,6 +22,7 @@ struct DamageData
 {
     uint32_t oidDamager;
     int32_t vDamage[MAX_DAMAGE_TYPES];
+    int32_t nSpellId;
 };
 
 struct AttackData
@@ -46,8 +47,6 @@ static AttackData s_AttackData;
 static std::string GetEventScript(CNWSObject*, const std::string&);
 static void HandleSignalDamage(CNWSCreature*, CNWSObject*, int32_t);
 
-
-
 static Hooks::Hook s_OnApplyDamageHook = Hooks::HookFunction(&CNWSEffectListHandler::OnApplyDamage,
     +[](CNWSEffectListHandler *pThis, CNWSObject *pObject, CGameEffect *pEffect, BOOL bLoadingGame) -> BOOL
     {
@@ -55,10 +54,11 @@ static Hooks::Hook s_OnApplyDamageHook = Hooks::HookFunction(&CNWSEffectListHand
 
         if (!sScript.empty())
         {
-            if (Utils::AsNWSCreature(pObject) || Utils::AsNWSPlaceable(pObject))
+            if (Utils::AsNWSCreature(pObject) || Utils::AsNWSPlaceable(pObject) || Utils::AsNWSDoor(pObject))
             {
                 s_DamageData.oidDamager = pEffect->m_oidCreator;
                 std::memcpy(s_DamageData.vDamage, pEffect->m_nParamInteger, MAX_DAMAGE_TYPES * sizeof(int32_t));
+                s_DamageData.nSpellId = pEffect->m_nSpellId;
                 Utils::ExecuteScript(sScript, pObject->m_idSelf);
                 std::memcpy(pEffect->m_nParamInteger, s_DamageData.vDamage, MAX_DAMAGE_TYPES * sizeof(int32_t));
             }
@@ -80,8 +80,6 @@ static Hooks::Hook s_SignalRangedDamageHook = Hooks::HookFunction(&CNWSCreature:
         HandleSignalDamage(pThis, pTarget, nAttacks);
         s_SignalRangedDamageHook->CallOriginal<void>(pThis, pTarget, nAttacks);
     }, Hooks::Order::Late);
-
-
 
 static std::string GetEventScript(CNWSObject *pObject, const std::string& sEventType)
 {
@@ -127,8 +125,6 @@ static void HandleSignalDamage(CNWSCreature *pThis, CNWSObject *pTarget, int32_t
     }
 }
 
-
-
 NWNX_EXPORT ArgumentStack SetEventScript(ArgumentStack&& args)
 {
     const auto sEvent = args.extract<std::string>();
@@ -160,11 +156,11 @@ NWNX_EXPORT ArgumentStack SetEventScript(ArgumentStack&& args)
     return {};
 }
 
-
 NWNX_EXPORT ArgumentStack GetDamageEventData(ArgumentStack&&)
 {
     ArgumentStack stack;
 
+    ScriptAPI::InsertArgument(stack, s_DamageData.nSpellId);
     for (int k = (MAX_DAMAGE_TYPES - 1); k >= 0; k--)
     {
         ScriptAPI::InsertArgument(stack, s_DamageData.vDamage[k]);
@@ -183,7 +179,6 @@ NWNX_EXPORT ArgumentStack SetDamageEventData(ArgumentStack&& args)
 
     return {};
 }
-
 
 NWNX_EXPORT ArgumentStack GetAttackEventData(ArgumentStack&&)
 {
@@ -218,7 +213,6 @@ NWNX_EXPORT ArgumentStack SetAttackEventData(ArgumentStack&& args)
     return {};
 }
 
-
 NWNX_EXPORT ArgumentStack DealDamage(ArgumentStack&& args)
 {
     int vDamage[MAX_DAMAGE_TYPES];
@@ -248,14 +242,14 @@ NWNX_EXPORT ArgumentStack DealDamage(ArgumentStack&& args)
             if (vDamage[k] > 0)
                 vDamage[k] = pTarget->DoDamageImmunity(pSource, vDamage[k], 1 << k, false, false);
             if (vDamage[k] > 0)
-                vDamage[k] = pTarget->DoDamageResistance(pSource, vDamage[k], 1 << k, false, false, false);
+                vDamage[k] = pTarget->DoDamageResistance(pSource, vDamage[k], 1 << k, false, false, false, false);
         }
 
         // apply DR (combine physical damage for this)
         vDamage[12] = vDamage[0] + vDamage[1] + vDamage[2];
         positive[12] = positive[0] || positive[1] || positive[2];
         if (vDamage[12] > 0)
-            vDamage[12] = pTarget->DoDamageReduction(pSource, vDamage[12], damagePower, false, false);
+            vDamage[12] = pTarget->DoDamageReduction(pSource, vDamage[12], damagePower, false, false, false);
 
         auto *pEffect = new CGameEffect(true);
         pEffect->m_nType = 38;
