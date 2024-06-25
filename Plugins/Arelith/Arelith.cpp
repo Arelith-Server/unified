@@ -8,7 +8,7 @@
 #include "API/CNWSCreature.hpp"
 #include "API/CNWSItem.hpp"
 #include "API/CNWSCreatureStats.hpp"
-#include "API/CNWVirtualMachineCommands.hpp"
+#include "API/CNWSVirtualMachineCommands.hpp"
 #include "API/Globals.hpp"
 #include "Source/ArelithEvents.hpp"
 //#include "Services/Config/Config.hpp"
@@ -386,7 +386,7 @@ NWNX_EXPORT ArgumentStack Arelith::ResolveDefensiveEffects(ArgumentStack&& args)
 }
 
 
-void Arelith::ReportErrorHook(CNWVirtualMachineCommands *pVirtualMachineCommands, CExoString *fileName, int32_t error, CExoString *message)
+void Arelith::ReportErrorHook(CNWSVirtualMachineCommands *pVirtualMachineCommands, CExoString *fileName, int32_t error, CExoString *message)
 
 {
     if(s_sHost.empty() || s_sOrigPath.empty())
