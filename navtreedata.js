@@ -1,24 +1,26 @@
 /*
-@licstart  The following is the entire license notice for the
-JavaScript code in this file.
+ @licstart  The following is the entire license notice for the JavaScript code in this file.
 
-Copyright (C) 1997-2019 by Dimitri van Heesch
+ The MIT License (MIT)
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of version 2 of the GNU General Public License as published by
-the Free Software Foundation
+ Copyright (C) 1997-2020 by Dimitri van Heesch
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+ and associated documentation files (the "Software"), to deal in the Software without restriction,
+ including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ The above copyright notice and this permission notice shall be included in all copies or
+ substantial portions of the Software.
 
-@licend  The above is the entire license notice
-for the JavaScript code in this file
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+ BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ @licend  The above is the entire license notice for the JavaScript code in this file
 */
 var NAVTREE =
 [
@@ -42,25 +44,25 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"group__admin.html#gab7ccc76514594e1afa3cc35ffb53a5e9",
-"group__creature.html#ga007d581a39d037dce04fdfa034427efd",
-"group__creature.html#gab4338193b84f354007440a28c0ae6a7a",
-"group__data__array__pushback.html#ga2c39787fc0ac4baa54ea697314ff3e73",
-"group__elc.html#gab972f430b5120e2f0484c50b14017928",
-"group__events.html#ga3c8e2c14d3670642a0be3390eef1cc37",
-"group__events.html#ga823260a7a5f119ca9da18dfd32d36b51",
-"group__events.html#gad96c7fef654a131e247c0b4165921e04",
-"group__feat.html#gafa984f3290b0066d0e4ff9d8c05c3caa",
-"group__feedback.html#ga667600f781abeb827fe54de879b1aebc",
-"group__feedback.html#gad9078dd0467d36c32a7d052d411395ce",
-"group__object.html#ga128dadd35f8d0b144c239153594a1178",
-"group__player.html#ga437385c6c111c59c8aaecd230c34c0c3",
-"group__race.html#gaecbf8ca60128917d1b58e383baac3c9f",
-"group__time.html#ga4a8d325c383232984e9e78d89bf8c429",
-"nwnx_8nss.html",
-"nwnx__redis_8nss.html#aa06c1f9939f50ad8be2061beec1037d9",
-"nwnx__redis__short_8nss.html#abee9555dbc653e3c43e8238865b822f4",
-"structNWNX__EffectUnpacked.html#a7f21f59f525f1dc6ea93333c3358f858"
+"group__admin.html#gaaec94357bcb512b38571f24e5d8c7a34",
+"group__consts.html#gaf5dad80b736ba0c80e15d1edddcdd6ae",
+"group__creature.html#gaaf4852e6a077da9128b3923ff52701df",
+"group__data__array__insert.html#ga6a86a4ae014a7e3a751a0ec3f3a39ab4",
+"group__elc.html#gaa6364f7bd16bb914378a3b9d527da354",
+"group__events.html#ga3aa6a411425127f2f87fee7e8d65a5cd",
+"group__events.html#ga7f58a3e884b71f3769578c0ae446dd2c",
+"group__events.html#gad59d6d6f8e2985a7c005256acc6e66bc",
+"group__feat.html#gad2027181fcf9388ec1d46fdb559bf6d9",
+"group__feedback.html#ga6047dfccef3f756b2e9ddaf9fb1f3284",
+"group__feedback.html#gad2506b5a805e01b0f30340bce4ea2f81",
+"group__nwnx.html#gac0c1a51051cef3e79c53a8995c280021",
+"group__player.html#ga3a2beb8a6af9a3b4bbb2caef69fbf568",
+"group__race.html#ga905efddc4ef7f929e7c042ceaf1188cf",
+"group__tileset.html#ga1486694caa032fb4c14a3893f4a03474",
+"group__weapon.html#gae8574965a3aae542e79e051bfad60217",
+"nwnx__redis_8nss.html#a7088469190fc9b6d2eec0103063939e2",
+"nwnx__redis__short_8nss.html#a8de0aaac947c4a485f229c7e91f94284",
+"structNWNX__Damage__DamageEventData.html#a4abb22e26f7ab484c221d33550f3aefd"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
