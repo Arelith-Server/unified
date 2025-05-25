@@ -1,14 +1,3 @@
-
-// Add move constructor to CExoString
-#define NWN_CLASS_EXTENSION_CExoString                \
-    CExoString(CExoString&& rhs)                      \
-    {                                                 \
-        this->m_sString = rhs.m_sString;              \
-        this->m_nBufferLength = rhs.m_nBufferLength;  \
-        rhs.m_sString = nullptr;                      \
-        rhs.m_nBufferLength = 0;                      \
-    }
-
 #include "nwnx.hpp"
 #include "API/CAppManager.hpp"
 #include "API/CServerExoApp.hpp"
