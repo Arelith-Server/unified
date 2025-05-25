@@ -13,7 +13,6 @@ add_plugin(Tweaks
     "FixArmorDexBonusUnderOne.cpp"
     "FixDispelEffectLevels.cpp"
     "FixGreaterSanctuaryBug.cpp"
-    "FixItemNullptrInCItemRepository.cpp"
     "FixTriggerEnterDetection.cpp"
     "FixUnlimitedPotionsBug.cpp"
     "HideOnCharList.cpp"
@@ -37,4 +36,8 @@ add_plugin(Tweaks
     "RangedWeaponsUseOnHitCastSpellItemProperties.cpp"
     "CastAllOnHitCastSpellItemProperties.cpp"
     "SetAreaCallsSetPosition.cpp"
-    "EquipUnequipEventTweaks.cpp")
+    "EquipUnequipEventTweaks.cpp"
+    "CutsceneModeNoTURD.cpp"
+    "CanUseItemsWhilePolymorphed.cpp"
+    "ResistEnergyStacksWithEpicEnergyResistance.cpp"
+    "UnhardcodeSpecialAbilityTargetType.cpp")

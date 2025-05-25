@@ -56,7 +56,7 @@ SWIG_DOTNET_EXTENSIONS
 %typemap(cscode, noblock=1) CExoString {
 SWIG_DOTNET_EXTENSIONS
 
-  public CExoString(string source) : this(source.GetNullTerminatedString()) {
+  public CExoString(string source) : this(NWNX.NET.Native.StringUtils.GetNullTerminatedString(source)) {
   }
 
   /// <summary>
@@ -64,7 +64,7 @@ SWIG_DOTNET_EXTENSIONS
   /// </summary>
   /// <returns>The equivalent C# string for this CExoString.</returns>
   public override string ToString() {
-    return StringHelper.ReadNullTerminatedString(CStr());
+    return NWNX.NET.Native.StringUtils.ReadNullTerminatedString(CStr());
   }
 }
 
@@ -72,7 +72,7 @@ SWIG_DOTNET_EXTENSIONS
 %typemap(cscode, noblock=1) CResRef {
 SWIG_DOTNET_EXTENSIONS
 
-  public CResRef(string source) : this(source.GetNullTerminatedString()) {
+  public CResRef(string source) : this(NWNX.NET.Native.StringUtils.GetNullTerminatedString(source)) {
   }
 
   /// <summary>
@@ -80,7 +80,7 @@ SWIG_DOTNET_EXTENSIONS
   /// </summary>
   /// <returns>A C# string representing this ResRef.</returns>
   public override string ToString() {
-    return StringHelper.ReadNullTerminatedString(GetResRefStr());
+    return NWNX.NET.Native.StringUtils.ReadNullTerminatedString(GetResRefStr());
   }
 }
 

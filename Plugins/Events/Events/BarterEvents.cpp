@@ -65,8 +65,10 @@ int32_t HandlePlayerToServerBarter_StartBarterHook(CNWSMessage* pMessage, CNWSPl
         retVal = s_HandlePlayerToServerBarter_StartBarterHook->CallOriginal<int32_t>(pMessage, pPlayer);
     }
     else
+    {
+        Utils::ClearReadMessage();
         retVal = false;
-
+    }
     PushAndSignal("NWNX_ON_BARTER_START_AFTER");
 
     return retVal;
@@ -89,7 +91,7 @@ int32_t SendServerToPlayerBarterCloseBarterHook(CNWSMessage *pMessage, ObjectID 
                                                               ObjectID nRecipientId, int32_t bAccepted)
 {
     CServerExoApp* exoApp = Globals::AppManager()->m_pServerExoApp;
-    uint32_t oidPlayer = static_cast<CNWSPlayer*>(exoApp->GetClientObjectByPlayerId(nInitiatorId))->m_oidNWSObject;
+    uint32_t oidPlayer = exoApp->GetClientObjectByPlayerId(nInitiatorId)->m_oidNWSObject;
     CNWSCreature* pCreature = exoApp->GetCreatureByGameObjectID(oidPlayer);
     auto *pBarter = pCreature->GetBarterInfo(0);
 

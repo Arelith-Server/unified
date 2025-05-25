@@ -1260,15 +1260,7 @@ NWNX_EXPORT ArgumentStack LevelUp(ArgumentStack&& args)
 
         const auto cls = args.extract<int32_t>();
         const auto count = args.extract<int32_t>();
-        int32_t package = 255;
-        try
-        {
-            package = args.extract<int32_t>();
-        }
-        catch(const std::runtime_error& e)
-        {
-            LOG_WARNING("NWNX_Creature_LevelUp: Missing argument \"package\". Continuing with \"package\" = PACKAGE_INVALID. Please update nwnx_creature.nss and recompile your module!");
-        }
+        const auto package = args.extract<int32_t>();
 
         // Allow leveling outside of regular rules
         bSkipLevelUpValidation = true;
@@ -2589,10 +2581,7 @@ NWNX_EXPORT ArgumentStack ComputeSafeLocation(ArgumentStack&& args)
 
     if (auto *pCreature = Utils::PopCreature(args))
     {
-        Vector vCurrentPosition{};
-        vCurrentPosition.z = args.extract<float>();
-        vCurrentPosition.y = args.extract<float>();
-        vCurrentPosition.x = args.extract<float>();
+        const auto vCurrentPosition = args.extract<Vector>();
         const auto fSearchRadius = args.extract<float>();
         const auto bWalkStraightLineRequired = !!args.extract<int32_t>();
 
@@ -2607,7 +2596,7 @@ NWNX_EXPORT ArgumentStack ComputeSafeLocation(ArgumentStack&& args)
             vNewPosition = vCurrentPosition;
     }
 
-    return {vNewPosition.x, vNewPosition.y, vNewPosition.z };
+    return vNewPosition;
 }
 
 NWNX_EXPORT ArgumentStack DoPerceptionUpdateOnCreature(ArgumentStack&& args)
@@ -2847,26 +2836,23 @@ NWNX_EXPORT ArgumentStack DoItemCastSpell(ArgumentStack&& args)
 {
     if (auto *pCaster = Utils::PopCreature(args))
     {
-        auto oidTarget = args.extract<ObjectID>();
-        auto oidArea = args.extract<ObjectID>();
-        auto x = args.extract<float>();
-        auto y = args.extract<float>();
-        auto z = args.extract<float>();
-        auto spellID = args.extract<int32_t>();
+        const auto oidTarget = args.extract<ObjectID>();
+        const auto location = args.extract<CScriptLocation>();
+        const auto spellID = args.extract<int32_t>();
           ASSERT_OR_THROW(spellID >= 0);
-        auto casterLevel = args.extract<int32_t>();
+        const auto casterLevel = args.extract<int32_t>();
           ASSERT_OR_THROW(casterLevel >= 0);
-        auto delay = args.extract<float>();
+        const auto delay = args.extract<float>();
           ASSERT_OR_THROW(delay >= 0.0f);
         auto projectilePathType = args.extract<int32_t>();
-        auto projectileSpellID = args.extract<int32_t>();
-        auto oidItem = args.extract<ObjectID>();
-        auto impactScript = args.extract<std::string>();
+        const auto projectileSpellID = args.extract<int32_t>();
+        const auto oidItem = args.extract<ObjectID>();
+        const auto impactScript = args.extract<std::string>();
 
         auto *pSpell = Globals::Rules()->m_pSpellArray->GetSpell(spellID);
         auto *pTarget = Utils::AsNWSObject(Utils::GetGameObject(oidTarget));
         auto *pItem = Utils::AsNWSObject(Utils::GetGameObject(oidItem));
-        auto *pArea = Utils::AsNWSArea(Utils::GetGameObject(oidArea));
+        auto *pArea = Utils::AsNWSArea(Utils::GetGameObject(location.m_oArea));
 
         if (!pSpell || (!pTarget && !pArea))
             return {};
@@ -2876,7 +2862,7 @@ NWNX_EXPORT ArgumentStack DoItemCastSpell(ArgumentStack&& args)
         if (pCaster->m_oidArea != oidTargetArea)
             return {};
 
-        Vector vTargetPosition = pTarget ? pTarget->m_vPosition : Vector(x, y, z);
+        Vector vTargetPosition = pTarget ? pTarget->m_vPosition : location.m_vPosition;
         auto delayMs = (int32_t)(delay * 1000);
 
         if (delayMs > 0)
@@ -3084,11 +3070,7 @@ NWNX_EXPORT ArgumentStack AddCastSpellActions(ArgumentStack&& args)
     {
         auto oidTarget = args.extract<ObjectID>();
           ASSERT_OR_THROW(oidTarget != Constants::OBJECT_INVALID);
-        const auto fX = args.extract<float>();
-        const auto fY = args.extract<float>();
-        const auto fZ = args.extract<float>();
-        Vector targetLocation{fX, fY, fZ};
-
+        const auto targetLocation = args.extract<Vector>();
         const auto spellId = args.extract<int32_t>();
           ASSERT_OR_THROW(spellId >= 0);
         const auto multiClass = args.extract<int32_t>();
@@ -3238,9 +3220,9 @@ NWNX_EXPORT ArgumentStack SetMaximumBonusAttacks(ArgumentStack&& args)
     }, Hooks::Order::Final);
 
     static Hooks::Hook s_OnApplyModifyNumAttacksHook = Hooks::HookFunction(&CNWSEffectListHandler::OnApplyModifyNumAttacks,
-    +[](CNWSEffectListHandler*, CNWSObject *pObject, CGameEffect *pEffect, BOOL bLoadingGame) -> int32_t
+    +[](CNWSEffectListHandler *pThis, CNWSObject *pObject, CGameEffect *pEffect, BOOL bLoadingGame) -> int32_t
     {
-        if (pObject->GetDead() && !bLoadingGame)
+        if (!pThis->CheckEffectAppliesToObject(pObject, pEffect, bLoadingGame))
             return 1;
 
         if (auto *pCreature = Utils::AsNWSCreature(pObject))
@@ -3583,4 +3565,97 @@ NWNX_EXPORT ArgumentStack GetMaxAttackRange(ArgumentStack&& args)
     }
 
     return 0.0f;
+}
+
+NWNX_EXPORT ArgumentStack GetMulticlassLimit(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        return pCreature->nwnxGet<int32_t>("MULTICLASS_LIMIT").value_or(0);
+    }
+    return 0;
+}
+
+NWNX_EXPORT ArgumentStack SetMulticlassLimit(ArgumentStack&& args)
+{
+    static Hooks::Hook s_GetIsClassAvailableHook = Hooks::HookFunction(&CNWSCreatureStats::GetIsClassAvailable,
+    +[](CNWSCreatureStats *pThis, uint8_t nClass) -> BOOL
+    {
+        if (pThis->m_bIsPC)
+        {
+            const auto limit = pThis->m_pBaseCreature->nwnxGet<int32_t>("MULTICLASS_LIMIT");
+            if (limit.has_value() && pThis->m_nNumMultiClasses >= limit.value())
+            {
+                for (int i = 0; i < pThis->m_nNumMultiClasses; ++i)
+                {
+                    if (pThis->m_ClassInfo[i].m_nClass == nClass)
+                        return s_GetIsClassAvailableHook->CallOriginal<BOOL>(pThis, nClass);
+                }
+
+                return 0;
+            }
+        }
+
+        return s_GetIsClassAvailableHook->CallOriginal<BOOL>(pThis, nClass);
+    }, Hooks::Order::Late);
+
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto limit = args.extract<int32_t>();
+          ASSERT_OR_THROW(limit >= 0);
+
+        const bool persist = !!args.extract<int32_t>();
+
+        if (!pCreature->m_bPlayerCharacter)
+        {
+            LOG_WARNING("SetMulticlassLimit: Only works on PCs");
+            return {};
+        }
+
+        if (limit >= Globals::Rules()->GetRulesetIntEntry(CRULES_HASHEDSTR("MULTICLASS_LIMIT"), 3))
+        {
+            LOG_WARNING("SetMulticlassLimit: Limit has to be lower than the server limit");
+            return {};
+        }
+
+        if (limit == 0)
+        {
+            pCreature->nwnxRemove("MULTICLASS_LIMIT");
+        }
+        else
+        {
+            pCreature->nwnxSet("MULTICLASS_LIMIT", limit, persist);
+        }
+    }
+
+    return {};
+}
+
+NWNX_EXPORT ArgumentStack GetNumberOfBonusSpells(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto nMultiClass = args.extract<int32_t>();
+        const auto nSpellLevel = args.extract<int32_t>();
+
+        return static_cast<int32_t>(pCreature->m_pStats->GetNumberOfBonusSpells(nMultiClass, nSpellLevel));
+    }
+
+    return 0;
+}
+
+NWNX_EXPORT ArgumentStack ModifyNumberBonusSpells(ArgumentStack&& args)
+{
+    if (auto *pCreature = Utils::PopCreature(args))
+    {
+        const auto nMultiClass = args.extract<int32_t>();
+          ASSERT_OR_THROW(nMultiClass >= 0 && nMultiClass < pCreature->m_pStats->m_nNumMultiClasses);
+        const auto nSpellLevel = args.extract<int32_t>();
+            ASSERT_OR_THROW(nSpellLevel >= 0 && nSpellLevel <= 9);
+        const auto nDelta = args.extract<int32_t>();
+
+        pCreature->m_pStats->ModifyNumberBonusSpells(nMultiClass, nSpellLevel, nDelta);
+    }
+
+    return {};
 }

@@ -100,6 +100,9 @@ namespace Hooks
         void*       m_trampoline;
 
         static inline std::unordered_map<void*, std::vector<FunctionHook*>> s_hooks;
+
+        template <typename F>
+        static void UpdateHookList(void* originalFunction, const std::vector<FunctionHook*>& hookList, int32_t index, F&& hookOperation);
     };
 
     using Hook = std::unique_ptr<FunctionHook>;
@@ -256,6 +259,7 @@ namespace Utils
     int32_t NWScriptObjectTypeToEngineObjectType(int32_t nwscriptObjectType);
     void UpdateClientObject(ObjectID oidObject);
     void UpdateClientObjectForPlayer(ObjectID oidObject, CNWSPlayer* oidPlayer);
+    void ClearReadMessage();
 }
 
 namespace POS
@@ -313,6 +317,8 @@ struct ScopeGuard {
 #define CAT(a, b) CAT2(a,b)
 #define SCOPEGUARD_IMPL(x) ::NWNXLib::ScopeGuard CAT(_scopeguard_, __LINE__) ([&]{x;})
 }
+
+#include "Instrumentation.hpp"
 
 // TODO: Remove entry points
 //todo: remove with Plugin
