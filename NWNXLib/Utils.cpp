@@ -27,7 +27,6 @@
 #include "API/CExoString.hpp"
 #include "API/CExoArrayList.hpp"
 #include "../Core/NWNXCore.hpp"
-#include "API/CNWSClient.hpp"
 #include "API/CNWSPlayer.hpp"
 
 #include <cmath>
@@ -556,7 +555,7 @@ void UpdateClientObjectForPlayer(ObjectID oidObject, CNWSPlayer* pPlayer)
 {
     for (auto* pLuo : pPlayer->m_lstActiveObjectsLastUpdate)
     {
-        if (pLuo->m_nId == oidObject) 
+        if (pLuo->m_nId == oidObject)
         {
             pPlayer->m_lstActiveObjectsLastUpdate.Remove(pLuo);
             delete pLuo;
@@ -567,11 +566,19 @@ void UpdateClientObjectForPlayer(ObjectID oidObject, CNWSPlayer* pPlayer)
 
 void UpdateClientObject(ObjectID oidObject)
 {
-    auto* pPlayerList = Globals::AppManager()->m_pServerExoApp->m_pcExoAppInternal->m_pNWSPlayerList->m_pcExoLinkedListInternal;
-    for (auto* pHead = pPlayerList->pHead; pHead; pHead = pHead->pNext)
+    for (auto *pPlayer : Globals::AppManager()->m_pServerExoApp->GetPlayerList())
     {
-        auto* pPlayer = static_cast<CNWSPlayer*>(static_cast<CNWSClient*>(pHead->pObject));
         UpdateClientObjectForPlayer(oidObject, pPlayer);
+    }
+}
+
+void ClearReadMessage()
+{
+    if (auto* pMessage = Globals::AppManager()->m_pServerExoApp->GetNWSMessage())
+    {
+        pMessage->m_nReadBufferPtr = pMessage->m_nReadBufferSize;
+        pMessage->m_nReadFragmentsBufferPtr = pMessage->m_nReadFragmentsBufferSize;
+        pMessage->m_nCurReadBit = pMessage->m_nLastByteBits;
     }
 }
 

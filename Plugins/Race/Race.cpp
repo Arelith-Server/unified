@@ -70,6 +70,8 @@ Race::Race(Services::ProxyServiceList* services)
     REGISTER(SetRacialModifier);
     REGISTER(GetParentRace);
     REGISTER(SetFavoredEnemyFeat);
+    REGISTER(SuppressCreatureRaceEffects);
+    REGISTER(ReactivateCreatureRaceEffects);
 
 #undef REGISTER
 
@@ -178,6 +180,27 @@ void Race::DoEffect(CNWSCreature *pCreature,
     pCreature->ApplyEffect(eff, true, true);
 }
 
+void Race::RemoveRaceEffects(CNWSCreature *pCreature)
+{
+    auto effectsLevelAdded = *pCreature->nwnxGet<int>("RACEMODS_ADDED_LEVEL");
+    if (pCreature->m_pStats == nullptr || effectsLevelAdded == 0)
+        return;
+
+    std::vector<uint64_t> remove(128);
+    for (int32_t i = 0; i < pCreature->m_appliedEffects.num; i++)
+    {
+        auto eff = (CGameEffect*)pCreature->m_appliedEffects.element[i];
+        if (eff->m_sCustomTag == "NWNX_Race_RacialMod")
+        {
+            remove.push_back(eff->m_nID);
+        }
+    }
+    for (auto id: remove)
+        pCreature->RemoveEffectById(id);
+
+    pCreature->nwnxRemove("RACEMODS_ADDED_LEVEL");
+}
+
 void Race::ApplyRaceEffects(CNWSCreature *pCreature)
 {
     auto effectsLevelAdded = *pCreature->nwnxGet<int>("RACEMODS_ADDED_LEVEL");
@@ -192,17 +215,7 @@ void Race::ApplyRaceEffects(CNWSCreature *pCreature)
     // the racial modifiers.
     if (effectsLevelAdded)
     {
-        std::vector<uint64_t> remove(128);
-        for (int i = 0; i < pCreature->m_appliedEffects.num; i++)
-        {
-            auto eff = (CGameEffect*)pCreature->m_appliedEffects.element[i];
-            if (eff->m_sCustomTag == "NWNX_Race_RacialMod")
-            {
-                remove.push_back(eff->m_nID);
-            }
-        }
-        for (auto id: remove)
-            pCreature->RemoveEffectById(id);
+        RemoveRaceEffects(pCreature);
     }
 
     // AB
@@ -701,8 +714,7 @@ int32_t Race::SendServerToPlayerLevelUp_ConfirmationHook(CNWSMessage *pMessage, 
     // Reapply the racial effects in case there are level specific ones
     if (bValidated)
     {
-        auto *client = Globals::AppManager()->m_pServerExoApp->GetClientObjectByPlayerId(nPlayerId, 0);
-        auto *pPlayer = static_cast<CNWSPlayer *>(client);
+        auto *pPlayer = Globals::AppManager()->m_pServerExoApp->GetClientObjectByPlayerId(nPlayerId);
         auto *pCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pPlayer->m_oidNWSObject);
         ApplyRaceEffects(pCreature);
     }
@@ -1188,6 +1200,24 @@ ArgumentStack Race::SetFavoredEnemyFeat(ArgumentStack&& args)
     LOG_INFO("%s: Setting Favored Enemy Feat to %s.", Globals::Rules()->m_lstRaces[raceId].GetNameText().CStr(), pFeat->GetNameText().CStr());
 
     return ScriptAPI::Arguments();
+}
+
+ArgumentStack Race::SuppressCreatureRaceEffects(ArgumentStack&& args)
+{
+    if(auto* pCreature = Utils::PopCreature(args))
+    {
+        RemoveRaceEffects(pCreature);
+    }
+    return {};
+}
+
+ArgumentStack Race::ReactivateCreatureRaceEffects(ArgumentStack&& args)
+{
+    if(auto* pCreature = Utils::PopCreature(args))
+    {
+        ApplyRaceEffects(pCreature);
+    }
+    return {};
 }
 
 int32_t Race::GetAttackModifierVersusHook(CNWSCreatureStats* pStats, CNWSCreature* pCreature)
