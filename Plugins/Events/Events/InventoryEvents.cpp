@@ -29,7 +29,7 @@ static void RemoveGoldHook(CNWSCreature*, int32_t, int32_t);
 void InventoryEvents() __attribute__((constructor));
 void InventoryEvents()
 {
-    InitOnFirstSubscribe("NWNX_ON_INVENTORY_(SELECT|OPEN)_.*", []()
+    InitOnFirstSubscribe("NWNX_ON_INVENTORY_(SELECT|OPEN|CLOSE)_.*", []()
     {
         s_HandlePlayerToServerGuiInventoryMessageHook = Hooks::HookFunction(
                 &CNWSMessage::HandlePlayerToServerGuiInventoryMessage,
@@ -71,20 +71,22 @@ int32_t HandlePlayerToServerGuiInventoryMessageHook(CNWSMessage *thisPtr, CNWSPl
             auto target = Utils::PeekMessage<ObjectID>(thisPtr, 0) & 0x7FFFFFFF;
             auto open = (bool)(Utils::PeekMessage<uint8_t>(thisPtr, 4) & 0x10);
 
+            auto PushAndSignal = [&](const std::string& ev) -> bool
+            {
+                PushEventData("TARGET_INVENTORY", Utils::ObjectIDToString(target));
+                return SignalEvent(ev, pPlayer->m_oidNWSObject);
+            };
+
             if (open)
             {
-                auto PushAndSignal = [&](const std::string& ev) -> bool
-                {
-                    PushEventData("TARGET_INVENTORY", Utils::ObjectIDToString(target));
-                    return SignalEvent(ev, pPlayer->m_oidNWSObject);
-                };
-
                 if (PushAndSignal("NWNX_ON_INVENTORY_OPEN_BEFORE"))
                 {
                     retVal = s_HandlePlayerToServerGuiInventoryMessageHook->CallOriginal<int32_t>(thisPtr, pPlayer, nMinor);
                 }
                 else
                 {
+                    Utils::ClearReadMessage();
+
                     CNWSPlayerInventoryGUI *pInventory = pPlayer->m_oidNWSObject == target ? pPlayer->m_pInventoryGUI :
                                                          pPlayer->m_pOtherInventoryGUI;
 
@@ -102,7 +104,9 @@ int32_t HandlePlayerToServerGuiInventoryMessageHook(CNWSMessage *thisPtr, CNWSPl
             }
             else
             {
+                PushAndSignal("NWNX_ON_INVENTORY_CLOSE_BEFORE");
                 retVal = s_HandlePlayerToServerGuiInventoryMessageHook->CallOriginal<int32_t>(thisPtr, pPlayer, nMinor);
+                PushAndSignal("NWNX_ON_INVENTORY_CLOSE_AFTER");
             }
             break;
         }
@@ -131,6 +135,8 @@ int32_t HandlePlayerToServerGuiInventoryMessageHook(CNWSMessage *thisPtr, CNWSPl
                 }
                 else
                 {
+                    Utils::ClearReadMessage();
+
                     auto *pMessage = static_cast<CNWSMessage*>(Globals::AppManager()->m_pServerExoApp->GetNWSMessage());
                     if (pMessage)
                     {

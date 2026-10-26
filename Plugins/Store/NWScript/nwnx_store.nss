@@ -2,7 +2,6 @@
 /// @brief Functions exposing additional store properties.
 /// @{
 /// @file nwnx_store.nss
-#include "nwnx"
 
 const string NWNX_Store = "NWNX_Store"; ///< @private
 
@@ -47,85 +46,85 @@ void NWNX_Store_SetMarkUp(object oStore, int nValue);
 /// @return count, or -1 on error
 int NWNX_Store_GetCurrentCustomersCount(object oStore);
 
+/// @brief Return the black market status
+/// @param oStore The store object.
+/// @return status, -1 on error
+int NWNX_Store_GetBlackMarket(object oStore);
+
+/// @brief Set the black market status
+/// @param oStore The store object.
+/// @param nValue TRUE/FALSE.
+void NWNX_Store_SetBlackMarket(object oStore, int nValue);
+
 /// @}
 
 int NWNX_Store_GetIsRestrictedBuyItem(object oStore, int nBaseItem)
 {
-    string sFunc = "GetIsRestrictedBuyItem";
-
-    NWNX_PushArgumentInt(nBaseItem);
-    NWNX_PushArgumentObject(oStore);
-
-    NWNX_CallFunction(NWNX_Store, sFunc);
-    return NWNX_GetReturnValueInt();
+    NWNXPushInt(nBaseItem);
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "GetIsRestrictedBuyItem");
+    return NWNXPopInt();
 }
 
 int NWNX_Store_GetBlackMarketMarkDown(object oStore)
 {
-    string sFunc = "GetBlackMarketMarkDown";
-
-    NWNX_PushArgumentObject(oStore);
-
-    NWNX_CallFunction(NWNX_Store, sFunc);
-    return NWNX_GetReturnValueInt();
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "GetBlackMarketMarkDown");
+    return NWNXPopInt();
 }
 
 void NWNX_Store_SetBlackMarketMarkDown(object oStore, int nValue)
 {
-    string sFunc = "SetBlackMarketMarkDown";
-
-    NWNX_PushArgumentInt(nValue);
-    NWNX_PushArgumentObject(oStore);
-
-    NWNX_CallFunction(NWNX_Store, sFunc);
+    NWNXPushInt(nValue);
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "SetBlackMarketMarkDown");
 }
 
 int NWNX_Store_GetMarkDown(object oStore)
 {
-    string sFunc = "GetMarkDown";
-
-    NWNX_PushArgumentObject(oStore);
-
-    NWNX_CallFunction(NWNX_Store, sFunc);
-    return NWNX_GetReturnValueInt();
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "GetMarkDown");
+    return NWNXPopInt();
 }
 
 void NWNX_Store_SetMarkDown(object oStore, int nValue)
 {
-    string sFunc = "SetMarkDown";
-
-    NWNX_PushArgumentInt(nValue);
-    NWNX_PushArgumentObject(oStore);
-
-    NWNX_CallFunction(NWNX_Store, sFunc);
+    NWNXPushInt(nValue);
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "SetMarkDown");
 }
 
 int NWNX_Store_GetMarkUp(object oStore)
 {
-    string sFunc = "GetMarkUp";
-
-    NWNX_PushArgumentObject(oStore);
-
-    NWNX_CallFunction(NWNX_Store, sFunc);
-    return NWNX_GetReturnValueInt();
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "GetMarkUp");
+    return NWNXPopInt();
 }
 
 void NWNX_Store_SetMarkUp(object oStore, int nValue)
 {
-    string sFunc = "SetMarkUp";
-
-    NWNX_PushArgumentInt(nValue);
-    NWNX_PushArgumentObject(oStore);
-
-    NWNX_CallFunction(NWNX_Store, sFunc);
+    NWNXPushInt(nValue);
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "SetMarkUp");
 }
 
-int NWNX_Store_GetCurrentCustomerCount(object oStore)
+int NWNX_Store_GetCurrentCustomersCount(object oStore)
 {
-    string sFunc = "GetCurrentCustomerCount";
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "GetCurrentCustomersCount");
+    return NWNXPopInt();
+}
 
-    NWNX_PushArgumentObject(oStore);
+int NWNX_Store_GetBlackMarket(object oStore)
+{
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "GetBlackMarket");
+    return NWNXPopInt();
+}
 
-    NWNX_CallFunction(NWNX_Store, sFunc);
-    return NWNX_GetReturnValueInt();
+void NWNX_Store_SetBlackMarket(object oStore, int nValue)
+{
+    NWNXPushInt(nValue);
+    NWNXPushObject(oStore);
+    NWNXCall(NWNX_Store, "SetBlackMarket");
 }

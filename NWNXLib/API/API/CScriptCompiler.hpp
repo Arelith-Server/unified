@@ -32,14 +32,19 @@ typedef int BOOL;
 
 // Removes any functions that cannot possibly be called by any codepath
 #define CSCRIPTCOMPILER_OPTIMIZE_DEAD_FUNCTIONS                       0x00000001
-// Merges constant expressions into a single constant where possible.
-// Note: Only affects runtime expressions, assignments to const variables are always folded.
-#define CSCRIPTCOMPILER_OPTIMIZE_FOLD_CONSTANTS                       0x00000002
 // Post processes generated instructions to merge sequences into shorter equivalents
-#define CSCRIPTCOMPILER_OPTIMIZE_MELD_INSTRUCTIONS                    0x00000004
+#define CSCRIPTCOMPILER_OPTIMIZE_MELD_INSTRUCTIONS                    0x00000002
+// Removes the jump and the dead branches in if (CONST) constructs
+#define CSCRIPTCOMPILER_OPTIMIZE_DEAD_BRANCHES                        0x00000004
 
+// Optimization groups - roughly corresponding to -O0, -O1, -O2, -O3. Each group includes the previous one.
+// Safe - Known good, used by the game and toolset
+// Aggressive - Probably good, used by the external compiler
+// Experimental - Untested or known to break something
 #define CSCRIPTCOMPILER_OPTIMIZE_NOTHING                              0x00000000
-#define CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING                           0xFFFFFFFF
+#define CSCRIPTCOMPILER_OPTIMIZE_SAFE                                 (CSCRIPTCOMPILER_OPTIMIZE_DEAD_FUNCTIONS)
+#define CSCRIPTCOMPILER_OPTIMIZE_AGGRESSIVE                           (CSCRIPTCOMPILER_OPTIMIZE_SAFE | CSCRIPTCOMPILER_OPTIMIZE_DEAD_BRANCHES)
+#define CSCRIPTCOMPILER_OPTIMIZE_EXPERIMENTAL                         (CSCRIPTCOMPILER_OPTIMIZE_AGGRESSIVE | CSCRIPTCOMPILER_OPTIMIZE_MELD_INSTRUCTIONS)
 
 struct CScriptCompilerAPI
 {
@@ -96,6 +101,7 @@ struct CScriptCompiler
     BOOL m_bCompileConditionalOrMain;
     CExoString m_sLanguageSource;
     CExoString m_sOutputAlias;
+    CExoString m_sGraphvizPath;
     int32_t m_nLines;
     int32_t m_nCharacterOnLine;
     int32_t * m_pnHashString;
@@ -106,6 +112,7 @@ struct CScriptCompiler
     CScriptCompilerStackEntry * m_pSRStack;
     int32_t m_nSRStackEntries;
     int32_t m_nSRStackStates;
+    CExoString m_sCurrentFunction;
     int32_t m_bCompileIdentifierList;
     int32_t m_bCompileIdentifierConstants;
     int32_t m_nIdentifierListState;
@@ -117,7 +124,8 @@ struct CScriptCompiler
     int32_t m_nMaxPredefinedIdentifierId;
     int32_t m_nPredefinedIdentifierOrder;
     int32_t m_nCompileFileLevel;
-    CScriptCompilerIncludeFileStackEntry m_pcIncludeFileStack[16];
+    CScriptCompilerIncludeFileStackEntry m_pcIncludeFileStack[200];
+    int32_t m_nMaxIncludeDepth;
     int32_t m_nVarStackRecursionLevel;
     CScriptCompilerVarStackEntry * m_pcVarStackList;
     int32_t m_nOccupiedVariables;
@@ -140,6 +148,7 @@ struct CScriptCompiler
     int32_t m_nSwitchIdentifier;
     int32_t m_nSwitchStackDepth;
     CExoString m_sUndefinedIdentifier;
+    CExoString m_sParserErrorExtraInfo;
     BOOL m_bSwitchLabelDefault;
     int32_t m_nSwitchLabelNumber;
     int32_t m_nSwitchLabelArraySize;
@@ -225,7 +234,7 @@ struct CScriptCompiler
     int32_t ParseCharacterAmpersand(int32_t chNext);
     int32_t ParseCharacterVerticalBar(int32_t chNext);
     int32_t ParseCharacterAlphabet(int32_t ch);
-    int32_t ParseStringCharacter(int32_t ch, int32_t chNext, char * pScript, int32_t nScriptLength);
+    int32_t ParseStringCharacter(int32_t ch, int32_t chNext, const char * pScript, int32_t nScriptLength);
     int32_t ParseRawStringCharacter(int32_t ch, int32_t chNext);
     int32_t ParseCharacterQuotationMark();
     int32_t ParseCharacterHyphen(int32_t chNext);
@@ -249,9 +258,9 @@ struct CScriptCompiler
     int32_t ParseCharacterQuestionMark();
     int32_t ParseCharacterColon();
     int32_t ParseCommentedOutCharacter(int32_t ch);
-    int32_t ParseNextCharacter(int32_t ch, int32_t chNext, char * pScript, int32_t nScriptLength);
+    int32_t ParseNextCharacter(int32_t ch, int32_t chNext, const char * pScript, int32_t nScriptLength);
     int32_t PrintParseSourceError(int32_t nParseCharacterError);
-    int32_t ParseSource(char * pScript, int32_t nScriptLength);
+    int32_t ParseSource(const char * pScript, int32_t nScriptLength);
     int32_t OutputError(int32_t nError, CExoString * psFileName, int32_t nLineNumber, const CExoString & sErrorText);
     CScriptParseTreeNode * DuplicateScriptParseTree(CScriptParseTreeNode * pNode);
     CScriptParseTreeNode * CreateScriptParseTreeNode(int32_t nNodeOperation, CScriptParseTreeNode * pNodeLeft, CScriptParseTreeNode * pNodeRight);
@@ -262,8 +271,10 @@ struct CScriptCompiler
     int32_t PreVisitGenerateCode(CScriptParseTreeNode * pNode);
     int32_t InVisitGenerateCode(CScriptParseTreeNode * pNode);
     int32_t PostVisitGenerateCode(CScriptParseTreeNode * pNode);
+    void WriteByteSwap16(char *buffer, int16_t value);
     void WriteByteSwap32(char *buffer, int32_t value);
     int32_t ReadByteSwap32(char *buffer);
+    int16_t ReadByteSwap16(char *buffer);
     char *EmitInstruction(uint8_t nOpCode, uint8_t nAuxCode = 0, int32_t nDataSize = 0);
     void EmitModifyStackPointer(int32_t nModifyBy);
     void StartLineNumberAtBinaryInstruction(int32_t nFileReference, int32_t nLineNumber, int32_t nBinaryInstruction);
@@ -291,7 +302,8 @@ struct CScriptCompiler
     int32_t GetStructureSize(const CExoString & sStructureName);
     int32_t GetIdentifierByName(const CExoString & sIdentifierName);
     int32_t AddToGlobalVariableList(CScriptParseTreeNode * pGlobalVariableNode);
-    BOOL ConstantFoldNode(CScriptParseTreeNode *pNode, BOOL bForce = false);
+    BOOL ConstantFoldNode(CScriptParseTreeNode *pNode);
+    CScriptParseTreeNode *TrimParseTree(CScriptParseTreeNode *pNode);
     void InitializeSwitchLabelList();
     int32_t TraverseTreeForSwitchLabels(CScriptParseTreeNode * pNode);
     void ClearSwitchLabelList();
