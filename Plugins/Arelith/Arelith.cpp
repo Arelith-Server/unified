@@ -106,8 +106,8 @@ Arelith::Arelith(Services::ProxyServiceList* services)
         });
 
     m_arelithEvents   = std::make_unique<ArelithEvents>();
-    s_ReportErrorHook = Hooks::HookFunction(&CNWSVirtualMachineCommands::ReportError,
-                                                      &ReportErrorHook, Hooks::Order::Earliest);
+    s_ReportErrorHook = Hooks::HookFunction(Functions::_ZN26CNWSVirtualMachineCommands11ReportErrorERK10CExoStringiS2_,
+                                                      (void*)&ReportErrorHook, Hooks::Order::Earliest);
     s_WriteToLogFileHook = Hooks::HookFunction(&CExoDebugInternal::WriteToLogFile,
                                                      &WriteToLogFileHook, Hooks::Order::Earliest);
     s_GetEffectImmunityHook = Hooks::HookFunction(&CNWSCreatureStats::GetEffectImmunity,
