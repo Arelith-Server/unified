@@ -74,7 +74,7 @@ private:
     ArgumentStack SetDisableMonkAbilitiesPolymorph(ArgumentStack&& args);
     CNWSCreature *creature(ArgumentStack& args);
     CNWSObject *object(ArgumentStack& args);
-    static void ReportErrorHook(CNWSVirtualMachineCommands*, CExoString*, int32_t, CExoString*);
+    static void ReportErrorHook(CNWSVirtualMachineCommands*, const CExoString&, int32_t, const CExoString&);
     static void WriteToLogFileHook(CExoDebugInternal*, CExoString*);
     static bool s_bSendError;
     static void SendWebHookHTTPS(const char* message);
