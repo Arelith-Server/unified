@@ -18,7 +18,6 @@ struct CFeatUseListEntry;
 struct CNWClass;
 struct CNWCreatureStatsUpdate;
 struct CNWLevelStats;
-struct CNWLevelStats;
 struct CNWSCreature;
 struct CNWSCreatureAppearanceInfo;
 struct CNWSItem;
@@ -89,6 +88,7 @@ struct CNWSCreatureStats
     char m_nACNaturalNeg;
     char m_nACDodgeMod;
     char m_nACDodgeNeg;
+    char m_nACPolymorph;
     uint8_t m_nBaseAttackBonus;
     uint8_t m_nOverrideBaseAttackBonus;
     char m_nEnemyAttackBonus;
@@ -391,4 +391,3 @@ struct CNWSCreatureStats
 #ifdef NWN_API_EPILOGUE
 NWN_API_EPILOGUE(CNWSCreatureStats)
 #endif
-

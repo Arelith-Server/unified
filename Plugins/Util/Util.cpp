@@ -23,6 +23,7 @@
 #include "API/CResGFF.hpp"
 #include "API/CNWSArea.hpp"
 #include "API/CNWSModule.hpp"
+#include "API/NWMODULEENTRYINFO.hpp"
 
 #include <string>
 #include <cstdio>
@@ -339,7 +340,7 @@ NWNX_EXPORT ArgumentStack AddScript(ArgumentStack&& args)
     {
         s_scriptCompiler = std::make_unique<CScriptCompiler>(Constants::ResRefType::NSS, Constants::ResRefType::NCS, Constants::ResRefType::NDB);
         s_scriptCompiler->SetGenerateDebuggerOutput(0);
-        s_scriptCompiler->SetOptimizationFlags(CSCRIPTCOMPILER_OPTIMIZE_EVERYTHING);
+        s_scriptCompiler->SetOptimizationFlags(CSCRIPTCOMPILER_OPTIMIZE_AGGRESSIVE);
         s_scriptCompiler->SetCompileConditionalOrMain(true);
         s_scriptCompiler->SetIdentifierSpecification("nwscript");
     }
@@ -464,7 +465,7 @@ NWNX_EXPORT ArgumentStack RegisterServerConsoleCommand(ArgumentStack&& args)
         if (Globals::AppManager()->m_pServerExoApp->GetServerMode() != 2)
             return;
 
-        LOG_INFO("Executing NWScript Server Console Command: '%s' with args: %s", command, args);
+        LOG_DEBUG("Executing NWScript Server Console Command: '%s' with args: %s", command, args);
 
         std::string scriptChunk = s_serverConsoleCommandMap[command];
         bool wrapIntoMain = scriptChunk.find("void main()") == std::string::npos;
@@ -504,6 +505,13 @@ NWNX_EXPORT ArgumentStack UnregisterServerConsoleCommand(ArgumentStack&& args)
     return {};
 }
 
+NWNX_EXPORT ArgumentStack RawPrint(ArgumentStack&& args)
+{
+  std::string sLogMessage = args.extract<std::string>();
+  std::cout << sLogMessage << std::endl;
+  return {};
+}
+
 NWNX_EXPORT ArgumentStack PluginExists(ArgumentStack&& args)
 {
     return Plugin::Find(args.extract<std::string>()) ? 1 : 0;
@@ -520,17 +528,11 @@ NWNX_EXPORT ArgumentStack CreateDoor(ArgumentStack&& args)
 
     const auto strResRef = args.extract<std::string>();
       ASSERT_OR_THROW(!strResRef.empty());
-    const auto oidArea = args.extract<ObjectID>();
-      ASSERT_OR_THROW(oidArea != Constants::OBJECT_INVALID);
-    const auto posX = args.extract<float>();
-    const auto posY = args.extract<float>();
-    const auto posZ = args.extract<float>();
-    const auto facing = args.extract<float>();
+    const auto locSpawn = args.extract<CScriptLocation>();
     const auto tag = args.extract<std::string>();
     const auto appearance = args.extract<int32_t>();
 
     auto resRef = CResRef(strResRef);
-    Vector position = {posX, posY, posZ};
 
     if (!Globals::ExoResMan()->Exists(resRef, Constants::ResRefType::UTD, nullptr))
     {
@@ -538,7 +540,7 @@ NWNX_EXPORT ArgumentStack CreateDoor(ArgumentStack&& args)
         return Constants::OBJECT_INVALID;
     }
 
-    if (auto *pArea = Utils::AsNWSArea(Utils::GetGameObject(oidArea)))
+    if (auto *pArea = Utils::AsNWSArea(Utils::GetGameObject(locSpawn.m_oArea)))
     {
         CResStruct resStruct{};
         CResGFF gff(Constants::ResRefType::UTD, (char*)"UTD ", resRef);
@@ -551,7 +553,7 @@ NWNX_EXPORT ArgumentStack CreateDoor(ArgumentStack&& args)
             pDoor->m_sTemplate = resRef.GetResRefStr();
             pDoor->LoadDoor(&gff, &resStruct);
             pDoor->LoadVarTable(&gff, &resStruct);
-            pDoor->SetPosition(position);
+            pDoor->SetPosition(locSpawn.m_vPosition);
             if (appearance > 0)
             {
                 pDoor->m_nAppearanceType = appearance;
@@ -565,7 +567,7 @@ NWNX_EXPORT ArgumentStack CreateDoor(ArgumentStack&& args)
                 pDoor->m_pWalkMesh->LoadWalkMesh(sWalkMeshTemplate);
                 pDoor->PostProcess();
             }
-            Utils::SetOrientation(pDoor, facing);
+            pDoor->SetOrientation(locSpawn.m_vOrientation);
 
             if (!tag.empty())
             {
@@ -573,7 +575,7 @@ NWNX_EXPORT ArgumentStack CreateDoor(ArgumentStack&& args)
                 Utils::GetModule()->AddObjectToLookupTable(pDoor->m_sTag, pDoor->m_idSelf);
             }
 
-            pDoor->AddToArea(pArea, posX, posY, pArea->ComputeHeight(position));
+            pDoor->AddToArea(pArea, locSpawn.m_vPosition.x, locSpawn.m_vPosition.y, pArea->ComputeHeight(locSpawn.m_vPosition));
 
             retVal = pDoor->m_idSelf;
         }
@@ -690,6 +692,11 @@ NWNX_EXPORT ArgumentStack SetDawnHour(ArgumentStack &&args)
     return {};
 }
 
+NWNX_EXPORT ArgumentStack GetDawnHour(ArgumentStack&&)
+{
+    return Utils::GetModule()->m_nDawnHour;
+}
+
 NWNX_EXPORT ArgumentStack SetDuskHour(ArgumentStack &&args)
 {
     const auto duskHour = args.extract<int32_t>();
@@ -699,6 +706,11 @@ NWNX_EXPORT ArgumentStack SetDuskHour(ArgumentStack &&args)
     Utils::GetModule()->m_nDuskHour = duskHour;
 
     return {};
+}
+
+NWNX_EXPORT ArgumentStack GetDuskHour(ArgumentStack&&)
+{
+    return Utils::GetModule()->m_nDuskHour;
 }
 
 NWNX_EXPORT ArgumentStack GetHighResTimeStamp(ArgumentStack&&)
@@ -768,7 +780,7 @@ NWNX_EXPORT ArgumentStack GetStringLevenshteinDistance(ArgumentStack&& args)
 
 NWNX_EXPORT ArgumentStack UpdateClientObject(ArgumentStack&& args)
 {
-    OBJECT_ID oidObject = args.extract<OBJECT_ID>();
+    auto oidObject = args.extract<OBJECT_ID>();
         ASSERT_OR_THROW(oidObject != Constants::OBJECT_INVALID);
 
     if (auto* pPlayer = Utils::PopPlayer(args))
@@ -793,8 +805,38 @@ NWNX_EXPORT ArgumentStack CleanResourceDirectory(ArgumentStack&& args)
     return bOk;
 }
 
-NWNX_EXPORT ArgumentStack GetModuleTlkFile(ArgumentStack&& args)
+NWNX_EXPORT ArgumentStack GetModuleTlkFile(ArgumentStack&&)
 {
+    return Utils::GetModule()->m_sModuleAltTLKFile;
+}
+
+NWNX_EXPORT ArgumentStack UpdateResourceDirectory(ArgumentStack&& args)
+{
+    const auto alias = args.extract<std::string>();
+      ASSERT_OR_THROW(!alias.empty());
+    return Globals::ExoResMan()->UpdateResourceDirectory(alias + ":");
+}
+
+NWNX_EXPORT ArgumentStack SetStartingLocation(ArgumentStack&& args)
+{
+    const auto strResRef = args.extract<std::string>();
+      ASSERT_OR_THROW(!strResRef.empty());
+    const auto locSpawn = args.extract<CScriptLocation>();
+    const auto vDirection = args.extract<Vector>();
+
+    auto resRef = CResRef(strResRef);
+    if (!Globals::ExoResMan()->Exists(resRef, Constants::ResRefType::ARE, nullptr))
+    {
+        LOG_WARNING("SetStartingLocation: ResRef '%s' does not exist", resRef.GetResRefStr());
+        return false;
+    }
+
     CNWSModule *pMod = Utils::GetModule();
-    return pMod->m_sModuleAltTLKFile;
+    pMod->m_pModuleEntryInfo->refArea = resRef;
+    pMod->m_pModuleEntryInfo->nX = locSpawn.m_vPosition.x;
+    pMod->m_pModuleEntryInfo->nY = locSpawn.m_vPosition.y;
+    pMod->m_pModuleEntryInfo->nZ = locSpawn.m_vPosition.z;
+    pMod->m_pModuleEntryInfo->fDirX = vDirection.x;
+    pMod->m_pModuleEntryInfo->fDirY = vDirection.y;
+    return true;
 }
