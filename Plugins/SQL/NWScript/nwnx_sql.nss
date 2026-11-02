@@ -111,6 +111,90 @@ int NWNX_SQL_GetPreparedQueryParamCount();
 /// @note This is ONLY needed on PostgreSQL, and ONLY if you want to deserialize raw bytea in NWNX_SQL_ReadFullObjectInActiveRow with base64=FALSE.
 void NWNX_SQL_PostgreSQL_SetNextQueryResultsBinaryMode();
 
+/// @name Async queries
+/// Statements queued for a worker thread with its own database connection, so a slow query
+/// doesn't hold up the server. The worker runs one server's statements one at a time, in the
+/// order they were queued.
+///
+/// Consistency rules:
+///   * Async statements run in the order they were queued (one FIFO worker per server).
+///   * A synchronous query does NOT see async writes that are still queued. Keep a write
+///     synchronous if something reads it straight back, or read from cached locals instead.
+///   * Call NWNX_SQL_AsyncFlush() before a player leaves the server (portal transfer,
+///     OnClientLeave, restart) so the next server sees the saved state.
+///   * Keep these synchronous: gold, bank, items and containers; insert-then-read-ID;
+///     ban, VPN and login checks.
+///
+/// Usage: push one parameter per `?` in order, then call NWNX_SQL_ExecuteAsync(). Parameters
+/// are bound by the database client, not spliced into the SQL, so they need no escaping.
+/// @code
+/// NWNX_SQL_PushAsyncParamInt(nXP);   // first ?
+/// NWNX_SQL_PushAsyncParam(sName);    // second ?
+/// NWNX_SQL_ExecuteAsync("UPDATE pc SET xp=? WHERE name=?");
+/// @endcode
+/// @{
+
+/// @brief Push a string parameter for the next NWNX_SQL_ExecuteAsync(), in `?` order.
+/// @param sValue The value. Bound as a string; MySQL converts it if the column is numeric.
+void NWNX_SQL_PushAsyncParam(string sValue);
+
+/// @brief Push an int parameter for the next NWNX_SQL_ExecuteAsync(), in `?` order.
+void NWNX_SQL_PushAsyncParamInt(int nValue);
+
+/// @brief Push a float parameter for the next NWNX_SQL_ExecuteAsync(), in `?` order.
+void NWNX_SQL_PushAsyncParamFloat(float fValue);
+
+/// @brief Push a NULL parameter for the next NWNX_SQL_ExecuteAsync(), in `?` order.
+void NWNX_SQL_PushAsyncParamNULL();
+
+/// @brief Queue a query to run on the async worker, with the parameters pushed since the last call.
+/// @note Returns at once. The pushed parameters are used up by this call even if it fails.
+/// @note If async is disabled (NWNX_SQL_ASYNC_DISABLE), the database isn't MySQL, or the queue is full
+/// (NWNX_SQL_ASYNC_QUEUE_LIMIT), the query runs synchronously on the main connection instead; the
+/// callback still runs on a later tick. Don't call this between NWNX_SQL_PrepareQuery() and
+/// NWNX_SQL_ExecutePreparedQuery(): a synchronous run replaces the prepared query.
+/// @param sQuery The query, with a `?` for each pushed parameter.
+/// @param sCallbackScript Script to run when the query is done (on a later tick, on the main thread).
+/// Inside it, use NWNX_SQL_GetAsyncJobId(), NWNX_SQL_GetAsyncSuccess() and the NWNX_SQL_Async*Row functions.
+/// "" for no callback.
+/// @param oCallbackTarget OBJECT_SELF for the callback. OBJECT_INVALID means the module. If the object
+/// no longer exists when the query is done, the callback is skipped.
+/// @return The job id (> 0), or 0 if the query couldn't be queued (empty query).
+int NWNX_SQL_ExecuteAsync(string sQuery, string sCallbackScript = "", object oCallbackTarget = OBJECT_INVALID);
+
+/// @brief In an async callback: the id NWNX_SQL_ExecuteAsync() returned for this job. 0 outside a callback.
+int NWNX_SQL_GetAsyncJobId();
+
+/// @brief In an async callback: TRUE if the job's query succeeded.
+int NWNX_SQL_GetAsyncSuccess();
+
+/// @brief In an async callback: rows affected by the job's INSERT/UPDATE/DELETE, -1 for a query that returns rows.
+int NWNX_SQL_GetAsyncAffectedRows();
+
+/// @brief In an async callback: the job's error message, "" if it succeeded.
+string NWNX_SQL_GetAsyncLastError();
+
+/// @brief In an async callback: TRUE if the job has another result row to read.
+/// @note Each job has its own rows; they don't affect NWNX_SQL_ReadyToReadNextRow() and friends.
+int NWNX_SQL_AsyncReadyToReadNextRow();
+
+/// @brief In an async callback: move to the job's next result row.
+void NWNX_SQL_AsyncReadNextRow();
+
+/// @brief In an async callback: data in the nth (0-based) column of the job's current row.
+string NWNX_SQL_AsyncReadDataInActiveRow(int nColumn = 0);
+
+/// @brief Wait, blocking the server, until every queued async query has run, or the timeout passes.
+/// @note Use before a player leaves the server. Callbacks of the flushed jobs run on a later tick, not inside this call.
+/// @param fTimeout The longest to wait, in seconds.
+/// @return TRUE if the queue is empty, FALSE on timeout.
+int NWNX_SQL_AsyncFlush(float fTimeout = 5.0);
+
+/// @brief The number of async jobs queued or running.
+int NWNX_SQL_GetAsyncQueueDepth();
+
+/// @}
+
 /// @}
 
 int NWNX_SQL_PrepareQuery(string query)
@@ -246,4 +330,91 @@ int NWNX_SQL_GetPreparedQueryParamCount()
 void NWNX_SQL_PostgreSQL_SetNextQueryResultsBinaryMode()
 {
     NWNXCall(NWNX_SQL, "PostgreSQL_SetNextQueryResultsBinaryMode");
+}
+
+void NWNX_SQL_PushAsyncParam(string sValue)
+{
+    NWNXPushString(sValue);
+    NWNXCall(NWNX_SQL, "PushAsyncParam");
+}
+
+void NWNX_SQL_PushAsyncParamInt(int nValue)
+{
+    NWNXPushInt(nValue);
+    NWNXCall(NWNX_SQL, "PushAsyncParamInt");
+}
+
+void NWNX_SQL_PushAsyncParamFloat(float fValue)
+{
+    NWNXPushFloat(fValue);
+    NWNXCall(NWNX_SQL, "PushAsyncParamFloat");
+}
+
+void NWNX_SQL_PushAsyncParamNULL()
+{
+    NWNXCall(NWNX_SQL, "PushAsyncParamNULL");
+}
+
+int NWNX_SQL_ExecuteAsync(string sQuery, string sCallbackScript = "", object oCallbackTarget = OBJECT_INVALID)
+{
+    NWNXPushObject(oCallbackTarget);
+    NWNXPushString(sCallbackScript);
+    NWNXPushString(sQuery);
+    NWNXCall(NWNX_SQL, "ExecuteAsync");
+    return NWNXPopInt();
+}
+
+int NWNX_SQL_GetAsyncJobId()
+{
+    NWNXCall(NWNX_SQL, "GetAsyncJobId");
+    return NWNXPopInt();
+}
+
+int NWNX_SQL_GetAsyncSuccess()
+{
+    NWNXCall(NWNX_SQL, "GetAsyncSuccess");
+    return NWNXPopInt();
+}
+
+int NWNX_SQL_GetAsyncAffectedRows()
+{
+    NWNXCall(NWNX_SQL, "GetAsyncAffectedRows");
+    return NWNXPopInt();
+}
+
+string NWNX_SQL_GetAsyncLastError()
+{
+    NWNXCall(NWNX_SQL, "GetAsyncLastError");
+    return NWNXPopString();
+}
+
+int NWNX_SQL_AsyncReadyToReadNextRow()
+{
+    NWNXCall(NWNX_SQL, "AsyncReadyToReadNextRow");
+    return NWNXPopInt();
+}
+
+void NWNX_SQL_AsyncReadNextRow()
+{
+    NWNXCall(NWNX_SQL, "AsyncReadNextRow");
+}
+
+string NWNX_SQL_AsyncReadDataInActiveRow(int nColumn = 0)
+{
+    NWNXPushInt(nColumn);
+    NWNXCall(NWNX_SQL, "AsyncReadDataInActiveRow");
+    return NWNXPopString();
+}
+
+int NWNX_SQL_AsyncFlush(float fTimeout = 5.0)
+{
+    NWNXPushFloat(fTimeout);
+    NWNXCall(NWNX_SQL, "AsyncFlush");
+    return NWNXPopInt();
+}
+
+int NWNX_SQL_GetAsyncQueueDepth()
+{
+    NWNXCall(NWNX_SQL, "GetAsyncQueueDepth");
+    return NWNXPopInt();
 }

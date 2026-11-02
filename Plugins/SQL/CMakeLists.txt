@@ -1,4 +1,5 @@
 add_plugin(SQL "SQL.cpp"
+    "AsyncWorker.cpp"
     "Targets/MySQL.cpp"
     "Targets/PostgreSQL.cpp"
     "Targets/SQLite.cpp")

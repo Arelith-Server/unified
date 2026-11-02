@@ -27,7 +27,9 @@ public:
     virtual std::string GetLastError(bool bClear = false) override;
     virtual int32_t GetPreparedQueryParamCount() override;
     virtual void DestroyPreparedQuery() override;
-
+    virtual void ThreadInit() override;
+    virtual void ThreadEnd() override;
+    virtual uint64_t GetConnectionId() override;
 
 private:
     void NoteConnectionError(unsigned int error);
@@ -40,6 +42,7 @@ private:
     // sending "SELECT 1" before every query saves two round trips per query.
     bool m_connected;
     bool m_initialised;
+    bool m_closed; // by ThreadEnd()
     std::vector<MYSQL_BIND> m_params;
     size_t m_paramCount;
     std::string m_lastError;
