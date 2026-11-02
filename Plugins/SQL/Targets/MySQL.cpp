@@ -75,7 +75,10 @@ bool MySQL::IsConnected()
 
 void MySQL::NoteConnectionError(unsigned int error)
 {
-    if (error == CR_SERVER_GONE_ERROR || error == CR_SERVER_LOST || error == CR_CONN_HOST_ERROR)
+    // Client-side: server gone, lost connection, lost connection (extended).
+    // Server-side: connection killed (1927), server shutting down (1053).
+    if (error == CR_SERVER_GONE_ERROR || error == CR_SERVER_LOST || error == CR_SERVER_LOST_EXTENDED ||
+        error == 1927 || error == 1053)
     {
         LOG_WARNING("Disconnected state identified (error %u).", error);
         m_connected = false;
@@ -127,6 +130,14 @@ std::optional<ResultSet> MySQL::ExecuteQuery()
 std::optional<ResultSet> MySQL::Execute(bool bRetryIfGone)
 {
     affectedRows = -1;
+
+    // A reconnect drops the statement, and if preparing it again failed there is nothing to run.
+    if (!m_stmt)
+    {
+        m_lastError = "No prepared statement";
+        LOG_WARNING("Query not run: %s", m_lastError);
+        return std::optional<ResultSet>();
+    }
 
     bool success = !mysql_stmt_bind_param(m_stmt, m_params.data());
     if (!success)
@@ -193,7 +204,10 @@ std::optional<ResultSet> MySQL::Execute(bool bRetryIfGone)
 
     if (!success)
     {
-        const char* error = mysql_error(&m_mysql);
+        // Statement-only errors are set on the statement, not the connection.
+        const char* error = mysql_stmt_error(m_stmt);
+        if (*error == '\0')
+            error = mysql_error(&m_mysql);
 
         if (*error == '\0')
         {
@@ -225,8 +239,13 @@ std::optional<ResultSet> MySQL::Execute(bool bRetryIfGone)
                 LOG_ERROR("Reconnect failed: %s", e.what());
                 return std::optional<ResultSet>();
             }
-            if (PrepareQuery(m_query))
+            const Query query = m_query;
+            if (PrepareQuery(query))
+            {
+                // The failure above was recovered from; don't leave its message for GetLastError().
+                m_lastError.clear();
                 return Execute(false);
+            }
         }
     }
 
