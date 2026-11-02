@@ -147,6 +147,13 @@ ArgumentStack SQL::PrepareQuery(ArgumentStack&& args)
     }
 
     m_queryPrepared = m_target->PrepareQuery(m_activeQuery);
+
+    // IsConnected() can be a cached state, so a dropped connection may only show up here.
+    // Preparing has no side effects, so reconnect and try once more.
+    if (!m_queryPrepared && !m_target->IsConnected() && Reconnect(3))
+    {
+        m_queryPrepared = m_target->PrepareQuery(m_activeQuery);
+    }
     return m_queryPrepared;
 }
 

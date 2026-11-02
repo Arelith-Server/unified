@@ -30,8 +30,16 @@ public:
 
 
 private:
+    void NoteConnectionError(unsigned int error);
+    std::optional<ResultSet> Execute(bool bRetryIfGone);
+
     MYSQL m_mysql;
     MYSQL_STMT *m_stmt;
+    Query m_query;
+    // Set by Connect() and cleared when a call fails with a connection error. Checking this instead of
+    // sending "SELECT 1" before every query saves two round trips per query.
+    bool m_connected;
+    bool m_initialised;
     std::vector<MYSQL_BIND> m_params;
     size_t m_paramCount;
     std::string m_lastError;
