@@ -14,6 +14,8 @@ MySQL::MySQL()
     m_stmt = nullptr;
     m_lastError = "";
     m_paramCount = 0;
+    m_connected = false;
+    m_initialised = false;
 }
 
 MySQL::~MySQL()
@@ -35,6 +37,22 @@ void MySQL::Connect()
 
     LOG_INFO("Connection info:  host=%s port=%i username=%s", host, port == 0 ? 3306 : port, username);
 
+    // A handle that has connected before is closed and initialised again rather than reused.
+    // Prepared statements don't survive a reconnect, so the current one goes too; its bound
+    // parameter values are kept so the query can be prepared and run again.
+    if (m_initialised)
+    {
+        if (m_stmt)
+        {
+            mysql_stmt_close(m_stmt);
+            m_stmt = nullptr;
+        }
+        mysql_close(&m_mysql);
+        mysql_init(&m_mysql);
+    }
+    m_initialised = true;
+    m_connected = false;
+
     if (!mysql_real_connect(&m_mysql, host.c_str(), username.c_str(), password.c_str(),
             database ? (*database).c_str() : nullptr, port >= 0 ? port : 0, nullptr, 0))
     {
@@ -47,25 +65,31 @@ void MySQL::Connect()
         if (mysql_set_character_set(&m_mysql, charset->c_str()))
             LOG_ERROR("Unable to set the character set");
     }
+    m_connected = true;
 }
 
 bool MySQL::IsConnected()
 {
-    bool bConnected = mysql_query(&m_mysql, "SELECT 1") == 0;
+    return m_connected;
+}
 
-    // Need to read the result before running any other queries.
-    mysql_free_result(mysql_store_result(&m_mysql));
-
-    if (!bConnected)
+void MySQL::NoteConnectionError(unsigned int error)
+{
+    // Client-side: server gone, lost connection, lost connection (extended).
+    // Server-side: connection killed (1927), server shutting down (1053).
+    if (error == CR_SERVER_GONE_ERROR || error == CR_SERVER_LOST || error == CR_SERVER_LOST_EXTENDED ||
+        error == 1927 || error == 1053)
     {
-        LOG_WARNING("Disconnected state identified.");
+        LOG_WARNING("Disconnected state identified (error %u).", error);
+        m_connected = false;
     }
-    return bConnected;
 }
 
 bool MySQL::PrepareQuery(const Query& query)
 {
     LOG_DEBUG("Preparing query %s\n", query);
+
+    m_query = query;
 
     if (m_stmt)
         mysql_stmt_close(m_stmt);
@@ -74,6 +98,7 @@ bool MySQL::PrepareQuery(const Query& query)
     if (!m_stmt)
     {
         m_lastError.assign(mysql_error(&m_mysql));
+        NoteConnectionError(mysql_errno(&m_mysql));
         LOG_WARNING("Failed to initialize statement: %s", m_lastError);
         return false;
     }
@@ -89,6 +114,7 @@ bool MySQL::PrepareQuery(const Query& query)
     else
     {
         m_lastError.assign(mysql_stmt_error(m_stmt));
+        NoteConnectionError(mysql_stmt_errno(m_stmt));
         LOG_WARNING("Failed to prepare statement: %s", m_lastError);
         mysql_stmt_close(m_stmt);
         m_stmt = nullptr;
@@ -98,7 +124,20 @@ bool MySQL::PrepareQuery(const Query& query)
 
 std::optional<ResultSet> MySQL::ExecuteQuery()
 {
+    return Execute(true);
+}
+
+std::optional<ResultSet> MySQL::Execute(bool bRetryIfGone)
+{
     affectedRows = -1;
+
+    // A reconnect drops the statement, and if preparing it again failed there is nothing to run.
+    if (!m_stmt)
+    {
+        m_lastError = "No prepared statement";
+        LOG_WARNING("Query not run: %s", m_lastError);
+        return std::optional<ResultSet>();
+    }
 
     bool success = !mysql_stmt_bind_param(m_stmt, m_params.data());
     if (!success)
@@ -165,7 +204,10 @@ std::optional<ResultSet> MySQL::ExecuteQuery()
 
     if (!success)
     {
-        const char* error = mysql_error(&m_mysql);
+        // Statement-only errors are set on the statement, not the connection.
+        const char* error = mysql_stmt_error(m_stmt);
+        if (*error == '\0')
+            error = mysql_error(&m_mysql);
 
         if (*error == '\0')
         {
@@ -176,6 +218,35 @@ std::optional<ResultSet> MySQL::ExecuteQuery()
         LOG_WARNING("Query failed due to error '%s'", error);
         m_lastError.assign(error);
 
+        unsigned int errorNo = mysql_stmt_errno(m_stmt);
+        if (!errorNo)
+            errorNo = mysql_errno(&m_mysql);
+        NoteConnectionError(errorNo);
+
+        // "Server has gone away" means the statement never reached the server, so it is safe to run
+        // it once more on a new connection. "Lost connection during query" (CR_SERVER_LOST) is not
+        // retried: the statement may already have run, and running a write twice is worse than
+        // failing it. The next query reconnects either way.
+        if (bRetryIfGone && errorNo == CR_SERVER_GONE_ERROR)
+        {
+            LOG_WARNING("Reconnecting to retry the query once.");
+            try
+            {
+                Connect();
+            }
+            catch (std::runtime_error& e)
+            {
+                LOG_ERROR("Reconnect failed: %s", e.what());
+                return std::optional<ResultSet>();
+            }
+            const Query query = m_query;
+            if (PrepareQuery(query))
+            {
+                // The failure above was recovered from; don't leave its message for GetLastError().
+                m_lastError.clear();
+                return Execute(false);
+            }
+        }
     }
 
     return std::optional<ResultSet>(); // Failed query.

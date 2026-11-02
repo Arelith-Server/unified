@@ -147,6 +147,14 @@ ArgumentStack SQL::PrepareQuery(ArgumentStack&& args)
     }
 
     m_queryPrepared = m_target->PrepareQuery(m_activeQuery);
+
+    // IsConnected() can be a cached state, so a dropped connection may only show up here.
+    // Preparing has no side effects, so reconnect and try once more.
+    if (!m_queryPrepared && !m_target->IsConnected() && Reconnect(3))
+    {
+        m_target->GetLastError(true); // the failed attempt's message no longer applies
+        m_queryPrepared = m_target->PrepareQuery(m_activeQuery);
+    }
     return m_queryPrepared;
 }
 
@@ -158,10 +166,10 @@ ArgumentStack SQL::ExecutePreparedQuery(ArgumentStack&&)
         return 0;
     }
 
-    // NOTE: There is a time-of-check-to-time-of-use race condition here.
-    // The target may be there at the check, but will go away afterwards.
-    // In these cases the reconnect will not be attempted, and the call will fail.
-    // It is up to the user to check the return value, and repeat the query if needed.
+    // NOTE: For MySQL, IsConnected() only knows about connection errors seen so far, so a connection
+    // that dropped since the last call still reads as connected. The MySQL target then reconnects and
+    // runs the statement again only when it provably never reached the server; otherwise the call
+    // fails. It is up to the user to check the return value, and repeat the query if needed.
     if (!m_target->IsConnected())
     {
         LOG_DEBUG("Not Connected");
