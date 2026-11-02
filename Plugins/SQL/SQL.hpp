@@ -60,6 +60,7 @@ private:
     bool Reconnect(int32_t attempts = 1, ITarget* target = nullptr);
     std::unique_ptr<ITarget> CreateTarget();
     void RunAsyncJobDirect(const AsyncJobPtr& job);
+    void ReportAsyncDrops();
 
     std::unique_ptr<ITarget> m_target;
     Query m_activeQuery;
@@ -80,6 +81,9 @@ private:
     std::vector<AsyncParam> m_asyncParams;    // pushed for the next ExecuteAsync
     AsyncJobPtr m_asyncCurrent;               // the job whose callback is running
     ResultRow m_asyncActiveRow;
+    size_t m_asyncDropped = 0;                // refused because the queue was full, not yet reported
+    std::string m_asyncLastDroppedQuery;
+    std::chrono::steady_clock::time_point m_asyncLastDropReport;
     std::shared_ptr<AsyncCompletions> m_asyncCompletions; // finished, callback not yet run; shared with the worker
 };
 

@@ -653,18 +653,24 @@ ArgumentStack SQL::ExecuteAsync(ArgumentStack&& args)
         return job->id;
 
     // Queue full (or shutting down). Running the job here would put it ahead of older queued jobs,
-    // so it is dropped instead: the caller gets 0 and no callback. Log at most once a second.
-    static auto lastError = std::chrono::steady_clock::time_point();
-    static size_t dropped = 0;
-    dropped++;
-    if (job->queuedAt - lastError >= std::chrono::seconds(1))
+    // so it is dropped instead: the caller gets 0 and no callback.
+    m_asyncDropped++;
+    m_asyncLastDroppedQuery = job->query;
+    ReportAsyncDrops();
+    return 0;
+}
+
+void SQL::ReportAsyncDrops()
+{
+    // At most once a second; also called every tick so the last few drops of a burst get reported.
+    const auto now = std::chrono::steady_clock::now();
+    if (m_asyncDropped && now - m_asyncLastDropReport >= std::chrono::seconds(1))
     {
         LOG_ERROR("Async SQL queue is full (limit %zu): %zu job(s) dropped since the last report. Latest: %s",
-            m_asyncQueueLimit, dropped, job->query);
-        lastError = job->queuedAt;
-        dropped = 0;
+            m_asyncQueueLimit, m_asyncDropped, m_asyncLastDroppedQuery);
+        m_asyncLastDropReport = now;
+        m_asyncDropped = 0;
     }
-    return 0;
 }
 
 void SQL::RunAsyncJobDirect(const AsyncJobPtr& job)
@@ -686,6 +692,7 @@ void SQL::RunAsyncCompletions()
     // Only the jobs finished before this point. Anything that finishes while these callbacks run,
     // including jobs they queue that complete straight away, waits for the next tick, so a callback
     // that keeps retrying can't keep the main thread here.
+    ReportAsyncDrops();
     auto done = m_asyncCompletions->Take();
     if (done.empty())
         return;
