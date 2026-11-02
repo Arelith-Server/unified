@@ -51,16 +51,15 @@ public:
     ArgumentStack AsyncFlush                    (ArgumentStack&& args);
     ArgumentStack GetAsyncQueueDepth            (ArgumentStack&& args);
 
-    // Main thread: runs the callbacks of every finished async job.
+    // Main thread, once per tick: runs the callbacks of the async jobs finished so far.
     void RunAsyncCompletions();
 
     ITarget* GetTarget() { return m_target.get(); }
 
 private:
-    bool Reconnect(int32_t attempts = 1);
+    bool Reconnect(int32_t attempts = 1, ITarget* target = nullptr);
     std::unique_ptr<ITarget> CreateTarget();
-    void RunAsyncJobSync(const AsyncJobPtr& job);
-    void PostAsyncCompletion(AsyncJobPtr job); // any thread
+    void RunAsyncJobDirect(const AsyncJobPtr& job);
 
     std::unique_ptr<ITarget> m_target;
     Query m_activeQuery;
@@ -74,16 +73,14 @@ private:
 
     // Async worker state. m_asyncWorker is null when async is disabled or unsupported.
     std::unique_ptr<AsyncWorker> m_asyncWorker;
+    std::unique_ptr<ITarget> m_directTarget;  // runs async jobs when there is no worker (kill switch)
     size_t m_asyncQueueLimit;
     std::chrono::milliseconds m_asyncShutdownTimeout;
     int32_t m_nextAsyncJobId;
     std::vector<AsyncParam> m_asyncParams;    // pushed for the next ExecuteAsync
     AsyncJobPtr m_asyncCurrent;               // the job whose callback is running
     ResultRow m_asyncActiveRow;
-
-    std::mutex m_asyncCompletedLock;
-    std::deque<AsyncJobPtr> m_asyncCompleted; // finished, callback not yet run
-    bool m_asyncPumpQueued;
+    std::shared_ptr<AsyncCompletions> m_asyncCompletions; // finished, callback not yet run; shared with the worker
 };
 
 }

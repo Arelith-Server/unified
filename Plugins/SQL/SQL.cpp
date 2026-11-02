@@ -8,6 +8,7 @@
 #include "API/CServerExoApp.hpp"
 #include "API/CNWSItem.hpp" // Needed for static_cast from CGameObject
 #include "API/CNWSModule.hpp"
+#include "API/CServerExoAppInternal.hpp"
 #include <algorithm>
 #include <chrono>
 #include <thread>
@@ -15,12 +16,10 @@
 #include <dlfcn.h>
 
 using namespace NWNXLib;
-
-namespace Core {
-    extern bool g_CoreShuttingDown;
-}
+using namespace NWNXLib::API;
 
 static SQL::SQL* g_plugin;
+static Hooks::Hook s_mainLoopHook;
 
 NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
@@ -34,7 +33,8 @@ namespace SQL {
 
 SQL::SQL(Services::ProxyServiceList* services)
     : Plugin(services), m_nextQueryId(0), m_queryMetrics(false), m_queryPrepared(false),
-      m_asyncQueueLimit(10000), m_asyncShutdownTimeout(10000), m_nextAsyncJobId(0), m_asyncPumpQueued(false)
+      m_asyncQueueLimit(10000), m_asyncShutdownTimeout(10000), m_nextAsyncJobId(0),
+      m_asyncCompletions(std::make_shared<AsyncCompletions>())
 {
 
 #define REGISTER(func) \
@@ -100,12 +100,21 @@ SQL::SQL(Services::ProxyServiceList* services)
     m_asyncQueueLimit = static_cast<size_t>(std::max(1, Config::Get<int32_t>("ASYNC_QUEUE_LIMIT", 10000)));
     m_asyncShutdownTimeout = std::chrono::seconds(std::max(0, Config::Get<int32_t>("ASYNC_SHUTDOWN_TIMEOUT", 10)));
 
-    // Completions are handed to the core's main-thread queue as std::function objects whose code
-    // lives in this library, and a worker that can't be joined at shutdown is detached. Keep the
-    // library mapped when NWNX unloads plugins so neither can end up running unmapped code.
+    // A worker that can't be joined at shutdown is detached and keeps running code from this
+    // library. Keep the library mapped when NWNX unloads plugins so it never runs unmapped code.
     Dl_info info;
     if (dladdr(reinterpret_cast<void*>(&PluginLoad), &info) && info.dli_fname)
         dlopen(info.dli_fname, RTLD_NOW | RTLD_NOLOAD | RTLD_NODELETE);
+
+    // Finished jobs are picked up once per main loop tick, before the game's own update. A job that
+    // finishes while callbacks are running (e.g. one a callback queued) waits for the next tick.
+    s_mainLoopHook = Hooks::HookFunction(&CServerExoAppInternal::MainLoop,
+        +[](CServerExoAppInternal* pServerExoAppInternal) -> int32_t
+        {
+            if (g_plugin)
+                g_plugin->RunAsyncCompletions();
+            return s_mainLoopHook->CallOriginal<int32_t>(pServerExoAppInternal);
+        }, Hooks::Order::Early);
 
     if (Config::Get<bool>("ASYNC_DISABLE", false))
     {
@@ -117,11 +126,24 @@ SQL::SQL(Services::ProxyServiceList* services)
     }
     else
     {
-        LOG_INFO("Starting the async SQL worker (queue limit %zu, shutdown timeout %lld s).",
+        // The worker's own connection gets timeouts, so a dead network can't hold it (and shutdown) forever.
+        // The main connection's behaviour is unchanged.
+        const auto connectTimeout = static_cast<uint32_t>(std::max(0, Config::Get<int32_t>("ASYNC_CONNECT_TIMEOUT", 5)));
+        const auto readTimeout    = static_cast<uint32_t>(std::max(0, Config::Get<int32_t>("ASYNC_READ_TIMEOUT", 30)));
+        const auto writeTimeout   = static_cast<uint32_t>(std::max(0, Config::Get<int32_t>("ASYNC_WRITE_TIMEOUT", 30)));
+        auto target = CreateTarget();
+        target->SetTimeouts(connectTimeout, readTimeout, writeTimeout);
+
+        LOG_INFO("Starting the async SQL worker (queue limit %zu, shutdown timeout %lld s, "
+            "connect/read/write timeouts %u/%u/%u s).",
             m_asyncQueueLimit, static_cast<long long>(
-                std::chrono::duration_cast<std::chrono::seconds>(m_asyncShutdownTimeout).count()));
-        m_asyncWorker = std::make_unique<AsyncWorker>(CreateTarget(),
-            [this](AsyncJobPtr job){ PostAsyncCompletion(std::move(job)); });
+                std::chrono::duration_cast<std::chrono::seconds>(m_asyncShutdownTimeout).count()),
+            connectTimeout, readTimeout, writeTimeout);
+
+        // The worker only ever touches the completion list, which it co-owns, so nothing of this
+        // object is used if the worker has to be detached at shutdown and outlives it.
+        m_asyncWorker = std::make_unique<AsyncWorker>(std::move(target),
+            [completions = m_asyncCompletions](AsyncJobPtr job){ completions->Push(std::move(job)); });
     }
 }
 
@@ -171,12 +193,28 @@ SQL::~SQL()
         if (joined)
             m_asyncWorker.reset();
         else
-            (void)m_asyncWorker.release(); // still running; leaked on purpose
+            (void)m_asyncWorker.release(); // still running; leaked on purpose, with its completion list
     }
 
-    std::lock_guard<std::mutex> lock(m_asyncCompletedLock);
-    if (!m_asyncCompleted.empty())
-        LOG_DEBUG("%zu async SQL callback(s) not run because the server is shutting down.", m_asyncCompleted.size());
+    // Jobs that finished after the last tick (including everything drained above) never get their
+    // callbacks. Make sure failures among them are visible.
+    auto done = m_asyncCompletions->Take();
+    size_t failed = 0;
+    for (const auto& job : done)
+    {
+        if (!job->success)
+        {
+            if (++failed <= 100)
+                LOG_ERROR("Async SQL job '%i' FAILED during shutdown: \"%s\". Query: %s", job->id, job->error, job->query);
+        }
+    }
+    if (failed > 100)
+        LOG_ERROR("  ... and %zu more failed jobs.", failed - 100);
+    if (!done.empty())
+        LOG_INFO("%zu async SQL job(s) finished during shutdown (%zu failed); their callbacks are not run.",
+            done.size(), failed);
+
+    s_mainLoopHook.reset();
     g_plugin = nullptr;
 }
 
@@ -205,15 +243,18 @@ std::unique_ptr<ITarget> SQL::CreateTarget()
     throw std::runtime_error("Invalid database type selected.");
 }
 
-bool SQL::Reconnect(int32_t attempts)
+bool SQL::Reconnect(int32_t attempts, ITarget* target)
 {
+    if (!target)
+        target = m_target.get();
+
     LOG_WARNING("Database connection lost. Reconnecting..");
 
     for (int32_t i = 0; i < attempts; i++)
     {
         try
         {
-            m_target->Connect();
+            target->Connect();
             LOG_NOTICE("Reconnect successful.");
             break;
         }
@@ -231,7 +272,7 @@ bool SQL::Reconnect(int32_t attempts)
                 std::this_thread::sleep_for(std::chrono::milliseconds(1 << i));
         }
     }
-    return m_target->IsConnected();
+    return target->IsConnected();
 }
 
 ArgumentStack SQL::PrepareQuery(ArgumentStack&& args)
@@ -542,7 +583,7 @@ ArgumentStack SQL::GetPreparedQueryParamCount(ArgumentStack&&)
 }
 
 // ---------------------------------------------------------------------------------------------
-// Async API. Everything below runs on the main thread, except PostAsyncCompletion.
+// Async API. Everything below runs on the main thread.
 
 ArgumentStack SQL::PushAsyncParam(ArgumentStack&& args)
 {
@@ -601,67 +642,53 @@ ArgumentStack SQL::ExecuteAsync(ArgumentStack&& args)
     job->callbackTarget = callbackTarget;
     job->queuedAt = std::chrono::steady_clock::now();
 
-    if (m_asyncWorker)
+    if (!m_asyncWorker)
     {
-        if (m_asyncWorker->Enqueue(job, m_asyncQueueLimit))
-            return job->id;
-
-        // Backpressure: past the cap the job runs here, on the main connection. Warn at most once a second.
-        static auto lastWarning = std::chrono::steady_clock::time_point();
-        static size_t overflowed = 0;
-        overflowed++;
-        if (job->queuedAt - lastWarning >= std::chrono::seconds(1))
-        {
-            LOG_WARNING("Async SQL queue is full (limit %zu): %zu job(s) run synchronously since the last warning, latest job ID '%i'.",
-                m_asyncQueueLimit, overflowed, job->id);
-            lastWarning = job->queuedAt;
-            overflowed = 0;
-        }
+        // Kill switch or no worker for this database type: run it now, on a connection of its own.
+        RunAsyncJobDirect(job);
+        return job->id;
     }
 
-    RunAsyncJobSync(job);
-    return job->id;
+    if (m_asyncWorker->Enqueue(job, m_asyncQueueLimit))
+        return job->id;
+
+    // Queue full (or shutting down). Running the job here would put it ahead of older queued jobs,
+    // so it is dropped instead: the caller gets 0 and no callback. Log at most once a second.
+    static auto lastError = std::chrono::steady_clock::time_point();
+    static size_t dropped = 0;
+    dropped++;
+    if (job->queuedAt - lastError >= std::chrono::seconds(1))
+    {
+        LOG_ERROR("Async SQL queue is full (limit %zu): %zu job(s) dropped since the last report. Latest: %s",
+            m_asyncQueueLimit, dropped, job->query);
+        lastError = job->queuedAt;
+        dropped = 0;
+    }
+    return 0;
 }
 
-void SQL::RunAsyncJobSync(const AsyncJobPtr& job)
+void SQL::RunAsyncJobDirect(const AsyncJobPtr& job)
 {
+    // A target of its own, so these jobs never disturb a query prepared through the sync API,
+    // its results or its GetLastError(). Jobs still run in submission order: one at a time, here.
+    if (!m_directTarget)
+        m_directTarget = CreateTarget();
+
     job->ranSync = true;
-    RunJob(*m_target, *job, [this]{ return Reconnect(3); });
-    // The job used the main connection's statement, so nothing prepared through the sync API is left.
-    m_queryPrepared = false;
-    // Callbacks always run on a later tick, never inside ExecuteAsync, sync or not.
-    PostAsyncCompletion(job);
-}
-
-// Any thread.
-void SQL::PostAsyncCompletion(AsyncJobPtr job)
-{
-    bool post = false;
-    {
-        std::lock_guard<std::mutex> lock(m_asyncCompletedLock);
-        m_asyncCompleted.push_back(std::move(job));
-        if (!m_asyncPumpQueued)
-            post = m_asyncPumpQueued = true;
-    }
-    if (post)
-    {
-        // One pending main-thread task at a time, however many jobs finish before the next tick.
-        Tasks::QueueOnMainThread([]
-        {
-            if (g_plugin && !Core::g_CoreShuttingDown)
-                g_plugin->RunAsyncCompletions();
-        });
-    }
+    ITarget* target = m_directTarget.get();
+    RunJob(*target, *job, [this, target]{ return Reconnect(3, target); });
+    // The callback runs on the next tick, never inside ExecuteAsync.
+    m_asyncCompletions->Push(job);
 }
 
 void SQL::RunAsyncCompletions()
 {
-    std::deque<AsyncJobPtr> done;
-    {
-        std::lock_guard<std::mutex> lock(m_asyncCompletedLock);
-        done.swap(m_asyncCompleted);
-        m_asyncPumpQueued = false;
-    }
+    // Only the jobs finished before this point. Anything that finishes while these callbacks run,
+    // including jobs they queue that complete straight away, waits for the next tick, so a callback
+    // that keeps retrying can't keep the main thread here.
+    auto done = m_asyncCompletions->Take();
+    if (done.empty())
+        return;
 
     const size_t depth = m_asyncWorker ? m_asyncWorker->GetDepth() : 0;
     using namespace std::chrono;
@@ -788,6 +815,9 @@ ArgumentStack SQL::AsyncFlush(ArgumentStack&& args)
 
     if (flushed)
         LOG_DEBUG("Async SQL queue flushed in %lld ms.", static_cast<long long>(waited.count()));
+    else if (m_asyncWorker->IsConnectFailing())
+        LOG_WARNING("Async SQL flush gave up after %lld ms: the worker can't reach the database; %zu job(s) still queued or running.",
+            static_cast<long long>(waited.count()), m_asyncWorker->GetDepth());
     else
         LOG_WARNING("Async SQL flush timed out after %lld ms; %zu job(s) still queued or running.",
             static_cast<long long>(waited.count()), m_asyncWorker->GetDepth());

@@ -30,6 +30,7 @@ public:
     virtual void ThreadInit() override;
     virtual void ThreadEnd() override;
     virtual uint64_t GetConnectionId() override;
+    virtual void SetTimeouts(uint32_t connect, uint32_t read, uint32_t write) override;
 
 private:
     void NoteConnectionError(unsigned int error);
@@ -43,6 +44,7 @@ private:
     bool m_connected;
     bool m_initialised;
     bool m_closed; // by ThreadEnd()
+    unsigned int m_connectTimeout = 0, m_readTimeout = 0, m_writeTimeout = 0; // seconds, 0 = unset
     std::vector<MYSQL_BIND> m_params;
     size_t m_paramCount;
     std::string m_lastError;

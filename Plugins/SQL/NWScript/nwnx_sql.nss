@@ -149,17 +149,19 @@ void NWNX_SQL_PushAsyncParamNULL();
 
 /// @brief Queue a query to run on the async worker, with the parameters pushed since the last call.
 /// @note Returns at once. The pushed parameters are used up by this call even if it fails.
-/// @note If async is disabled (NWNX_SQL_ASYNC_DISABLE), the database isn't MySQL, or the queue is full
-/// (NWNX_SQL_ASYNC_QUEUE_LIMIT), the query runs synchronously on the main connection instead; the
-/// callback still runs on a later tick. Don't call this between NWNX_SQL_PrepareQuery() and
-/// NWNX_SQL_ExecutePreparedQuery(): a synchronous run replaces the prepared query.
+/// @note If the queue is full (NWNX_SQL_ASYNC_QUEUE_LIMIT) or the server is shutting down, the job is
+/// refused: this returns 0, the query never runs and there is no callback. Check the result for writes that matter.
+/// @note If async is disabled (NWNX_SQL_ASYNC_DISABLE) or the database isn't MySQL, the query runs right
+/// away, synchronously, on a separate connection (the sync API's prepared query and results are untouched);
+/// the callback still runs on the next tick.
 /// @param sQuery The query, with a `?` for each pushed parameter.
-/// @param sCallbackScript Script to run when the query is done (on a later tick, on the main thread).
+/// @param sCallbackScript Script to run when the query is done (on a later tick, on the main thread;
+/// a job that finishes while callbacks are running waits for the next tick).
 /// Inside it, use NWNX_SQL_GetAsyncJobId(), NWNX_SQL_GetAsyncSuccess() and the NWNX_SQL_Async*Row functions.
 /// "" for no callback.
 /// @param oCallbackTarget OBJECT_SELF for the callback. OBJECT_INVALID means the module. If the object
 /// no longer exists when the query is done, the callback is skipped.
-/// @return The job id (> 0), or 0 if the query couldn't be queued (empty query).
+/// @return The job id (> 0), or 0 if the job was refused (empty query, queue full, shutting down).
 int NWNX_SQL_ExecuteAsync(string sQuery, string sCallbackScript = "", object oCallbackTarget = OBJECT_INVALID);
 
 /// @brief In an async callback: the id NWNX_SQL_ExecuteAsync() returned for this job. 0 outside a callback.
@@ -187,7 +189,8 @@ string NWNX_SQL_AsyncReadDataInActiveRow(int nColumn = 0);
 /// @brief Wait, blocking the server, until every queued async query has run, or the timeout passes.
 /// @note Use before a player leaves the server. Callbacks of the flushed jobs run on a later tick, not inside this call.
 /// @param fTimeout The longest to wait, in seconds.
-/// @return TRUE if the queue is empty, FALSE on timeout.
+/// @note While the worker can't reach the database, returns FALSE straight away rather than waiting out the timeout.
+/// @return TRUE if the queue is empty, FALSE on timeout or database outage.
 int NWNX_SQL_AsyncFlush(float fTimeout = 5.0);
 
 /// @brief The number of async jobs queued or running.

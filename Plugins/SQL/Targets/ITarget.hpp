@@ -37,6 +37,8 @@ struct ITarget
     virtual void ThreadEnd() { }
     // Server-side id of the current connection (0 if unknown), so it can be killed at shutdown.
     virtual uint64_t GetConnectionId() { return 0; }
+    // Network timeouts in seconds for this target's connection (0 = library default), applied on the next Connect().
+    virtual void SetTimeouts(uint32_t /*connect*/, uint32_t /*read*/, uint32_t /*write*/) { }
 };
 
 }

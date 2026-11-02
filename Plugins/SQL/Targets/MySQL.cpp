@@ -55,6 +55,14 @@ void MySQL::Connect()
     m_initialised = true;
     m_connected = false;
 
+    // Only set when asked for (the async worker's connection); the main connection keeps the defaults.
+    if (m_connectTimeout)
+        mysql_options(&m_mysql, MYSQL_OPT_CONNECT_TIMEOUT, &m_connectTimeout);
+    if (m_readTimeout)
+        mysql_options(&m_mysql, MYSQL_OPT_READ_TIMEOUT, &m_readTimeout);
+    if (m_writeTimeout)
+        mysql_options(&m_mysql, MYSQL_OPT_WRITE_TIMEOUT, &m_writeTimeout);
+
     if (!mysql_real_connect(&m_mysql, host.c_str(), username.c_str(), password.c_str(),
             database ? (*database).c_str() : nullptr, port >= 0 ? port : 0, nullptr, 0))
     {
@@ -384,6 +392,13 @@ void MySQL::ThreadEnd()
     m_closed = true;
     m_connected = false;
     mysql_thread_end();
+}
+
+void MySQL::SetTimeouts(uint32_t connect, uint32_t read, uint32_t write)
+{
+    m_connectTimeout = connect;
+    m_readTimeout = read;
+    m_writeTimeout = write;
 }
 
 uint64_t MySQL::GetConnectionId()

@@ -117,7 +117,14 @@ bool AsyncWorker::Enqueue(AsyncJobPtr job, size_t maxDepth)
 bool AsyncWorker::Flush(milliseconds timeout)
 {
     std::unique_lock<std::mutex> lock(m_lock);
-    return m_idle.wait_for(lock, timeout, [this]{ return m_queue.empty() && !m_inFlight; });
+    m_idle.wait_for(lock, timeout, [this]{ return (m_queue.empty() && !m_inFlight) || m_connectFailing; });
+    return m_queue.empty() && !m_inFlight;
+}
+
+bool AsyncWorker::IsConnectFailing()
+{
+    std::lock_guard<std::mutex> lock(m_lock);
+    return m_connectFailing;
 }
 
 size_t AsyncWorker::GetDepth()
@@ -181,6 +188,10 @@ bool AsyncWorker::EnsureConnected()
         {
             m_target->Connect();
             m_connectionId = m_target->GetConnectionId();
+            {
+                std::lock_guard<std::mutex> lock(m_lock);
+                m_connectFailing = false;
+            }
             LOG_NOTICE("Async SQL worker connected (connection id %llu, attempt %d).",
                 static_cast<unsigned long long>(m_connectionId.load()), attempt);
             return true;
@@ -188,6 +199,11 @@ bool AsyncWorker::EnsureConnected()
         catch (const std::runtime_error& e)
         {
             m_connectionId = 0;
+            {
+                std::lock_guard<std::mutex> lock(m_lock);
+                m_connectFailing = true;
+            }
+            m_idle.notify_all();
             if (attempt == 1 || attempt % 10 == 0)
                 LOG_ERROR("Async SQL worker: connect attempt %d failed: %s. Retrying.", attempt, e.what());
         }
@@ -219,6 +235,9 @@ void AsyncWorker::Run()
         }
 
         RunJob(*m_target, *job, [this]{ return EnsureConnected(); });
+        // The target may have reconnected by itself (the one retry after error 2006), so keep the id
+        // the shutdown KILL would use current.
+        m_connectionId = m_target->GetConnectionId();
 
         // Hand the result over before the job stops counting as in flight, so a successful
         // Flush() means every flushed job's completion is already queued for the main thread.

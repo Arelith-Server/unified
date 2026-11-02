@@ -46,6 +46,32 @@ struct AsyncJob
 };
 using AsyncJobPtr = std::shared_ptr<AsyncJob>;
 
+// Finished jobs waiting for the main thread. Shared by the plugin and the worker's completion
+// handler, so a worker that outlives the plugin (detached at shutdown) still has somewhere to put them.
+struct AsyncCompletions
+{
+    void Push(AsyncJobPtr job)
+    {
+        std::lock_guard<std::mutex> lock(m_lock);
+        m_jobs.push_back(std::move(job));
+        m_pending = true;
+    }
+    std::deque<AsyncJobPtr> Take()
+    {
+        std::deque<AsyncJobPtr> jobs;
+        if (!m_pending)
+            return jobs;
+        std::lock_guard<std::mutex> lock(m_lock);
+        jobs.swap(m_jobs);
+        m_pending = false;
+        return jobs;
+    }
+private:
+    std::mutex m_lock;
+    std::deque<AsyncJobPtr> m_jobs;
+    std::atomic<bool> m_pending{false}; // cheap check every tick
+};
+
 // Runs a job on a target: prepare, bind the parameters, execute, collect the rows.
 // reconnect() is called when the target reports it isn't connected; it returns true once connected.
 // Follows the sync rules: preparing is retried after a reconnect (it has no side effects), and
@@ -64,10 +90,13 @@ public:
     // the caller then runs the job itself.
     bool Enqueue(AsyncJobPtr job, size_t maxDepth);
 
-    // Waits until the queue is empty and no job is running. False on timeout.
+    // Waits until the queue is empty and no job is running. False on timeout, and false at once
+    // (or as soon as it happens) while the worker can't connect, so a flush doesn't sit out an outage.
     bool Flush(std::chrono::milliseconds timeout);
 
     size_t GetDepth();
+    // True while the worker's connection attempts are failing (database unreachable).
+    bool IsConnectFailing();
     uint64_t GetConnectionId() const { return m_connectionId; }
 
     // Stops accepting jobs and drains the queue for up to timeout. If a job is still running after
@@ -92,6 +121,7 @@ private:
     bool m_inFlight = false;
     bool m_accepting = true;
     bool m_exited = false;
+    bool m_connectFailing = false;
     std::atomic<bool> m_stop{false};
     std::atomic<uint64_t> m_connectionId{0};
 
