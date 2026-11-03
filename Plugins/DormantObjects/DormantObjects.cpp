@@ -29,6 +29,7 @@
 
 #include <chrono>
 #include <unordered_map>
+#include <vector>
 
 namespace DormantObjects {
 
@@ -40,9 +41,15 @@ using namespace NWNXLib::API::Constants;
 static constexpr int PLACEABLE_SCRIPT_HEARTBEAT = 4;
 
 static std::unordered_map<ObjectID, int32_t> s_dormant; // object -> AI list it was taken from
+// The same IDs in order, for re-checking a bounded slice per tick. Entries no longer in s_dormant (woken, or the
+// engine took the object back) are dropped lazily when the cursor reaches them.
+static std::vector<ObjectID> s_recheck;
+static size_t s_recheckPos;
+static int32_t s_recheckPerTick;
 static std::chrono::steady_clock::duration s_period;
 static std::chrono::steady_clock::time_point s_nextSweep;
 static bool s_placeables, s_items;
+static int32_t s_nWoken, s_nGone; // counted since the last sweep log line
 
 static Hooks::Hook s_UpdateStateHook;
 static Hooks::Hook s_OnEffectAppliedHook;
@@ -107,30 +114,46 @@ static void Wake(CServerAIMaster* pMaster, ObjectID oid)
     pMaster->m_apGameAIList[nList].AddObject(oid);
 }
 
-static void Sweep(CServerAIMaster* pMaster)
+// Re-check up to s_recheckPerTick dormant objects: forget destroyed ones, wake any that gained work in a way the
+// hooks don't see (a heartbeat script set at runtime, a non-permanent effect, queued actions).
+static void Recheck(CServerAIMaster* pMaster)
 {
-    // Objects already dormant: forget destroyed ones, wake any that gained work some way the hooks don't see.
-    int32_t nWoken = 0, nGone = 0;
-    for (auto it = s_dormant.begin(); it != s_dormant.end();)
+    for (int32_t n = 0; n < s_recheckPerTick && !s_recheck.empty(); n++)
     {
-        auto* pGameObject = Utils::GetGameObject(it->first);
-        if (!pGameObject)
+        if (s_recheckPos >= s_recheck.size())
+            s_recheckPos = 0;
+        ObjectID oid = s_recheck[s_recheckPos];
+        bool bDrop = false;
+        auto it = s_dormant.find(oid);
+        if (it == s_dormant.end())
+            bDrop = true; // woken or reclaimed by the engine already
+        else if (auto* pGameObject = Utils::GetGameObject(oid); !pGameObject)
         {
-            it = s_dormant.erase(it);
-            nGone++;
+            s_dormant.erase(it);
+            s_nGone++;
+            bDrop = true;
         }
         else if (!IsDormant(pGameObject))
         {
             int32_t nList = it->second;
-            ObjectID oid = it->first;
-            it = s_dormant.erase(it);
+            s_dormant.erase(it);
             pMaster->m_apGameAIList[nList].AddObject(oid);
-            nWoken++;
+            s_nWoken++;
+            bDrop = true;
+        }
+        if (bDrop)
+        {
+            s_recheck[s_recheckPos] = s_recheck.back(); // swap-remove; re-examine this slot next
+            s_recheck.pop_back();
         }
         else
-            ++it;
+            s_recheckPos++;
     }
+}
 
+static void Sweep(CServerAIMaster* pMaster)
+{
+    auto start = std::chrono::steady_clock::now();
     // One pass per list: keep order, drop dormant objects, keep the walk's resume position on the same object.
     int32_t nDropped = 0;
     int32_t nRemaining = 0;
@@ -144,7 +167,8 @@ static void Sweep(CServerAIMaster* pMaster)
             ObjectID oid = objects.element[i];
             if (IsDormant(Utils::GetGameObject(oid)))
             {
-                s_dormant[oid] = nList;
+                if (s_dormant.emplace(oid, nList).second)
+                    s_recheck.push_back(oid);
                 nDropped++;
                 continue;
             }
@@ -157,8 +181,10 @@ static void Sweep(CServerAIMaster* pMaster)
         nRemaining += nKeep;
     }
 
-    LOG_INFO("Sweep: %d made dormant, %d woken, %d destroyed; %zu dormant, %d left in the AI lists",
-             nDropped, nWoken, nGone, s_dormant.size(), nRemaining);
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+    LOG_INFO("Sweep: %d made dormant, %d woken, %d destroyed since last; %zu dormant, %d left in the AI lists; took %lld us",
+             nDropped, s_nWoken, s_nGone, s_dormant.size(), nRemaining, (long long)us);
+    s_nWoken = s_nGone = 0;
 }
 
 void DormantObjects() __attribute__((constructor));
@@ -170,6 +196,7 @@ void DormantObjects()
     s_period = std::chrono::seconds(Config::Get<int32_t>("SWEEP_SECONDS", 10));
     s_placeables = Config::Get<bool>("PLACEABLES", true);
     s_items = Config::Get<bool>("ITEMS", true);
+    s_recheckPerTick = Config::Get<int32_t>("RECHECK_PER_TICK", 1000);
     s_nextSweep = std::chrono::steady_clock::now() + s_period;
     LOG_INFO("Enabled: sweep every %lld s, placeables %d, items %d",
              (long long)std::chrono::duration_cast<std::chrono::seconds>(s_period).count(), s_placeables, s_items);
@@ -177,6 +204,7 @@ void DormantObjects()
     s_UpdateStateHook = Hooks::HookFunction(&CServerAIMaster::UpdateState,
         +[](CServerAIMaster* pThis) -> void
         {
+            Recheck(pThis);
             auto now = std::chrono::steady_clock::now();
             if (now >= s_nextSweep)
             {
