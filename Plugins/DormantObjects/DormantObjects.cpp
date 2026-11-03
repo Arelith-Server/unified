@@ -32,7 +32,9 @@
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 
+#include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -136,18 +138,63 @@ static bool Wake(CServerAIMaster* pMaster, ObjectID oid)
     return true;
 }
 
+// Puts every dormant object back in its AI list at once. CServerAIList::AddObject scans the whole list for a
+// duplicate before appending, so calling it per object is quadratic: seconds of main thread with 100k+ dormant.
+// This does the same duplicate check with a hash set and appends directly, which is all AddObject does.
 static void WakeAll(CServerAIMaster* pMaster)
 {
-    // AddObject's hook erases from s_dormant, so take the set out first.
-    auto dormant = std::move(s_dormant);
+    std::vector<ObjectID> toWake[AIPriority::MAX + 1];
+    auto take = [&](ObjectID oid, int32_t nList)
+    {
+        if (Utils::GetGameObject(oid))
+            toWake[nList].push_back(oid);
+    };
+    // s_recheck holds every dormant object in roughly the order sweeps took them out; walk it first to keep that
+    // order, then pick up anything not in it (there shouldn't be any).
+    for (ObjectID oid : s_recheck)
+    {
+        auto it = s_dormant.find(oid);
+        if (it == s_dormant.end())
+            continue;
+        take(oid, it->second);
+        s_dormant.erase(it);
+    }
+    for (auto& [oid, nList] : s_dormant)
+        take(oid, nList);
     s_dormant.clear();
     s_recheck.clear();
     s_inRecheck.clear();
     s_recheckPos = 0;
-    for (auto& [oid, nList] : dormant)
+
+    for (int32_t nList = AIPriority::MIN; nList <= AIPriority::MAX; nList++)
     {
-        if (Utils::GetGameObject(oid))
-            pMaster->m_apGameAIList[nList].AddObject(oid);
+        if (toWake[nList].empty())
+            continue;
+        auto& objects = pMaster->m_apGameAIList[nList].m_aoGameObjects;
+        std::unordered_set<ObjectID> present;
+        present.reserve(objects.num + toWake[nList].size());
+        for (int32_t i = 0; i < objects.num; i++)
+            present.insert(objects.element[i]);
+        // The engine grows this array with realloc, so do the same rather than CExoArrayList::Allocate (new[]).
+        int32_t nNeeded = objects.num + (int32_t)toWake[nList].size();
+        if (nNeeded > objects.array_size)
+        {
+            auto* pGrown = (ObjectID*)std::realloc(objects.element, nNeeded * sizeof(ObjectID));
+            if (!pGrown)
+            {
+                LOG_ERROR("Out of memory growing AI list %d, waking one by one", nList);
+                for (ObjectID oid : toWake[nList])
+                    pMaster->m_apGameAIList[nList].AddObject(oid);
+                continue;
+            }
+            objects.element = pGrown;
+            objects.array_size = nNeeded;
+        }
+        for (ObjectID oid : toWake[nList])
+        {
+            if (present.insert(oid).second)
+                objects.element[objects.num++] = oid;
+        }
     }
 }
 
@@ -155,7 +202,9 @@ static void WakeAll(CServerAIMaster* pMaster)
 // hooks don't see (a heartbeat script set at runtime, a non-permanent effect, queued actions).
 static void Recheck(CServerAIMaster* pMaster)
 {
-    for (int32_t n = 0; n < s_recheckPerTick && !s_recheck.empty(); n++)
+    // Never more than once per object per tick, however few are queued.
+    size_t nChecks = std::min(s_recheck.size(), (size_t)s_recheckPerTick);
+    for (size_t n = 0; n < nChecks && !s_recheck.empty(); n++)
     {
         if (s_recheckPos >= s_recheck.size())
             s_recheckPos = 0;
@@ -271,6 +320,11 @@ void DormantObjects()
         LOG_WARNING("RECHECK_PER_TICK must be above 0, using 1000");
         s_recheckPerTick = 1000;
     }
+    else if (s_recheckPerTick > 100000)
+    {
+        LOG_WARNING("RECHECK_PER_TICK must be at most 100000, using 100000");
+        s_recheckPerTick = 100000;
+    }
     s_dormant.reserve(262144);
     s_inRecheck.reserve(262144);
     s_recheck.reserve(262144);
@@ -374,9 +428,11 @@ NWNX_EXPORT ArgumentStack Disable(ArgumentStack&&)
 {
     int32_t nWoken = (int32_t)s_dormant.size();
     s_active = false;
+    auto start = std::chrono::steady_clock::now();
     if (s_configured)
         WakeAll(AIMaster());
-    LOG_INFO("Disabled at runtime: %d dormant objects woken", nWoken);
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+    LOG_INFO("Disabled at runtime: %d dormant objects woken; took %lld us", nWoken, (long long)us);
     return nWoken;
 }
 
