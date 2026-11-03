@@ -16,11 +16,13 @@ MySQL::MySQL()
     m_paramCount = 0;
     m_connected = false;
     m_initialised = false;
+    m_closed = false;
 }
 
 MySQL::~MySQL()
 {
-    mysql_close(&m_mysql);
+    if (!m_closed)
+        mysql_close(&m_mysql);
 }
 
 void MySQL::Connect()
@@ -52,6 +54,14 @@ void MySQL::Connect()
     }
     m_initialised = true;
     m_connected = false;
+
+    // Only set when asked for (the async worker's connection); the main connection keeps the defaults.
+    if (m_connectTimeout)
+        mysql_options(&m_mysql, MYSQL_OPT_CONNECT_TIMEOUT, &m_connectTimeout);
+    if (m_readTimeout)
+        mysql_options(&m_mysql, MYSQL_OPT_READ_TIMEOUT, &m_readTimeout);
+    if (m_writeTimeout)
+        mysql_options(&m_mysql, MYSQL_OPT_WRITE_TIMEOUT, &m_writeTimeout);
 
     if (!mysql_real_connect(&m_mysql, host.c_str(), username.c_str(), password.c_str(),
             database ? (*database).c_str() : nullptr, port >= 0 ? port : 0, nullptr, 0))
@@ -361,6 +371,39 @@ void MySQL::DestroyPreparedQuery()
         std::vector<Variant>().swap(m_paramValues);
         m_paramCount = 0;
     }
+}
+
+void MySQL::ThreadInit()
+{
+    // The client library is already initialised by the main thread's connection;
+    // each extra thread that uses a handle needs its own thread-local state.
+    mysql_thread_init();
+}
+
+void MySQL::ThreadEnd()
+{
+    // Close on the thread that used the handle, then release that thread's client state.
+    if (m_stmt)
+    {
+        mysql_stmt_close(m_stmt);
+        m_stmt = nullptr;
+    }
+    mysql_close(&m_mysql);
+    m_closed = true;
+    m_connected = false;
+    mysql_thread_end();
+}
+
+void MySQL::SetTimeouts(uint32_t connect, uint32_t read, uint32_t write)
+{
+    m_connectTimeout = connect;
+    m_readTimeout = read;
+    m_writeTimeout = write;
+}
+
+uint64_t MySQL::GetConnectionId()
+{
+    return m_connected ? static_cast<uint64_t>(mysql_thread_id(&m_mysql)) : 0;
 }
 
 }

@@ -2,8 +2,11 @@
 
 #include "nwnx.hpp"
 #include "Targets/ITarget.hpp"
+#include "AsyncWorker.hpp"
 
+#include <deque>
 #include <memory>
+#include <mutex>
 
 using ArgumentStack = NWNXLib::ArgumentStack;
 
@@ -33,10 +36,31 @@ public:
     ArgumentStack GetLastError                  (ArgumentStack&& args);
     ArgumentStack GetPreparedQueryParamCount    (ArgumentStack&& args);
 
+    ArgumentStack PushAsyncParam                (ArgumentStack&& args);
+    ArgumentStack PushAsyncParamInt             (ArgumentStack&& args);
+    ArgumentStack PushAsyncParamFloat           (ArgumentStack&& args);
+    ArgumentStack PushAsyncParamNULL            (ArgumentStack&& args);
+    ArgumentStack ExecuteAsync                  (ArgumentStack&& args);
+    ArgumentStack GetAsyncJobId                 (ArgumentStack&& args);
+    ArgumentStack GetAsyncSuccess               (ArgumentStack&& args);
+    ArgumentStack GetAsyncAffectedRows          (ArgumentStack&& args);
+    ArgumentStack GetAsyncLastError             (ArgumentStack&& args);
+    ArgumentStack AsyncReadyToReadNextRow       (ArgumentStack&& args);
+    ArgumentStack AsyncReadNextRow              (ArgumentStack&& args);
+    ArgumentStack AsyncReadDataInActiveRow      (ArgumentStack&& args);
+    ArgumentStack AsyncFlush                    (ArgumentStack&& args);
+    ArgumentStack GetAsyncQueueDepth            (ArgumentStack&& args);
+
+    // Main thread, once per tick: runs the callbacks of the async jobs finished so far.
+    void RunAsyncCompletions();
+
     ITarget* GetTarget() { return m_target.get(); }
 
 private:
-    bool Reconnect(int32_t attempts = 1);
+    bool Reconnect(int32_t attempts = 1, ITarget* target = nullptr);
+    std::unique_ptr<ITarget> CreateTarget();
+    void RunAsyncJobDirect(const AsyncJobPtr& job);
+    void ReportAsyncDrops();
 
     std::unique_ptr<ITarget> m_target;
     Query m_activeQuery;
@@ -47,6 +71,20 @@ private:
     bool m_queryPrepared;
     bool m_utf8;
     std::string m_databaseType;
+
+    // Async worker state. m_asyncWorker is null when async is disabled or unsupported.
+    std::unique_ptr<AsyncWorker> m_asyncWorker;
+    std::unique_ptr<ITarget> m_directTarget;  // runs async jobs when there is no worker (kill switch)
+    size_t m_asyncQueueLimit;
+    std::chrono::milliseconds m_asyncShutdownTimeout;
+    int32_t m_nextAsyncJobId;
+    std::vector<AsyncParam> m_asyncParams;    // pushed for the next ExecuteAsync
+    AsyncJobPtr m_asyncCurrent;               // the job whose callback is running
+    ResultRow m_asyncActiveRow;
+    size_t m_asyncDropped = 0;                // refused because the queue was full, not yet reported
+    std::string m_asyncLastDroppedQuery;
+    std::chrono::steady_clock::time_point m_asyncLastDropReport;
+    std::shared_ptr<AsyncCompletions> m_asyncCompletions; // finished, callback not yet run; shared with the worker
 };
 
 }

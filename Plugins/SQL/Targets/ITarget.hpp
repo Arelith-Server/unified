@@ -31,6 +31,14 @@ struct ITarget
     virtual int32_t GetPreparedQueryParamCount() = 0;
     virtual void DestroyPreparedQuery() = 0;
 
+    // Used by the async worker, which owns its own target instance on its own thread.
+    // Called on that thread before its first and after its last use of the target.
+    virtual void ThreadInit() { }
+    virtual void ThreadEnd() { }
+    // Server-side id of the current connection (0 if unknown), so it can be killed at shutdown.
+    virtual uint64_t GetConnectionId() { return 0; }
+    // Network timeouts in seconds for this target's connection (0 = library default), applied on the next Connect().
+    virtual void SetTimeouts(uint32_t /*connect*/, uint32_t /*read*/, uint32_t /*write*/) { }
 };
 
 }
