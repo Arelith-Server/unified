@@ -10,7 +10,7 @@
 //   - an effect is applied to it (CServerAIMaster::OnEffectApplied),
 //   - an action is queued on it (CNWSObject::AddAction),
 //   - and, checked at each sweep, if it gained a heartbeat script, actions or a non-permanent effect some other way.
-// If the engine itself adds or removes a dormant object (CServerAIMaster::AddObject/RemoveObject), the plugin forgets
+// If the engine itself adds or removes a dormant object (CServerAIList::AddObject, CServerAIMaster::RemoveObject), the plugin forgets
 // it. Off unless NWNX_DORMANTOBJECTS_ENABLE=true.
 
 #include "nwnx.hpp"
@@ -235,12 +235,14 @@ void DormantObjects()
         }, Hooks::Order::Early);
 
     // The engine adding or removing an object we hold as dormant takes precedence: forget it.
-    s_AddObjectHook = Hooks::HookFunction(&CServerAIMaster::AddObject,
-        +[](CServerAIMaster* pThis, CNWSObject* pObject, int32_t nAILevel) -> BOOL
+    // Adds are hooked on the list, not on CServerAIMaster::AddObject: that one starts with a short conditional jump
+    // that funchook can't relocate, so hooking it fails. Every add goes through CServerAIList::AddObject anyway.
+    s_AddObjectHook = Hooks::HookFunction(&CServerAIList::AddObject,
+        +[](CServerAIList* pThis, ObjectID oid) -> BOOL
         {
-            if (pObject && !s_dormant.empty())
-                s_dormant.erase(pObject->m_idSelf);
-            return s_AddObjectHook->CallOriginal<BOOL>(pThis, pObject, nAILevel);
+            if (!s_dormant.empty())
+                s_dormant.erase(oid);
+            return s_AddObjectHook->CallOriginal<BOOL>(pThis, oid);
         }, Hooks::Order::Early);
 
     s_RemoveObjectHook = Hooks::HookFunction(&CServerAIMaster::RemoveObject,
