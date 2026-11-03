@@ -29,6 +29,10 @@ If any of the plugin's hooks fails to install, it logs an error and stays inacti
 | `NWNX_DORMANTOBJECTS_RECHECK_PER_TICK` | int | 1000 | Dormant objects re-checked per tick. Must be above 0. |
 | `NWNX_DORMANTOBJECTS_PLACEABLES` | true/false | true | Consider placeables. |
 | `NWNX_DORMANTOBJECTS_ITEMS` | true/false | true | Consider items. |
+| `NWNX_DORMANTOBJECTS_CONTAINERS` | true/false | false | Also consider placeables with an inventory or a trap (the engine's placeable update ignores both). |
+| `NWNX_DORMANTOBJECTS_DOORS` | true/false | false | Consider doors: no heartbeat script, no actions, not dead, only permanent effects. |
+| `NWNX_DORMANTOBJECTS_TRIGGERS` | true/false | false | Consider triggers: no heartbeat script, no actions. |
+| `NWNX_DORMANTOBJECTS_RECHECK_SECONDS` | int | 0 | Re-check every dormant object once in about this many seconds, at most `RECHECK_PER_TICK` per tick. 0 always uses `RECHECK_PER_TICK`. |
 | `NWNX_DORMANTOBJECTS_DEBUG_SIMULATE_HOOK_FAILURE` | true/false | false | Testing only: behave as if a hook failed to install. |
 
 ## NWScript

@@ -23,7 +23,9 @@
 #include "API/CAppManager.hpp"
 #include "API/CExoLinkedListInternal.hpp"
 #include "API/CGameEffect.hpp"
+#include "API/CNWSDoor.hpp"
 #include "API/CNWSItem.hpp"
+#include "API/CNWSTrigger.hpp"
 #include "API/CNWSObject.hpp"
 #include "API/CNWSPlaceable.hpp"
 #include "API/CServerAIList.hpp"
@@ -34,7 +36,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <cstdlib>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -45,8 +49,18 @@ using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
 
-// Placeable script slots are EVENT_SCRIPT_PLACEABLE_ON_* - 9000; the heartbeat is 9004.
+// Script slots are EVENT_SCRIPT_<TYPE>_ON_* minus the type's base: placeable heartbeat 9004, door heartbeat 10005,
+// trigger heartbeat 7000.
 static constexpr int PLACEABLE_SCRIPT_HEARTBEAT = 4;
+static constexpr int DOOR_SCRIPT_HEARTBEAT = 5;
+static constexpr int TRIGGER_SCRIPT_HEARTBEAT = 0;
+
+// The heartbeat strings CNWSPlaceable::AIUpdate and CNWSDoor::AIUpdate test (8193.37-17: +0x418 and +0x350).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(CNWSPlaceable, m_sScripts) + PLACEABLE_SCRIPT_HEARTBEAT * sizeof(CExoString) == 0x418);
+static_assert(offsetof(CNWSDoor, m_sScripts) + DOOR_SCRIPT_HEARTBEAT * sizeof(CExoString) == 0x350);
+#pragma GCC diagnostic pop
 
 static std::unordered_map<ObjectID, int32_t> s_dormant; // object -> AI list it was taken from
 // IDs to re-check, a bounded slice per tick. s_inRecheck holds the same IDs so none is queued twice; entries no
@@ -54,7 +68,11 @@ static std::unordered_map<ObjectID, int32_t> s_dormant; // object -> AI list it 
 static std::vector<ObjectID> s_recheck;
 static std::unordered_set<ObjectID> s_inRecheck;
 static size_t s_recheckPos;
-static int32_t s_recheckPerTick;
+static int32_t s_recheckPerTick;   // upper bound per tick
+static double s_recheckSeconds;    // aim to re-check every dormant object once in this many seconds (0: always the bound)
+static double s_recheckCredit;     // fractional checks carried between ticks
+static std::chrono::steady_clock::time_point s_lastRecheck;
+static bool s_doors, s_triggers, s_containers;
 static std::chrono::steady_clock::duration s_period;
 static std::chrono::steady_clock::time_point s_nextSweep;
 static bool s_placeables, s_items;
@@ -106,24 +124,54 @@ static bool IsDormant(CGameObject* pGameObject)
     if (!pGameObject)
         return false;
 
-    if (s_placeables)
+    // CNWSPlaceable::AIUpdate and CNWSDoor::AIUpdate (8193.37-17) return at once when the heartbeat script, the
+    // action queue and the effect list are all empty; otherwise they run the heartbeat timer, UpdateEffectList and
+    // RunActions, nothing else. Inventory and trap flags play no part, so containers and trapped objects are as
+    // idle as any other when those are empty. CNWSTrigger::AIUpdate only runs the heartbeat timer and RunActions.
+    switch (pGameObject->m_nObjectType)
     {
-        if (auto* pPlaceable = Utils::AsNWSPlaceable(pGameObject))
+        case ObjectType::Placeable:
         {
-            return !pPlaceable->m_bHasInventory &&
-                   !pPlaceable->m_bTrapFlag &&
+            if (!s_placeables)
+                return false;
+            auto* pPlaceable = Utils::AsNWSPlaceable(pGameObject);
+            return pPlaceable &&
+                   (s_containers || (!pPlaceable->m_bHasInventory && !pPlaceable->m_bTrapFlag)) &&
                    pPlaceable->m_sScripts[PLACEABLE_SCRIPT_HEARTBEAT].IsEmpty() &&
                    !HasQueuedActions(pPlaceable) &&
                    !pPlaceable->GetDead() &&
                    EffectsNeverExpire(pPlaceable);
         }
+        case ObjectType::Item:
+        {
+            if (!s_items)
+                return false;
+            auto* pItem = Utils::AsNWSItem(pGameObject);
+            return pItem && !HasQueuedActions(pItem) && EffectsNeverExpire(pItem);
+        }
+        case ObjectType::Door:
+        {
+            if (!s_doors)
+                return false;
+            auto* pDoor = Utils::AsNWSDoor(pGameObject);
+            return pDoor &&
+                   pDoor->m_sScripts[DOOR_SCRIPT_HEARTBEAT].IsEmpty() &&
+                   !HasQueuedActions(pDoor) &&
+                   !pDoor->GetDead() &&
+                   EffectsNeverExpire(pDoor);
+        }
+        case ObjectType::Trigger:
+        {
+            if (!s_triggers)
+                return false;
+            auto* pTrigger = Utils::AsNWSTrigger(pGameObject);
+            return pTrigger &&
+                   pTrigger->m_sScripts[TRIGGER_SCRIPT_HEARTBEAT].IsEmpty() &&
+                   !HasQueuedActions(pTrigger);
+        }
+        default:
+            return false;
     }
-    if (s_items)
-    {
-        if (auto* pItem = Utils::AsNWSItem(pGameObject))
-            return !HasQueuedActions(pItem) && EffectsNeverExpire(pItem);
-    }
-    return false;
 }
 
 // Puts oid back in its AI list if it's dormant. Returns true if it was.
@@ -202,8 +250,20 @@ static void WakeAll(CServerAIMaster* pMaster)
 // hooks don't see (a heartbeat script set at runtime, a non-permanent effect, queued actions).
 static void Recheck(CServerAIMaster* pMaster)
 {
-    // Never more than once per object per tick, however few are queued.
-    size_t nChecks = std::min(s_recheck.size(), (size_t)s_recheckPerTick);
+    // With RECHECK_SECONDS set, spread one pass over all dormant objects across that many seconds, whatever the tick
+    // rate; RECHECK_PER_TICK stays the upper bound. Never more than once per object per tick.
+    size_t nChecks = (size_t)s_recheckPerTick;
+    if (s_recheckSeconds > 0)
+    {
+        auto now = std::chrono::steady_clock::now();
+        double dt = std::chrono::duration<double>(now - s_lastRecheck).count();
+        s_lastRecheck = now;
+        s_recheckCredit += (double)s_recheck.size() * std::min(dt, 1.0) / s_recheckSeconds;
+        nChecks = std::min((size_t)s_recheckCredit, nChecks);
+        // Don't bank more than one tick's worth when the bound or an empty queue held it back.
+        s_recheckCredit = std::min(s_recheckCredit - (double)nChecks, (double)s_recheckPerTick);
+    }
+    nChecks = std::min(s_recheck.size(), nChecks);
     for (size_t n = 0; n < nChecks && !s_recheck.empty(); n++)
     {
         if (s_recheckPos >= s_recheck.size())
@@ -314,6 +374,17 @@ void DormantObjects()
     s_period = std::chrono::seconds(nSweepSeconds);
     s_placeables = Config::Get<bool>("PLACEABLES", true);
     s_items = Config::Get<bool>("ITEMS", true);
+    // Off by default until each has been piloted on live.
+    s_doors = Config::Get<bool>("DOORS", false);
+    s_triggers = Config::Get<bool>("TRIGGERS", false);
+    s_containers = Config::Get<bool>("CONTAINERS", false); // placeables with an inventory or a trap
+    s_recheckSeconds = Config::Get<int32_t>("RECHECK_SECONDS", 0);
+    if (s_recheckSeconds < 0)
+    {
+        LOG_WARNING("RECHECK_SECONDS must be 0 or above, using 0");
+        s_recheckSeconds = 0;
+    }
+    s_lastRecheck = std::chrono::steady_clock::now();
     s_recheckPerTick = Config::Get<int32_t>("RECHECK_PER_TICK", 1000);
     if (s_recheckPerTick <= 0)
     {
@@ -419,8 +490,9 @@ void DormantObjects()
 
     s_configured = true;
     s_active = true;
-    LOG_INFO("Enabled: sweep every %d s, re-check %d per tick, placeables %d, items %d",
-             nSweepSeconds, s_recheckPerTick, s_placeables, s_items);
+    LOG_INFO("Enabled: sweep every %d s, re-check every %.0f s (0: as fast as the bound) up to %d per tick, "
+             "placeables %d (containers and traps %d), items %d, doors %d, triggers %d",
+             nSweepSeconds, s_recheckSeconds, s_recheckPerTick, s_placeables, s_containers, s_items, s_doors, s_triggers);
 }
 
 // Wakes every dormant object and stops sweeping. Returns how many were woken.
@@ -454,6 +526,109 @@ NWNX_EXPORT ArgumentStack Enable(ArgumentStack&&)
 NWNX_EXPORT ArgumentStack GetDormantCount(ArgumentStack&&)
 {
     return s_active ? (int32_t)s_dormant.size() : -1;
+}
+
+// Logs what the AI lists still hold: per list, objects by type, and for placeables, doors, triggers and items the
+// reasons they aren't dormant; then dormant objects by type, and creature effect counts. Read-only; one pass over
+// the lists, so a few ms on a big module. Returns the number of objects left in the lists.
+NWNX_EXPORT ArgumentStack LogCensus(ArgumentStack&&)
+{
+    auto* pMaster = AIMaster();
+    int32_t nTotal = 0;
+    int32_t nCreatures = 0, nCreatureFx = 0, nCreatureFxInert = 0, nCreaturesAllInert = 0;
+    std::unordered_map<std::string, int32_t> reasons;
+    for (int32_t nList = AIPriority::MIN; nList <= AIPriority::MAX; nList++)
+    {
+        auto& objects = pMaster->m_apGameAIList[nList].m_aoGameObjects;
+        int32_t byType[ObjectType::MAX + 1] = {};
+        for (int32_t i = 0; i < objects.num; i++)
+        {
+            auto* pGameObject = Utils::GetGameObject(objects.element[i]);
+            if (!pGameObject)
+                continue;
+            uint8_t nType = pGameObject->m_nObjectType;
+            if (nType <= ObjectType::MAX)
+                byType[nType]++;
+            auto* pObject = Utils::AsNWSObject(pGameObject);
+            if (!pObject)
+                continue;
+            std::string why;
+            auto fx = [&]() { if (!EffectsNeverExpire(pObject)) why += "fx-expiring "; else if (pObject->m_appliedEffects.num) why += "(fx-permanent) "; };
+            if (nType == ObjectType::Placeable)
+            {
+                auto* p = Utils::AsNWSPlaceable(pGameObject);
+                if (!p->m_sScripts[PLACEABLE_SCRIPT_HEARTBEAT].IsEmpty()) why += "hb ";
+                if (p->m_bHasInventory) why += "inventory ";
+                if (p->m_bTrapFlag) why += "trap ";
+                if (HasQueuedActions(p)) why += "actions ";
+                if (p->GetDead()) why += "dead ";
+                fx();
+            }
+            else if (nType == ObjectType::Door)
+            {
+                auto* p = Utils::AsNWSDoor(pGameObject);
+                if (!p->m_sScripts[DOOR_SCRIPT_HEARTBEAT].IsEmpty()) why += "hb ";
+                if (HasQueuedActions(p)) why += "actions ";
+                if (p->GetDead()) why += "dead ";
+                fx();
+            }
+            else if (nType == ObjectType::Trigger)
+            {
+                auto* p = Utils::AsNWSTrigger(pGameObject);
+                if (!p->m_sScripts[TRIGGER_SCRIPT_HEARTBEAT].IsEmpty()) why += "hb ";
+                if (HasQueuedActions(p)) why += "actions ";
+            }
+            else if (nType == ObjectType::Item)
+            {
+                if (HasQueuedActions(pObject)) why += "actions ";
+                fx();
+            }
+            else if (nType == ObjectType::Creature)
+            {
+                nCreatures++;
+                int32_t nInert = 0;
+                for (int32_t e = 0; e < pObject->m_appliedEffects.num; e++)
+                {
+                    auto* pEffect = pObject->m_appliedEffects.element[e];
+                    if (!pEffect)
+                        continue;
+                    auto d = pEffect->GetDurationType();
+                    bool bInterval = pEffect->m_nType == EffectTrueType::RunScript || pEffect->m_nType == EffectTrueType::Regenerate ||
+                                     pEffect->m_nType == EffectTrueType::Poison || pEffect->m_nType == EffectTrueType::Disease;
+                    if (!bInterval && (d == EffectDurationType::Permanent || d == EffectDurationType::Equipped || d == EffectDurationType::Innate))
+                        nInert++;
+                }
+                nCreatureFx += pObject->m_appliedEffects.num;
+                nCreatureFxInert += nInert;
+                if (nInert == pObject->m_appliedEffects.num)
+                    nCreaturesAllInert++;
+                continue;
+            }
+            else
+                continue;
+            reasons[std::string(ObjectType::ToString(nType)) + " list " + std::to_string(nList) + ": " + (why.empty() ? "idle" : why)]++;
+        }
+        std::string line;
+        for (int32_t t = 0; t <= ObjectType::MAX; t++)
+            if (byType[t])
+                line += std::string(" ") + ObjectType::ToString(t) + "=" + std::to_string(byType[t]);
+        LOG_INFO("Census list %d: %d objects:%s", nList, objects.num, line.c_str());
+        nTotal += objects.num;
+    }
+    for (auto& [k, v] : reasons)
+        LOG_INFO("Census not dormant: %s x%d", k.c_str(), v);
+    int32_t dormantByType[ObjectType::MAX + 1] = {};
+    for (auto& [oid, nList] : s_dormant)
+        if (auto* p = Utils::GetGameObject(oid); p && p->m_nObjectType <= ObjectType::MAX)
+            dormantByType[p->m_nObjectType]++;
+    std::string line;
+    for (int32_t t = 0; t <= ObjectType::MAX; t++)
+        if (dormantByType[t])
+            line += std::string(" ") + ObjectType::ToString(t) + "=" + std::to_string(dormantByType[t]);
+    LOG_INFO("Census dormant: %zu:%s", s_dormant.size(), line.c_str());
+    LOG_INFO("Census creatures in lists: %d, effects %d (permanent/equipped/innate, no interval: %d), creatures with only "
+             "such effects: %d", nCreatures, nCreatureFx, nCreatureFxInert, nCreaturesAllInert);
+    return nTotal;
 }
 
 // Returns TRUE if oObject is currently dormant (out of the AI list walk).

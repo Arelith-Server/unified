@@ -22,6 +22,11 @@ int NWNX_DormantObjects_GetDormantCount();
 /// @return TRUE if dormant.
 int NWNX_DormantObjects_GetIsDormant(object oObject);
 
+/// @brief Logs (at INFO) what the engine's AI lists still hold: objects by type per list, why placeables, doors,
+/// triggers and items aren't dormant, dormant objects by type, and creature effect counts. Read-only.
+/// @return The number of objects left in the AI lists.
+int NWNX_DormantObjects_LogCensus();
+
 /// @}
 
 int NWNX_DormantObjects_Disable()
@@ -46,5 +51,11 @@ int NWNX_DormantObjects_GetIsDormant(object oObject)
 {
     NWNXPushObject(oObject);
     NWNXCall(NWNX_DormantObjects, "GetIsDormant");
+    return NWNXPopInt();
+}
+
+int NWNX_DormantObjects_LogCensus()
+{
+    NWNXCall(NWNX_DormantObjects, "LogCensus");
     return NWNXPopInt();
 }
