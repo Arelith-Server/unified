@@ -160,9 +160,13 @@ static Hooks::Hook s_AIUpdateHook;
 // Objects a connected player controls this tick (their character, or a creature they or a DM possess). Rebuilt once
 // per tick before the AI walk; a possessed creature's area need not count a player, so check it directly.
 static std::vector<ObjectID> s_controlled;
+// Read once per tick, before the AI walk, so the per-creature path makes no clock or timer calls.
+static uint32_t s_tickMs, s_tickWorldDay, s_tickWorldTime;
 
-static void RefreshControlled()
+static void RefreshPerTick()
 {
+    s_tickMs = NowMs();
+    Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->GetWorldTime(&s_tickWorldDay, &s_tickWorldTime);
     s_controlled.clear();
     for (auto* pPlayer : Globals::AppManager()->m_pServerExoApp->GetPlayerList())
     {
@@ -219,11 +223,19 @@ static void CountSkippedHeartbeatCheck(CNWSCreature* pCreature)
 {
     if (!pCreature->m_bOnCreationScriptExecuted)
         return;
-    auto* pApp = Globals::AppManager()->m_pServerExoApp;
-    uint32_t nDay = 0, nTime = 0, nDiffDay = 0, nDiffMs = 0;
-    pApp->GetActiveTimer(pCreature->m_idSelf)->GetWorldTime(&nDay, &nTime);
-    pApp->GetWorldTimer()->SubtractWorldTimes(nDay, nTime, pCreature->m_nLastHeartbeatScriptCalendarDay,
-                                              pCreature->m_nLastHeartbeatScriptTimeOfDay, &nDiffDay, &nDiffMs);
+    // World time as of the start of this tick (read once per tick in the UpdateState hook). The engine reads the
+    // object's active timer, which is the world timer unless the game is paused; the difference is a few ms at most.
+    uint32_t nDiffMs;
+    if (s_tickWorldDay == pCreature->m_nLastHeartbeatScriptCalendarDay &&
+        s_tickWorldTime >= pCreature->m_nLastHeartbeatScriptTimeOfDay)
+        nDiffMs = s_tickWorldTime - pCreature->m_nLastHeartbeatScriptTimeOfDay;
+    else
+    {
+        uint32_t nDiffDay = 0;
+        nDiffMs = 0;
+        Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->SubtractWorldTimes(s_tickWorldDay, s_tickWorldTime,
+            pCreature->m_nLastHeartbeatScriptCalendarDay, pCreature->m_nLastHeartbeatScriptTimeOfDay, &nDiffDay, &nDiffMs);
+    }
     // The engine compares only the time-of-day part of the difference.
     if (nDiffMs >= pCreature->m_nHeartbeatInterval)
         pCreature->m_nChecksHeartbeat++;
@@ -235,7 +247,7 @@ static void AIUpdateHook(CNWSCreature* pThis)
     {
         if (CanThrottle(pThis))
         {
-            uint32_t nNow = NowMs();
+            uint32_t nNow = s_tickMs;
             auto [it, bNew] = s_throttled.try_emplace(pThis->m_idSelf);
             auto& st = it->second;
             if (bNew)
@@ -321,7 +333,7 @@ static void InstallHousekeeping()
         +[](CServerAIMaster* pThis) -> void
         {
             if (s_throttleActive)
-                RefreshControlled();
+                RefreshPerTick();
             s_UpdateStateHook->CallOriginal<void>(pThis);
             auto now = std::chrono::steady_clock::now();
             if (now >= s_nextLog)
