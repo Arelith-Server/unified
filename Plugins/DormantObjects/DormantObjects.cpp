@@ -10,6 +10,8 @@
 //   - an effect is applied to it (CServerAIMaster::OnEffectApplied),
 //   - an action is queued on it (CNWSObject::AddAction, AddActionToFront, AddActionAfterFront; PlayAnimation and
 //     ActionDoDoorAction use the latter two),
+//   - a script changes one of its event scripts (SetEventScript, CNWSVirtualMachineCommands::
+//     ExecuteCommandEventScriptManagement), so a heartbeat set at runtime starts at once,
 //   - and, re-checked a slice per tick, if it gained a heartbeat script, actions or a non-permanent effect some
 //     other way.
 // If the engine itself adds or removes a dormant object (CServerAIList::AddObject, CServerAIMaster::RemoveObject),
@@ -28,11 +30,14 @@
 #include "API/CNWSTrigger.hpp"
 #include "API/CNWSObject.hpp"
 #include "API/CNWSPlaceable.hpp"
+#include "API/CNWSVirtualMachineCommands.hpp"
 #include "API/CServerAIList.hpp"
 #include "API/CServerAIMaster.hpp"
 #include "API/CServerExoApp.hpp"
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
+#include "API/CVirtualMachine.hpp"
+#include "API/StackElement.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -60,6 +65,9 @@ static constexpr int TRIGGER_SCRIPT_HEARTBEAT = 0;
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 static_assert(offsetof(CNWSPlaceable, m_sScripts) + PLACEABLE_SCRIPT_HEARTBEAT * sizeof(CExoString) == 0x418);
 static_assert(offsetof(CNWSDoor, m_sScripts) + DOOR_SCRIPT_HEARTBEAT * sizeof(CExoString) == 0x350);
+// CNWSPlaceable::AIUpdate never takes its early return for a placeable with m_bDieWhenEmpty (+0x4fc; body bags):
+// the full update destroys it once its inventory is empty and nobody has it open.
+static_assert(offsetof(CNWSPlaceable, m_bDieWhenEmpty) == 0x4fc);
 #pragma GCC diagnostic pop
 
 static std::unordered_map<ObjectID, int32_t> s_dormant; // object -> AI list it was taken from
@@ -87,6 +95,7 @@ static Hooks::Hook s_AddActionToFrontHook;
 static Hooks::Hook s_AddActionAfterFrontHook;
 static Hooks::Hook s_AddObjectHook;
 static Hooks::Hook s_RemoveObjectHook;
+static Hooks::Hook s_EventScriptHook;
 
 static CServerAIMaster* AIMaster()
 {
@@ -126,8 +135,10 @@ static bool IsDormant(CGameObject* pGameObject)
 
     // CNWSPlaceable::AIUpdate and CNWSDoor::AIUpdate (8193.37-17) return at once when the heartbeat script, the
     // action queue and the effect list are all empty; otherwise they run the heartbeat timer, UpdateEffectList and
-    // RunActions, nothing else. Inventory and trap flags play no part, so containers and trapped objects are as
-    // idle as any other when those are empty. CNWSTrigger::AIUpdate only runs the heartbeat timer and RunActions.
+    // RunActions. Placeables have one more step: one with m_bDieWhenEmpty (a body bag) is destroyed by its own
+    // AIUpdate once its inventory is empty and it isn't open, so those are never dormant. Inventory and trap flags
+    // play no other part, so containers and trapped objects are as idle as any other. CNWSTrigger::AIUpdate only
+    // runs the heartbeat timer and RunActions.
     switch (pGameObject->m_nObjectType)
     {
         case ObjectType::Placeable:
@@ -137,6 +148,7 @@ static bool IsDormant(CGameObject* pGameObject)
             auto* pPlaceable = Utils::AsNWSPlaceable(pGameObject);
             return pPlaceable &&
                    (s_containers || (!pPlaceable->m_bHasInventory && !pPlaceable->m_bTrapFlag)) &&
+                   !pPlaceable->m_bDieWhenEmpty &&
                    pPlaceable->m_sScripts[PLACEABLE_SCRIPT_HEARTBEAT].IsEmpty() &&
                    !HasQueuedActions(pPlaceable) &&
                    !pPlaceable->GetDead() &&
@@ -462,6 +474,32 @@ void DormantObjects()
             return s_RemoveObjectHook->CallOriginal<BOOL>(pThis, pObject);
         }, Hooks::Order::Early);
 
+    // SetEventScript/GetEventScript. The object is the first argument, so on top of the VM stack before the call. A
+    // dormant object whose new scripts give it work (a heartbeat) wakes now rather than at its next re-check.
+    s_EventScriptHook = Hooks::HookFunction(&CNWSVirtualMachineCommands::ExecuteCommandEventScriptManagement,
+        +[](CNWSVirtualMachineCommands* pThis, int32_t nCommandId, int32_t nParameters) -> int32_t
+        {
+            ObjectID oid = Constants::OBJECT_INVALID;
+            if (!s_dormant.empty())
+            {
+                auto& stack = Globals::VirtualMachine()->m_cRunTimeStack;
+                if (stack.m_nStackPointer > 0 && stack.m_pStackNodes)
+                {
+                    auto& top = stack.m_pStackNodes[stack.m_nStackPointer - 1];
+                    if (top.m_nType == StackElement::OBJECT)
+                        oid = top.m_nStackObjectID;
+                }
+            }
+            auto nRet = s_EventScriptHook->CallOriginal<int32_t>(pThis, nCommandId, nParameters);
+            if (oid != Constants::OBJECT_INVALID && s_dormant.count(oid) && !IsDormant(Utils::GetGameObject(oid)))
+            {
+                // A destroyed object isn't dormant either; Wake only re-adds what GetGameObject still finds.
+                if (Utils::GetGameObject(oid) && Wake(AIMaster(), oid))
+                    s_nHookWoken++;
+            }
+            return nRet;
+        }, Hooks::Order::Early);
+
     // NWNX's hook ASSERTs only log, so check every hook ourselves and stay off if one is missing: a missing wake or
     // forget hook would leave objects frozen or in two lists.
     struct { const char* name; bool ok; } hooks[] = {
@@ -472,6 +510,8 @@ void DormantObjects()
         { "CNWSObject::AddActionAfterFront",  Installed(s_AddActionAfterFrontHook, &CNWSObject::AddActionAfterFront) },
         { "CServerAIList::AddObject",         Installed(s_AddObjectHook, &CServerAIList::AddObject) },
         { "CServerAIMaster::RemoveObject",    Installed(s_RemoveObjectHook, &CServerAIMaster::RemoveObject) },
+        { "CNWSVirtualMachineCommands::ExecuteCommandEventScriptManagement",
+          Installed(s_EventScriptHook, &CNWSVirtualMachineCommands::ExecuteCommandEventScriptManagement) },
     };
     bool bAllHooked = !Config::Get<bool>("DEBUG_SIMULATE_HOOK_FAILURE", false);
     for (auto& h : hooks)
@@ -560,6 +600,7 @@ NWNX_EXPORT ArgumentStack LogCensus(ArgumentStack&&)
                 if (!p->m_sScripts[PLACEABLE_SCRIPT_HEARTBEAT].IsEmpty()) why += "hb ";
                 if (p->m_bHasInventory) why += "inventory ";
                 if (p->m_bTrapFlag) why += "trap ";
+                if (p->m_bDieWhenEmpty) why += "die-when-empty ";
                 if (HasQueuedActions(p)) why += "actions ";
                 if (p->GetDead()) why += "dead ";
                 fx();

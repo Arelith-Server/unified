@@ -2,21 +2,29 @@
 @page dormantobjects Readme
 @ingroup dormantobjects
 
-**EXPERIMENTAL.** Takes placeables and items that cannot change on their own out of the engine's per-tick AI list
+**EXPERIMENTAL.** Takes placeables and items (and, opt-in, doors, triggers and containers) that cannot change on their own out of the engine's per-tick AI list
 walk (`CServerAIMaster::UpdateState`), and puts them back as soon as something gives them work. Off by default.
 
 An object is dormant when it is:
 - a placeable with no inventory, no trap, no heartbeat script, no queued actions, not dead, and only effects that never
   expire (permanent, equipped or innate), or none;
 - an item with no queued actions and only effects that never expire (item properties are permanent effects).
+- with `CONTAINERS`, also a placeable with an inventory or a trap that is otherwise idle as above, unless it is a body
+  bag (`DieWhenEmpty`): the engine destroys an emptied body bag from its AI update, so those always stay in the walk;
+- with `DOORS`, a door with no heartbeat script, no queued actions, not dead and only effects that never expire;
+- with `TRIGGERS`, a trigger with no heartbeat script and no queued actions.
+
+Door, trigger and container events (OnOpen, OnClose, OnEnter, OnExit, OnDisturbed, OnFailToOpen, traps springing,
+locking, inventory changes) are driven by the creature or script acting on the object and the event queue, not by the
+object's own AI update, so they work the same while it is dormant.
 
 An object with a RunScript or Regenerate effect is never dormant, whatever the effect's duration: the engine runs the
 interval script, or regenerates, from the AI update.
 
 A dormant object goes back into its AI list when an effect is applied to it, or when an action is queued on it
 (`AddAction`, `AddActionToFront`, `AddActionAfterFront`; `PlayAnimation` and `ActionDoDoorAction` use the latter two).
-A bounded slice of dormant objects is also re-checked every tick, which catches anything else, for example a heartbeat
-script set at runtime.
+A script changing one of its event scripts (`SetEventScript`) wakes it at once if that gives it work (a heartbeat). A
+bounded slice of dormant objects is also re-checked every tick, which catches anything else.
 
 If any of the plugin's hooks fails to install, it logs an error and stays inactive.
 
