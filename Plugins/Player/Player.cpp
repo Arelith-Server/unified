@@ -626,7 +626,7 @@ NWNX_EXPORT ArgumentStack SetObjectVisualTransformOverride(ArgumentStack&& args)
                             pObject->m_nObjectType == Constants::ObjectType::Item ||
                             pObject->m_nObjectType == Constants::ObjectType::Door)
                         {
-                            if (auto objectVisualTransformData = pObject->nwnxGet<void*>("OVTO!" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)))
+                            if (auto objectVisualTransformData = pObject->m_pNwnxData ? pObject->nwnxGet<void*>("OVTO!" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)) : std::nullopt)
                             {
                                 auto *pObjectVisualTransformData = static_cast<ObjectVisualTransformData*>(*objectVisualTransformData);
 
@@ -732,7 +732,7 @@ NWNX_EXPORT ArgumentStack ApplyLoopingVisualEffectToObject(ArgumentStack&& args)
                 {
                     if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidObjectToUpdate)))
                     {
-                            if (auto loopingVisualEffectSet = pObject->nwnxGet<void*>("LVES!" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)))
+                            if (auto loopingVisualEffectSet = pObject->m_pNwnxData ? pObject->nwnxGet<void*>("LVES!" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)) : std::nullopt)
                             {
                                 auto *pLoopingVisualEffectSet = static_cast<std::set<uint16_t> *>(*loopingVisualEffectSet);
 
@@ -812,7 +812,7 @@ NWNX_EXPORT ArgumentStack SetPlaceableNameOverride(ArgumentStack&& args)
                 {
                     if (auto *pPlaceable = Utils::AsNWSPlaceable(Utils::GetGameObject(oidObjectToUpdate)))
                     {
-                        if (auto name = pPlaceable->nwnxGet<std::string>("PLCNO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)))
+                        if (auto name = pPlaceable->m_pNwnxData ? pPlaceable->nwnxGet<std::string>("PLCNO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)) : std::nullopt)
                         {
                             CExoString swapName = CExoString(*name);
 
@@ -1180,7 +1180,7 @@ NWNX_EXPORT ArgumentStack SetCreatureNameOverride(ArgumentStack&& args)
                  {
                      if (auto *pCreature = Utils::AsNWSCreature(Utils::GetGameObject(oidObjectToUpdate)))
                      {
-                         if (auto name = pCreature->nwnxGet<std::string>("CRENO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)))
+                         if (auto name = pCreature->m_pNwnxData ? pCreature->nwnxGet<std::string>("CRENO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)) : std::nullopt)
                          {
                              CExoString swapName = CExoString(*name);
 
@@ -1336,7 +1336,7 @@ NWNX_EXPORT ArgumentStack SetObjectMouseCursorOverride(ArgumentStack&& args)
                 {
                     if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidObjectToUpdate)))
                     {
-                        if (auto cursorId = pObject->nwnxGet<int32_t>("OBJCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)))
+                        if (auto cursorId = pObject->m_pNwnxData ? pObject->nwnxGet<int32_t>("OBJCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)) : std::nullopt)
                         {
                             std::swap(*cursorId, pObject->m_nMouseCursor);
                             pSetObjectMouseCursorOverrideHook->CallOriginal<void>(pMessage, pPlayer, pPlayerGameObject, pGameObjectArray, oidObjectToUpdate);
@@ -1376,7 +1376,7 @@ NWNX_EXPORT ArgumentStack SetObjectHiliteColorOverride(ArgumentStack&& args)
                 {
                     if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidObjectToUpdate)))
                     {
-                        if (auto hiliteColor = pObject->nwnxGet<int32_t>("OBJHCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)))
+                        if (auto hiliteColor = pObject->m_pNwnxData ? pObject->nwnxGet<int32_t>("OBJHCO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)) : std::nullopt)
                         {
                             Vector vHiliteColor = {};
                             vHiliteColor.x = (float)((*hiliteColor >> 16) & 0xFF) / 255.0f; // R
@@ -1837,7 +1837,7 @@ NWNX_EXPORT ArgumentStack SetObjectUiDiscoveryMaskOverride(ArgumentStack&& args)
             {
                 if (auto *pObject = Utils::AsNWSObject(Utils::GetGameObject(oidObjectToUpdate)))
                 {
-                    if (auto discoveryMask = pObject->nwnxGet<int>("OBJUDO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)))
+                    if (auto discoveryMask = pObject->m_pNwnxData ? pObject->nwnxGet<int>("OBJUDO_" + Utils::ObjectIDToString(pPlayer->m_oidNWSObject)) : std::nullopt)
                     {
                         std::swap(*discoveryMask, pObject->m_nUiDiscoveryMask);
                         pSetObjectUiDiscoveryMaskOverrideHook->CallOriginal<void>(pMessage, pPlayer, pPlayerGameObject, pGameObjectArray, oidObjectToUpdate);
