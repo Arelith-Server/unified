@@ -247,6 +247,11 @@ static ObjectStorage* GetObjectStorage(CGameObject *pGameObject)
     }
     return static_cast<ObjectStorage*>(pGameObject->m_pNwnxData);
 }
+// For reads and removes: the object's storage if it has any. Unlike GetObjectStorage, never creates it.
+static ObjectStorage* FindObjectStorage(CGameObject *pGameObject)
+{
+    return pGameObject ? static_cast<ObjectStorage*>(pGameObject->m_pNwnxData) : nullptr;
+}
 static void DestroyObjectStorage(CGameObject *pGameObject)
 {
     if (pGameObject->m_pNwnxData)
@@ -284,59 +289,59 @@ void Set(CGameObject *pGameObject, const std::string& prefix, const std::string&
 
 template <> std::optional<int> Get<int>(CGameObject *pGameObject, const std::string& prefix, const std::string& key)
 {
-    if (auto *pOS = GetObjectStorage(pGameObject))
-    {
-        auto fullkey = prefix + "!" + key;
-        auto map = pOS->GetIntMap();
-        auto it = map.find(fullkey);
-        if (it != map.end())
-            return std::make_optional<int>(it->second.first);
-    }
+    // Reads run on hot paths (e.g. every object in every player's game object update): don't create storage or maps,
+    // and don't copy the map.
+    auto *pOS = FindObjectStorage(pGameObject);
+    if (!pOS || !pOS->m_IntMap)
+        return std::optional<int>();
+    auto it = pOS->m_IntMap->find(prefix + "!" + key);
+    if (it != pOS->m_IntMap->end())
+        return std::make_optional<int>(it->second.first);
     return std::optional<int>();
 }
 
 template <> std::optional<float> Get<float>(CGameObject *pGameObject, const std::string& prefix, const std::string& key)
 {
-    if (auto *pOS = GetObjectStorage(pGameObject))
-    {
-        auto fullkey = prefix + "!" + key;
-        auto map = pOS->GetFloatMap();
-        auto it = map.find(fullkey);
-        if (it != map.end())
-            return std::make_optional<float>(it->second.first);
-    }
+    // Reads run on hot paths (e.g. every object in every player's game object update): don't create storage or maps,
+    // and don't copy the map.
+    auto *pOS = FindObjectStorage(pGameObject);
+    if (!pOS || !pOS->m_FloatMap)
+        return std::optional<float>();
+    auto it = pOS->m_FloatMap->find(prefix + "!" + key);
+    if (it != pOS->m_FloatMap->end())
+        return std::make_optional<float>(it->second.first);
     return std::optional<float>();
 }
 
 template <> std::optional<std::string> Get<std::string>(CGameObject *pGameObject,  const std::string& prefix, const std::string& key)
 {
-    if (auto *pOS = GetObjectStorage(pGameObject))
-    {
-        auto fullkey = prefix + "!" + key;
-        auto map = pOS->GetStringMap();
-        auto it = map.find(fullkey);
-        if (it != map.end())
-            return std::make_optional<std::string>(it->second.first);
-    }
+    // Reads run on hot paths (e.g. every object in every player's game object update): don't create storage or maps,
+    // and don't copy the map.
+    auto *pOS = FindObjectStorage(pGameObject);
+    if (!pOS || !pOS->m_StringMap)
+        return std::optional<std::string>();
+    auto it = pOS->m_StringMap->find(prefix + "!" + key);
+    if (it != pOS->m_StringMap->end())
+        return std::make_optional<std::string>(it->second.first);
     return std::optional<std::string>();
 }
 
 template <> std::optional<void*> Get<void*>(CGameObject *pGameObject, const std::string& prefix, const std::string& key)
 {
-    if (auto *pOS = GetObjectStorage(pGameObject))
-    {
-        auto fullkey = prefix + "!" + key;
-        auto map = pOS->GetPointerMap();
-        auto it = map.find(fullkey);
-        if (it != map.end())
-            return std::make_optional<void*>(it->second.first);
-    }
+    // Reads run on hot paths (e.g. every object in every player's game object update): don't create storage or maps,
+    // and don't copy the map.
+    auto *pOS = FindObjectStorage(pGameObject);
+    if (!pOS || !pOS->m_PointerMap)
+        return std::optional<void*>();
+    auto it = pOS->m_PointerMap->find(prefix + "!" + key);
+    if (it != pOS->m_PointerMap->end())
+        return std::make_optional<void*>(it->second.first);
     return std::optional<void*>();
 }
 
 void Remove(CGameObject *pGameObject, const std::string& prefix, const std::string& key)
 {
-    if (auto *pOS = GetObjectStorage(pGameObject))
+    if (auto *pOS = FindObjectStorage(pGameObject))
     {
         auto fullkey = prefix + "!" + key;
         // Ugly, but GetXxxMap will create it if missing.
@@ -354,7 +359,7 @@ void Remove(CGameObject *pGameObject, const std::string& prefix, const std::stri
 void RemoveRegex(CGameObject *pGameObject, const std::string& prefix, const std::string& regex)
 {
     auto fullregex = "(?:" + prefix + "!)" + regex;
-    if (auto *pOS = GetObjectStorage(pGameObject))
+    if (auto *pOS = FindObjectStorage(pGameObject))
     {
         std::regex rgx(fullregex);
 
