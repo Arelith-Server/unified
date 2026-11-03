@@ -70,11 +70,26 @@ static_assert(offsetof(CNWSDoor, m_sScripts) + DOOR_SCRIPT_HEARTBEAT * sizeof(CE
 static_assert(offsetof(CNWSPlaceable, m_bDieWhenEmpty) == 0x4fc);
 #pragma GCC diagnostic pop
 
-static std::unordered_map<ObjectID, int32_t> s_dormant; // object -> AI list it was taken from
-// IDs to re-check, a bounded slice per tick. s_inRecheck holds the same IDs so none is queued twice; entries no
-// longer in s_dormant (woken, or the engine took the object back) are dropped when the cursor reaches them.
+// Per-object state, one byte per object ID: the low bits are the AI list the object was taken from plus one (0: not
+// dormant), the top bit says the ID is queued in s_recheck. The hooks below ask "is this object dormant?" for nearly
+// every action and effect on the server, and the answer is almost always no, so this has to be cheap: an array
+// index rather than a hash lookup.
+//
+// The engine hands out server object IDs from 0 upwards and never reuses them (CGameObjectArray::AddInternalObject;
+// character objects count down from 0x7FFFFFFF), so the IDs of dormant objects are dense from 0 and the array only
+// grows to the highest one made dormant. IDs at or above DENSE_LIMIT (character objects, or a server that has made
+// tens of millions of objects) go in s_stateOverflow instead, which is empty, and costs one test, otherwise.
+static constexpr uint8_t STATE_LIST = 0x7f;      // AI list + 1; 0: not dormant
+static constexpr uint8_t STATE_IN_RECHECK = 0x80; // queued in s_recheck
+static constexpr ObjectID DENSE_LIMIT = 1u << 26; // 64 MB at most, in practice a few MB
+static std::vector<uint8_t> s_state;
+static std::unordered_map<ObjectID, uint8_t> s_stateOverflow;
+static size_t s_nDormant; // objects with a non-zero STATE_LIST
+
+// IDs to re-check, a bounded slice per tick. STATE_IN_RECHECK marks the same IDs so none is queued twice; entries no
+// longer dormant (woken, or the engine took the object back) are dropped when the cursor reaches them. Every dormant
+// object is in it.
 static std::vector<ObjectID> s_recheck;
-static std::unordered_set<ObjectID> s_inRecheck;
 static size_t s_recheckPos;
 static int32_t s_recheckPerTick;   // upper bound per tick
 static double s_recheckSeconds;    // aim to re-check every dormant object once in this many seconds (0: always the bound)
@@ -100,6 +115,52 @@ static Hooks::Hook s_EventScriptHook;
 static CServerAIMaster* AIMaster()
 {
     return Globals::AppManager()->m_pServerExoApp->GetServerAIMaster();
+}
+
+static inline uint8_t GetState(ObjectID oid)
+{
+    if (__builtin_expect(oid < s_state.size(), 1))
+        return s_state[oid];
+    if (__builtin_expect(s_stateOverflow.empty(), 1))
+        return 0;
+    auto it = s_stateOverflow.find(oid);
+    return it == s_stateOverflow.end() ? 0 : it->second;
+}
+
+static void SetState(ObjectID oid, uint8_t nState)
+{
+    if (oid < DENSE_LIMIT)
+    {
+        if (oid >= s_state.size())
+        {
+            if (!nState)
+                return;
+            size_t nSize = std::max<size_t>({ (size_t)oid + 1, s_state.size() * 2, 65536 });
+            s_state.resize(std::min<size_t>(nSize, DENSE_LIMIT), 0);
+        }
+        s_state[oid] = nState;
+    }
+    else if (nState)
+        s_stateOverflow[oid] = nState;
+    else
+        s_stateOverflow.erase(oid);
+}
+
+// The AI list oid was taken from, or -1 if it isn't dormant.
+static inline int32_t DormantList(ObjectID oid)
+{
+    return (int32_t)(GetState(oid) & STATE_LIST) - 1;
+}
+
+// Forgets oid without putting it back in a list. Returns the list it was taken from, or -1 if it wasn't dormant.
+static int32_t Forget(ObjectID oid)
+{
+    uint8_t nState = GetState(oid);
+    if (!(nState & STATE_LIST))
+        return -1;
+    SetState(oid, nState & STATE_IN_RECHECK);
+    s_nDormant--;
+    return (int32_t)(nState & STATE_LIST) - 1;
 }
 
 static bool EffectsNeverExpire(CNWSObject* pObject)
@@ -139,15 +200,16 @@ static bool IsDormant(CGameObject* pGameObject)
     // AIUpdate once its inventory is empty and it isn't open, so those are never dormant. Inventory and trap flags
     // play no other part, so containers and trapped objects are as idle as any other. CNWSTrigger::AIUpdate only
     // runs the heartbeat timer and RunActions.
+    // Each case has tested m_nObjectType, so it casts directly: the same as Utils::AsNWS*, without the call into
+    // NWNXLib.
     switch (pGameObject->m_nObjectType)
     {
         case ObjectType::Placeable:
         {
             if (!s_placeables)
                 return false;
-            auto* pPlaceable = Utils::AsNWSPlaceable(pGameObject);
-            return pPlaceable &&
-                   (s_containers || (!pPlaceable->m_bHasInventory && !pPlaceable->m_bTrapFlag)) &&
+            auto* pPlaceable = static_cast<CNWSPlaceable*>(pGameObject);
+            return (s_containers || (!pPlaceable->m_bHasInventory && !pPlaceable->m_bTrapFlag)) &&
                    !pPlaceable->m_bDieWhenEmpty &&
                    pPlaceable->m_sScripts[PLACEABLE_SCRIPT_HEARTBEAT].IsEmpty() &&
                    !HasQueuedActions(pPlaceable) &&
@@ -158,16 +220,15 @@ static bool IsDormant(CGameObject* pGameObject)
         {
             if (!s_items)
                 return false;
-            auto* pItem = Utils::AsNWSItem(pGameObject);
-            return pItem && !HasQueuedActions(pItem) && EffectsNeverExpire(pItem);
+            auto* pItem = static_cast<CNWSItem*>(pGameObject);
+            return !HasQueuedActions(pItem) && EffectsNeverExpire(pItem);
         }
         case ObjectType::Door:
         {
             if (!s_doors)
                 return false;
-            auto* pDoor = Utils::AsNWSDoor(pGameObject);
-            return pDoor &&
-                   pDoor->m_sScripts[DOOR_SCRIPT_HEARTBEAT].IsEmpty() &&
+            auto* pDoor = static_cast<CNWSDoor*>(pGameObject);
+            return pDoor->m_sScripts[DOOR_SCRIPT_HEARTBEAT].IsEmpty() &&
                    !HasQueuedActions(pDoor) &&
                    !pDoor->GetDead() &&
                    EffectsNeverExpire(pDoor);
@@ -176,9 +237,8 @@ static bool IsDormant(CGameObject* pGameObject)
         {
             if (!s_triggers)
                 return false;
-            auto* pTrigger = Utils::AsNWSTrigger(pGameObject);
-            return pTrigger &&
-                   pTrigger->m_sScripts[TRIGGER_SCRIPT_HEARTBEAT].IsEmpty() &&
+            auto* pTrigger = static_cast<CNWSTrigger*>(pGameObject);
+            return pTrigger->m_sScripts[TRIGGER_SCRIPT_HEARTBEAT].IsEmpty() &&
                    !HasQueuedActions(pTrigger);
         }
         default:
@@ -189,11 +249,9 @@ static bool IsDormant(CGameObject* pGameObject)
 // Puts oid back in its AI list if it's dormant. Returns true if it was.
 static bool Wake(CServerAIMaster* pMaster, ObjectID oid)
 {
-    auto it = s_dormant.find(oid);
-    if (it == s_dormant.end())
+    int32_t nList = Forget(oid);
+    if (nList < 0)
         return false;
-    int32_t nList = it->second;
-    s_dormant.erase(it);
     pMaster->m_apGameAIList[nList].AddObject(oid);
     return true;
 }
@@ -213,17 +271,27 @@ static void WakeAll(CServerAIMaster* pMaster)
     // order, then pick up anything not in it (there shouldn't be any).
     for (ObjectID oid : s_recheck)
     {
-        auto it = s_dormant.find(oid);
-        if (it == s_dormant.end())
+        int32_t nList = DormantList(oid);
+        if (nList < 0)
             continue;
-        take(oid, it->second);
-        s_dormant.erase(it);
-    }
-    for (auto& [oid, nList] : s_dormant)
         take(oid, nList);
-    s_dormant.clear();
+        SetState(oid, 0);
+        s_nDormant--;
+    }
+    if (s_nDormant)
+    {
+        LOG_ERROR("WakeAll: %zu dormant objects were not queued for re-check", s_nDormant);
+        for (size_t oid = 0; oid < s_state.size(); oid++)
+            if (s_state[oid] & STATE_LIST)
+                take((ObjectID)oid, (s_state[oid] & STATE_LIST) - 1);
+        for (auto& [oid, nState] : s_stateOverflow)
+            if (nState & STATE_LIST)
+                take(oid, (nState & STATE_LIST) - 1);
+    }
+    std::fill(s_state.begin(), s_state.end(), 0);
+    s_stateOverflow.clear();
+    s_nDormant = 0;
     s_recheck.clear();
-    s_inRecheck.clear();
     s_recheckPos = 0;
 
     for (int32_t nList = AIPriority::MIN; nList <= AIPriority::MAX; nList++)
@@ -282,26 +350,27 @@ static void Recheck(CServerAIMaster* pMaster)
             s_recheckPos = 0;
         ObjectID oid = s_recheck[s_recheckPos];
         bool bDrop = false;
-        auto it = s_dormant.find(oid);
-        if (it == s_dormant.end())
+        int32_t nList = DormantList(oid);
+        if (nList < 0)
             bDrop = true; // woken or reclaimed by the engine already
         else if (auto* pGameObject = Utils::GetGameObject(oid); !pGameObject)
         {
-            s_dormant.erase(it);
+            s_nDormant--;
             s_nGone++;
             bDrop = true;
         }
         else if (!IsDormant(pGameObject))
         {
-            int32_t nList = it->second;
-            s_dormant.erase(it);
+            // Clear the state before AddObject, whose hook would otherwise forget it a second time.
+            SetState(oid, 0);
+            s_nDormant--;
             pMaster->m_apGameAIList[nList].AddObject(oid);
             s_nWoken++;
             bDrop = true;
         }
         if (bDrop)
         {
-            s_inRecheck.erase(oid);
+            SetState(oid, 0);
             s_recheck[s_recheckPos] = s_recheck.back(); // swap-remove; re-examine this slot next
             s_recheck.pop_back();
         }
@@ -329,9 +398,18 @@ static void Sweep(CServerAIMaster* pMaster)
             ObjectID oid = objects.element[i];
             if (IsDormant(Utils::GetGameObject(oid)))
             {
-                s_dormant.emplace(oid, nList);
-                if (s_inRecheck.insert(oid).second)
+                uint8_t nState = GetState(oid);
+                if (!(nState & STATE_LIST)) // already dormant from an earlier list: keep that one
+                {
+                    nState |= (uint8_t)(nList + 1);
+                    s_nDormant++;
+                }
+                if (!(nState & STATE_IN_RECHECK))
+                {
+                    nState |= STATE_IN_RECHECK;
                     s_recheck.push_back(oid);
+                }
+                SetState(oid, nState);
                 if (i == list.m_nPosition)
                     bPositionDropped = true;
                 nDropped++;
@@ -354,14 +432,19 @@ static void Sweep(CServerAIMaster* pMaster)
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
     LOG_INFO("Sweep: %d made dormant; since last: %d woken by hooks, %d by re-check, %d destroyed; %zu dormant, "
              "%d left in the AI lists; took %lld us",
-             nDropped, s_nHookWoken, s_nWoken, s_nGone, s_dormant.size(), nRemaining, (long long)us);
+             nDropped, s_nHookWoken, s_nWoken, s_nGone, s_nDormant, nRemaining, (long long)us);
     s_nWoken = s_nHookWoken = s_nGone = 0;
 }
 
-static void WakeFromHook(CNWSObject* pObject)
+// Called for nearly every action queued and effect applied on the server, nearly always for an object that isn't
+// dormant: keep that answer to a counter test and an array read.
+static inline void WakeFromHook(CServerAIMaster* pMaster, CNWSObject* pObject)
 {
-    if (pObject && !s_dormant.empty() && Wake(AIMaster(), pObject->m_idSelf))
-        s_nHookWoken++;
+    if (__builtin_expect(pObject && s_nDormant && (GetState(pObject->m_idSelf) & STATE_LIST), 0))
+    {
+        if (Wake(pMaster ? pMaster : AIMaster(), pObject->m_idSelf))
+            s_nHookWoken++;
+    }
 }
 
 // A hook that failed to install leaves its trampoline pointing at the original function.
@@ -408,8 +491,6 @@ void DormantObjects()
         LOG_WARNING("RECHECK_PER_TICK must be at most 100000, using 100000");
         s_recheckPerTick = 100000;
     }
-    s_dormant.reserve(262144);
-    s_inRecheck.reserve(262144);
     s_recheck.reserve(262144);
     s_nextSweep = std::chrono::steady_clock::now() + s_period;
 
@@ -432,8 +513,7 @@ void DormantObjects()
     s_OnEffectAppliedHook = Hooks::HookFunction(&CServerAIMaster::OnEffectApplied,
         +[](CServerAIMaster* pThis, CNWSObject* pObject, CGameEffect* pEffect, BOOL bLoadingGame) -> int32_t
         {
-            if (pObject && !s_dormant.empty() && Wake(pThis, pObject->m_idSelf))
-                s_nHookWoken++;
+            WakeFromHook(pThis, pObject);
             return s_OnEffectAppliedHook->CallOriginal<int32_t>(pThis, pObject, pEffect, bLoadingGame);
         }, Hooks::Order::Early);
 
@@ -444,7 +524,7 @@ void DormantObjects()
             uint32_t t5, void* p5, uint32_t t6, void* p6, uint32_t t7, void* p7, uint32_t t8, void* p8,                \
             uint32_t t9, void* p9, uint32_t t10, void* p10, uint32_t t11, void* p11, uint32_t t12, void* p12) -> void \
         {                                                                                                              \
-            WakeFromHook(pThis);                                                                                       \
+            WakeFromHook(nullptr, pThis);                                                                              \
             hook->CallOriginal<void>(pThis, nActionId, nGroupId, t1, p1, t2, p2, t3, p3, t4, p4,                       \
                 t5, p5, t6, p6, t7, p7, t8, p8, t9, p9, t10, p10, t11, p11, t12, p12);                                 \
         }, Hooks::Order::Early)
@@ -461,16 +541,16 @@ void DormantObjects()
     s_AddObjectHook = Hooks::HookFunction(&CServerAIList::AddObject,
         +[](CServerAIList* pThis, ObjectID oid) -> BOOL
         {
-            if (!s_dormant.empty())
-                s_dormant.erase(oid);
+            if (s_nDormant)
+                Forget(oid);
             return s_AddObjectHook->CallOriginal<BOOL>(pThis, oid);
         }, Hooks::Order::Early);
 
     s_RemoveObjectHook = Hooks::HookFunction(&CServerAIMaster::RemoveObject,
         +[](CServerAIMaster* pThis, CNWSObject* pObject) -> BOOL
         {
-            if (pObject && !s_dormant.empty())
-                s_dormant.erase(pObject->m_idSelf);
+            if (pObject && s_nDormant)
+                Forget(pObject->m_idSelf);
             return s_RemoveObjectHook->CallOriginal<BOOL>(pThis, pObject);
         }, Hooks::Order::Early);
 
@@ -480,7 +560,7 @@ void DormantObjects()
         +[](CNWSVirtualMachineCommands* pThis, int32_t nCommandId, int32_t nParameters) -> int32_t
         {
             ObjectID oid = Constants::OBJECT_INVALID;
-            if (!s_dormant.empty())
+            if (s_nDormant)
             {
                 auto& stack = Globals::VirtualMachine()->m_cRunTimeStack;
                 if (stack.m_nStackPointer > 0 && stack.m_pStackNodes)
@@ -491,7 +571,7 @@ void DormantObjects()
                 }
             }
             auto nRet = s_EventScriptHook->CallOriginal<int32_t>(pThis, nCommandId, nParameters);
-            if (oid != Constants::OBJECT_INVALID && s_dormant.count(oid) && !IsDormant(Utils::GetGameObject(oid)))
+            if (oid != Constants::OBJECT_INVALID && DormantList(oid) >= 0 && !IsDormant(Utils::GetGameObject(oid)))
             {
                 // A destroyed object isn't dormant either; Wake only re-adds what GetGameObject still finds.
                 if (Utils::GetGameObject(oid) && Wake(AIMaster(), oid))
@@ -538,7 +618,7 @@ void DormantObjects()
 // Wakes every dormant object and stops sweeping. Returns how many were woken.
 NWNX_EXPORT ArgumentStack Disable(ArgumentStack&&)
 {
-    int32_t nWoken = (int32_t)s_dormant.size();
+    int32_t nWoken = (int32_t)s_nDormant;
     s_active = false;
     auto start = std::chrono::steady_clock::now();
     if (s_configured)
@@ -565,7 +645,7 @@ NWNX_EXPORT ArgumentStack Enable(ArgumentStack&&)
 // Returns the number of objects currently dormant, or -1 if the plugin isn't active.
 NWNX_EXPORT ArgumentStack GetDormantCount(ArgumentStack&&)
 {
-    return s_active ? (int32_t)s_dormant.size() : -1;
+    return s_active ? (int32_t)s_nDormant : -1;
 }
 
 // Logs what the AI lists still hold: per list, objects by type, and for placeables, doors, triggers and items the
@@ -659,14 +739,14 @@ NWNX_EXPORT ArgumentStack LogCensus(ArgumentStack&&)
     for (auto& [k, v] : reasons)
         LOG_INFO("Census not dormant: %s x%d", k.c_str(), v);
     int32_t dormantByType[ObjectType::MAX + 1] = {};
-    for (auto& [oid, nList] : s_dormant)
-        if (auto* p = Utils::GetGameObject(oid); p && p->m_nObjectType <= ObjectType::MAX)
+    for (ObjectID oid : s_recheck) // holds every dormant object, once
+        if (auto* p = DormantList(oid) >= 0 ? Utils::GetGameObject(oid) : nullptr; p && p->m_nObjectType <= ObjectType::MAX)
             dormantByType[p->m_nObjectType]++;
     std::string line;
     for (int32_t t = 0; t <= ObjectType::MAX; t++)
         if (dormantByType[t])
             line += std::string(" ") + ObjectType::ToString(t) + "=" + std::to_string(dormantByType[t]);
-    LOG_INFO("Census dormant: %zu:%s", s_dormant.size(), line.c_str());
+    LOG_INFO("Census dormant: %zu:%s", s_nDormant, line.c_str());
     LOG_INFO("Census creatures in lists: %d, effects %d (permanent/equipped/innate, no interval: %d), creatures with only "
              "such effects: %d", nCreatures, nCreatureFx, nCreatureFxInert, nCreaturesAllInert);
     return nTotal;
@@ -676,7 +756,7 @@ NWNX_EXPORT ArgumentStack LogCensus(ArgumentStack&&)
 NWNX_EXPORT ArgumentStack GetIsDormant(ArgumentStack&& args)
 {
     const auto oid = args.extract<ObjectID>();
-    return (int32_t)(s_dormant.find(oid) != s_dormant.end());
+    return (int32_t)(DormantList(oid) >= 0);
 }
 
 }
