@@ -33,6 +33,7 @@ Tweaks stuff. See below.
 | `NWNX_TWEAKS_ALWAYS_RETURN_FULL_DEX_STAT` | true or false | Creatures will always have their full dex states, even when immobilized/entangled. |
 | `NWNX_TWEAKS_DISPLAY_NUM_ATTACKS_OVERRIDE_IN_CHARACTER_SHEET` | true or false | The number of attacks per round overridden by SetBaseAttackBonus() will show on the character sheet. |
 | `NWNX_TWEAKS_TURD_BY_CDKEY` | true or false | TURDs are associated by CDKey/CharacterName instead of PlayerName/CharacterName. Pass the CDKey instead of PlayerName when calling NWNX_Administration_DeleteTURD() |
+| `NWNX_TWEAKS_FIX_GHOST_PLAYERS` | true or false | Removes a player object when its netlayer slot is reset. Fixes the 8193.37 "ghost player" left by a second connect on the same connection, which also hangs server shutdown. An orphaned object is removed without a character save or TURD, and its creature gets the local int `NWNX_TWEAKS_GHOST_PLAYER_LEAVE` = 1 during OnClientLeave (its player name and CD key are not available then). See `docs/2026-11-04-ghost-player/`. |
 | `NWNX_TWEAKS_LANGUAGE_OVERRIDE` | between 1 and 5, or between 128 and 131 | See [here](https://github.com/nwnxee/unified/tree/master/Plugins/Tweaks#nwnx_tweaks_language_override). |
 | `NWNX_TWEAKS_SEND_TLK_OVERRIDE_BEFORE_CHARGEN` | true or false | TlkTable entries overridden by SetTlkOverride() will be sent before Character Generation. |
 | `NWNX_TWEAKS_RETAIN_LOCAL_VARIABLES_ON_ITEM_SPLIT` | true or false | When splitting an item, local variables will be copied. |

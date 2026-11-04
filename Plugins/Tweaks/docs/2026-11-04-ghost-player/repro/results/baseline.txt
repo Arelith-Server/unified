@@ -1,0 +1,25 @@
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:108] GHOSTREPRO relogin start slot=200
+I [20:44:44] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:92] GHOSTREPRO slot 200: player object <ptr> has creature 0x00000340
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO relogin after first login: objects on slot=1 total=1 slotInUse=1
+I [20:44:44] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 2
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO relogin after second login: objects on slot=2 total=2 slotInUse=1
+I [20:44:44] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (1 players left)
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:133] GHOSTREPRO relogin after leave: objects on slot=1 -> GHOST PRESENT
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:108] GHOSTREPRO double start slot=201
+I [20:44:44] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 2
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:92] GHOSTREPRO slot 201: player object <ptr> has creature 0x0000034f
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO double after first login: objects on slot=1 total=2 slotInUse=1
+I [20:44:44] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 3
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO double after second login: objects on slot=2 total=3 slotInUse=1
+I [20:44:44] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (2 players left)
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:133] GHOSTREPRO double after leave: objects on slot=1 -> GHOST PRESENT
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:108] GHOSTREPRO orphan start slot=202
+I [20:44:44] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 3
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:92] GHOSTREPRO slot 202: player object <ptr> has creature 0x00000350
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO orphan after first login: objects on slot=1 total=3 slotInUse=1
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO orphan orphan made: objects on slot=1 total=3 slotInUse=0
+I [20:44:44] [NWNX_GhostRepro] [GhostRepro.cpp:148] GHOSTREPRO all cases done
+I [20:47:18] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) Server shutting down
+ThreadWatchdog LongStall every 15 s after 'Server shutting down'; the server never exited and was killed 240 s after the console 'exit'.
+gdb on an earlier run of the hung test server, main thread: PlayerIdToSlidingWindow+0x31 <- DisconnectPlayer+0x78 (same frames on 3 samples)

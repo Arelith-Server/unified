@@ -41,4 +41,5 @@ add_plugin(Tweaks
     "CanUseItemsWhilePolymorphed.cpp"
     "ResistEnergyStacksWithEpicEnergyResistance.cpp"
     "UnhardcodeSpecialAbilityTargetType.cpp"
-    "SortCharListByLastPlayedDate.cpp")
+    "SortCharListByLastPlayedDate.cpp"
+    "FixGhostPlayers.cpp")
