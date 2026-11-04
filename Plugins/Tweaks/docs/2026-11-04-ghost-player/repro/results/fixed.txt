@@ -1,12 +1,31 @@
-I [19:43:44] [NWNX_Tweaks] [FixGhostPlayers.cpp:126] Player objects are removed when their netlayer slot is reset (fixes ghost players and the shutdown hang).
-I [19:46:35] [NWNX_GhostRepro] [GhostRepro.cpp:56] GHOSTREPRO start slot=200 players=0
-I [19:46:35] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
-I [19:46:35] [NWNX_GhostRepro] [GhostRepro.cpp:60] GHOSTREPRO after first login: objects on slot=1 total=1
-W [19:46:35] [NWNX_Tweaks] [FixGhostPlayers.cpp:104] Netlayer slot 200 is being reset while player object 0x7f000000 still uses it; removing it with the normal leave.
-I [19:46:35] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (0 players left)
-I [19:46:35] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
-I [19:46:35] [NWNX_GhostRepro] [GhostRepro.cpp:66] GHOSTREPRO after second login: objects on slot=1 total=1
-I [19:46:35] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (0 players left)
-I [19:46:35] [NWNX_GhostRepro] [GhostRepro.cpp:70] GHOSTREPRO after leave: objects on slot=0 total=0 slotInUse=0 -> NO GHOST
-I [19:46:50] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) Server shutting down
-Container exited with code 0, 16 s after the console 'exit'.
+I [20:52:02] [NWNX_Tweaks] [FixGhostPlayers.cpp:143] Player objects are removed when their netlayer slot is reset (fixes ghost players and the shutdown hang).
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:108] GHOSTREPRO relogin start slot=200
+I [21:04:16] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:92] GHOSTREPRO slot 200: player object <ptr> has creature 0x00000340
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO relogin after first login: objects on slot=1 total=1 slotInUse=1
+W [21:04:16] [NWNX_Tweaks] [FixGhostPlayers.cpp:125] Netlayer slot 200 (address '') is being reset while player object 0x00000340 still uses it; removing it with the normal leave.
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:156] GHOSTREPRO save reached the engine for player ID 200 object 0x00000340 (skipped)
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:163] GHOSTREPRO turd reached the engine for player ID 200 (skipped)
+I [21:04:16] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (0 players left)
+I [21:04:16] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO relogin after second login: objects on slot=1 total=1 slotInUse=1
+I [21:04:16] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (0 players left)
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:133] GHOSTREPRO relogin after leave: objects on slot=0 -> NO GHOST
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:108] GHOSTREPRO double start slot=201
+I [21:04:16] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:92] GHOSTREPRO slot 201: player object <ptr> has creature 0x0000034f
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO double after first login: objects on slot=1 total=1 slotInUse=1
+I [21:04:16] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 2
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO double after second login: objects on slot=2 total=2 slotInUse=1
+I [21:04:16] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (1 players left)
+W [21:04:16] [NWNX_Tweaks] [FixGhostPlayers.cpp:61] Removing orphaned player object 0x0000034f for player ID 201 (slot address ''). The character is not saved.
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:133] GHOSTREPRO double after leave: objects on slot=0 -> NO GHOST
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:108] GHOSTREPRO orphan start slot=202
+I [21:04:16] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:92] GHOSTREPRO slot 202: player object <ptr> has creature 0x00000350
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO orphan after first login: objects on slot=1 total=1 slotInUse=1
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:101] GHOSTREPRO orphan orphan made: objects on slot=1 total=1 slotInUse=0
+I [21:04:16] [NWNX_GhostRepro] [GhostRepro.cpp:148] GHOSTREPRO all cases done
+I [21:07:15] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) Server shutting down
+W [21:07:15] [NWNX_Tweaks] [FixGhostPlayers.cpp:61] Removing orphaned player object 0x00000350 for player ID 202 (slot address ''). The character is not saved.
+Container exited with code 0 after the console 'exit'.

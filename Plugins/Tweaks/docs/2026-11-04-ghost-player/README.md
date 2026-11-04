@@ -27,21 +27,31 @@ The live log fits this exactly. All three logins of the account (18:49:26, 18:50
 
 ## Fix
 
-`FixGhostPlayers.cpp` hooks `CNetLayerPlayerInfo::Initialize()`. Every slot reset goes through that function: the second BNCS, both reject paths in `HandleBNVSMessage`, and `DisconnectPlayer`. Before the slot is reset, the hook checks for any `CNWSPlayer` that still uses the slot's player ID:
+`FixGhostPlayers.cpp` hooks `CNetLayerPlayerInfo::Initialize()`. Every slot reset goes through that function: the second BNCS, both reject paths in `HandleBNVSMessage`, and `DisconnectPlayer`. Before the slot is reset, the hook looks for any `CNWSPlayer` that still uses the slot's player ID:
 
-- **Slot still has player/DM privileges** (the earlier login is being replaced): call the engine's own leave, `CServerExoApp::PlayerListChange(id, FALSE)`. This saves the character, runs OnClientLeave, updates player lists and logs "Left as a Player", as for any disconnect. The new login has not loaded its character yet, so this save cannot overwrite a newer `.bic`.
-- **Slot already free** (an orphan, which the engine can never remove): do what the engine's leave does by hand (RemovePCFromWorld, remove from list, player-list updates, delete). The character save is suppressed, because the `.bic` on disk may come from a newer session. This is also what stops the shutdown loop if an orphan ever exists.
+- **The slot's own login is being replaced** (the slot still has player/DM privileges, and the engine has not just run a leave for this slot): call the engine's own leave, `CServerExoApp::PlayerListChange(id, FALSE)`. That saves the character, runs OnClientLeave and the TURD drop, updates player lists and logs "Left as a Player", as for any disconnect. The new login has not loaded its character yet, so this save cannot overwrite a newer `.bic`. Only the first match can take this branch.
+- **Anything else is an orphan.** That covers a slot that is already free, and any further object found after the engine's leave on the `DisconnectPlayer` path (a hook on `PlayerListChange` records which slot it just ran a leave for). An orphan is removed by hand, mirroring the engine's leave: RemovePCFromWorld, removal from the player list and from `m_lstClientDisconnectPending`, player-list updates, delete. For that one object only, the character save and the TURD drop are skipped: the `.bic` on disk may come from a newer session, and the slot's player name and CD key now belong to nobody, or to another login. OnClientLeave still runs, so the creature is cleaned up. While it runs, the creature has the local int `NWNX_TWEAKS_GHOST_PLAYER_LEAVE` = 1, so a leave script can skip work keyed on the player name or CD key.
+
+Every warning logs the slot's connection address, so live cases can be audited. Docs here keep only the sanitised form.
 
 In the normal case `DisconnectPlayer` has already removed the player before it calls `Initialize()`, so the hook finds nothing and does nothing. The cost is one scan of the player list per slot reset.
 
+`CServerExoAppInternal::RestartNetLayer` resets the netlayer, and with it every slot, without a disconnect. Nothing in the 8193.37 Linux binary calls it directly (`CServerExoApp::RestartNetLayer` only forwards to it). If it ever ran with players online, this hook would remove each of them with the normal leave.
+
 ## Repro and results (AreDev pool slot, 8193.37-17 image)
 
-`repro/GhostRepro.cpp` runs on slot 200 with no client. It drives the same engine calls a real duplicate login makes: a validated slot and `PlayerListChange(id, TRUE)`; then `CNetLayerPlayerInfo::Initialize()` as in step 2; then a validated slot and `PlayerListChange(id, TRUE)` again; then `CNetLayer::DisconnectPlayer(id)`. After that the server is shut down with the console `exit` command.
+`repro/GhostRepro.cpp` needs no client. In one server run it drives three cases, each on its own unused slot, with the same engine calls as the real sequences. Each case's first (older) player object gets a module NPC as its creature, so its removal runs the full `RemovePCFromWorld` (save, OnClientLeave, TURD). Saves and TURD drops that reach the engine are logged ("GHOSTREPRO save/turd reached the engine") and then skipped, so nothing is written to the vault. Afterwards the server is stopped with the console `exit`.
+
+- **relogin (slot 200):** the Distant Shores sequence. A validated login (with creature), then what a second BNCS on the same connection does (`CNetLayerPlayerInfo::Initialize()` on the slot), then the second login and `CNetLayer::DisconnectPlayer`.
+- **double (slot 201):** two objects already share the slot when the player leaves through `DisconnectPlayer`. This is the review case: the engine's leave removes the newest object while the slot still has player privileges, and the older copy must not be saved.
+- **orphan (slot 202):** an object whose slot is already free, left until shutdown.
 
 | Run | Log | Result |
 | --- | --- | ------ |
-| Stock plugins | `results/baseline.txt` | Joined 1, Joined 2, one "Left (1 players left)"; `GHOST PRESENT`. After `exit`: "Server shutting down", then the server spins at ~100% CPU and never exits (killed after 4 min). gdb on the hung test server: `PlayerIdToSlidingWindow+0x31` ← `DisconnectPlayer+0x78`, the same stack as on Distant Shores. |
-| `NWNX_TWEAKS_FIX_GHOST_PLAYERS=true` | `results/fixed.txt` | The slot reset removes the first player with the normal leave; one object at a time; `NO GHOST`. `exit` → clean exit (code 0) in 16 s. |
-| Fix plus `NWNX_GHOSTREPRO_ORPHAN=true` | `results/orphan.txt` | An orphan is planted whose slot is already free. On `exit`, the safety net removes it without saving and the server exits cleanly. |
+| Stock plugins | `results/baseline.txt` | All three cases leave a ghost (`GHOST PRESENT`). After `exit`: "Server shutting down", then ThreadWatchdog LongStall every 15 s. The server never exited and was killed after 240 s. gdb on the hung test server: `PlayerIdToSlidingWindow+0x31` ← `DisconnectPlayer+0x78`, the same stack as on Distant Shores. |
+| `NWNX_TWEAKS_FIX_GHOST_PLAYERS=true` | `results/fixed.txt` | **relogin:** the slot reset removes the older object with the normal leave, and its save and TURD reach the engine (correct: the new login hasn't loaded yet). The second session leaves normally; `NO GHOST`. **double:** the engine leave removes the newest object, then the older one (with creature) is removed as an orphan; no save reaches the engine; `NO GHOST`. **orphan:** removed at shutdown, no save. The server exits with code 0. |
 
-Not verified: a duplicate connect from a real game client (the client was busy with other tests), and the `.bic` contents with a real character in the world. The engine-level repro players never load a creature, so the save rules above are argued from the code, not measured.
+Not verified:
+- A duplicate connect from a real game client (the client was in use by other tests).
+- A real character's `.bic` on disk. The repro checks whether a save reaches the engine and skips writing it.
+- Leave scripts reacting to `NWNX_TWEAKS_GHOST_PLAYER_LEAVE` (no Arelith script uses it yet).
