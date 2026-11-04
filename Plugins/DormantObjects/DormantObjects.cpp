@@ -91,13 +91,14 @@ static_assert(offsetof(CNWSObject, m_oidDialogOwner) == 0x74);
 // dormant: an item created late and made dormant grows it, and it never shrinks while the plugin runs (Disable
 // releases it). The sweep log line shows its size. IDs at or above DENSE_LIMIT (character objects, or a server that
 // has made tens of millions of objects) go in s_stateOverflow instead, which is empty, and costs one test,
-// otherwise.
+// otherwise; the first use logs a warning.
 static constexpr uint8_t STATE_LIST = 0x7f;      // AI list + 1; 0: not dormant
 static constexpr uint8_t STATE_IN_RECHECK = 0x80; // queued in s_recheck
 static constexpr ObjectID DENSE_LIMIT = 1u << 26; // 64 MB at most, in practice a few MB
 static std::vector<uint8_t> s_state;
 static std::unordered_map<ObjectID, uint8_t> s_stateOverflow;
 static size_t s_nDormant; // objects with a non-zero STATE_LIST
+static bool s_bOverflowWarned;
 
 // IDs to re-check, a bounded slice per tick. STATE_IN_RECHECK marks the same IDs so none is queued twice; entries no
 // longer dormant (woken, or the engine took the object back) are dropped when the cursor reaches them. Every dormant
@@ -155,7 +156,15 @@ static void SetState(ObjectID oid, uint8_t nState)
         s_state[oid] = nState;
     }
     else if (nState)
+    {
+        if (__builtin_expect(!s_bOverflowWarned, 0))
+        {
+            s_bOverflowWarned = true;
+            LOG_WARNING("Object ID 0x%x is at or above 0x%x: dormant state for such IDs goes in a hash map from now on "
+                        "(logged once)", oid, DENSE_LIMIT);
+        }
         s_stateOverflow[oid] = nState;
+    }
     else
         s_stateOverflow.erase(oid);
 }
