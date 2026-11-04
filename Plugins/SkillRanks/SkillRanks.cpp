@@ -10,6 +10,7 @@
 #include "API/Constants.hpp"
 #include "API/Globals.hpp"
 #include "API/Functions.hpp"
+#include <array>
 #include <cmath>
 #include <list>
 #include <numeric>
@@ -30,6 +31,19 @@ const auto maxMask = (1u << 7u);
 const auto avgMask = (1u << 8u);
 const auto sumMask = (1u << 9u);
 const auto areaModPOSKey = "SKILLRANK_MOD_";
+
+// "SKILLRANK_MOD_<skill>" for every possible skill id, built once instead of on every GetSkillRank call.
+static const std::string& AreaModKey(uint8_t nSkill)
+{
+    static const auto s_keys = []
+    {
+        std::array<std::string, 256> keys;
+        for (size_t i = 0; i < keys.size(); i++)
+            keys[i] = areaModPOSKey + std::to_string(i);
+        return keys;
+    }();
+    return s_keys[nSkill];
+}
 
 NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 {
@@ -559,20 +573,31 @@ char SkillRanks::GetSkillRankHook(CNWSCreatureStats* thisPtr, uint8_t nSkill, CN
 
     int32_t retVal = baseRank + thisPtr->m_pBaseCreature->GetTotalEffectBonus(5, pVersus, 0, 0, 0, 0, nSkill, -1, 0);
 
-    // Add any racial modifiers broadcasted from the Race plugin
-    retVal += g_plugin->m_skillRaceMod[nSkill][thisPtr->m_nRace];
+    // Add any racial modifiers broadcasted from the Race plugin (read without inserting; usually none are set)
+    if (!g_plugin->m_skillRaceMod.empty())
+    {
+        auto skillIt = g_plugin->m_skillRaceMod.find(nSkill);
+        if (skillIt != g_plugin->m_skillRaceMod.end())
+        {
+            auto raceIt = skillIt->second.find(thisPtr->m_nRace);
+            if (raceIt != skillIt->second.end())
+                retVal += raceIt->second;
+        }
+    }
 
     auto *pArea = Globals::AppManager()->m_pServerExoApp->GetAreaByGameObjectID(thisPtr->m_pBaseCreature->m_oidArea);
 
     // Now check if the creature has any skill impacting feats
     bool bHasOverrideKeyAbilityFeat = false;
     bool bHasBypassArmorCheckPenaltyFeat = false;
-    for (auto it: g_plugin->m_skillFeatMap[nSkill])
+    static const std::unordered_map<uint16_t, SkillFeats> s_noSkillFeats;
+    auto skillFeatsIt = g_plugin->m_skillFeatMap.find(nSkill);
+    for (const auto &it: skillFeatsIt != g_plugin->m_skillFeatMap.end() ? skillFeatsIt->second : s_noSkillFeats)
     {
         uint32_t featId = it.first;
         if (thisPtr->HasFeat(featId))
         {
-            auto skillFeat = it.second;
+            const auto &skillFeat = it.second;
 
             if (skillFeat.bBypassArmorCheckPenalty)
                 bHasBypassArmorCheckPenaltyFeat = true;
@@ -672,7 +697,7 @@ char SkillRanks::GetSkillRankHook(CNWSCreatureStats* thisPtr, uint8_t nSkill, CN
     // Area set skill rank modifiers
     if (pArea)
     {
-        if(auto areaMod = pArea->nwnxGet<int>(areaModPOSKey + std::to_string(nSkill)))
+        if(auto areaMod = pArea->nwnxGet<int>(AreaModKey(nSkill)))
         {
             retVal += *areaMod;
         }

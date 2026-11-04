@@ -40,6 +40,23 @@ NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 
 namespace Race {
 
+// Read-only lookup for the per-call hooks: unlike operator[] it never inserts, and a missing key reads as a
+// value-initialised entry (0), which is what operator[] returned before.
+template <typename Map>
+static typename Map::mapped_type Lookup(const Map& map, const typename Map::key_type& key)
+{
+    auto it = map.find(key);
+    return it == map.end() ? typename Map::mapped_type{} : it->second;
+}
+
+template <typename Map, typename Key, typename... Keys>
+static auto Lookup(const Map& map, const typename Map::key_type& key, const Key& next, const Keys&... rest)
+{
+    using Leaf = decltype(Lookup(map.begin()->second, next, rest...));
+    auto it = map.find(key);
+    return it == map.end() ? Leaf{} : Lookup(it->second, next, rest...);
+}
+
 static Hooks::Hook s_LoadCharacterFinishHook;
 static Hooks::Hook s_GetTotalEffectBonusHook;
 static Hooks::Hook s_SavingThrowRollHook;
@@ -443,15 +460,15 @@ uint8_t Race::SavingThrowRollHook(CNWSCreature *pCreature, uint8_t nSaveType, ui
 
     auto nRace = pCreature->m_pStats->m_nRace;
     auto *pTargetCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(oidSaveVersus);
-    auto modSaveBonus = g_plugin->m_RaceSave[nRace][nSaveType] + g_plugin->m_RaceSave[nRace][SavingThrow::All];
+    auto modSaveBonus = Lookup(g_plugin->m_RaceSave, nRace, nSaveType) + Lookup(g_plugin->m_RaceSave, nRace, SavingThrow::All);
     uint8_t modSaveVSRaceBonus = 0;
     if (pTargetCreature)
     {
-        modSaveVSRaceBonus = g_plugin->m_RaceSaveVsRace[nRace][nSaveType][pTargetCreature->m_pStats->m_nRace] +
-                             g_plugin->m_RaceSaveVsRace[nRace][SavingThrow::All][pTargetCreature->m_pStats->m_nRace];
+        modSaveVSRaceBonus = Lookup(g_plugin->m_RaceSaveVsRace, nRace, nSaveType, pTargetCreature->m_pStats->m_nRace) +
+                             Lookup(g_plugin->m_RaceSaveVsRace, nRace, SavingThrow::All, pTargetCreature->m_pStats->m_nRace);
     }
-    auto modSaveVSTypeBonus = g_plugin->m_RaceSaveVsType[nRace][nSaveType][nSpecificType] +
-                              g_plugin->m_RaceSaveVsType[nRace][SavingThrow::All][nSpecificType];
+    auto modSaveVSTypeBonus = Lookup(g_plugin->m_RaceSaveVsType, nRace, nSaveType, nSpecificType) +
+                              Lookup(g_plugin->m_RaceSaveVsType, nRace, SavingThrow::All, nSpecificType);
 
     pServerExoApp->SetSavingThrowBonusLimit(pServerExoApp->GetSavingThrowBonusLimit() + modSaveBonus + modSaveVSRaceBonus + modSaveVSTypeBonus);
 
@@ -469,15 +486,15 @@ int32_t Race::GetWeaponPowerHook(CNWSCreature *pCreature, CNWSObject *pObject, i
     uint16_t attackBonusLimit = pServerExoApp->GetAttackBonusLimit();
 
     auto nRace = pCreature->m_pStats->m_nRace;
-    auto modABBonus = g_plugin->m_RaceAB[nRace];
+    auto modABBonus = Lookup(g_plugin->m_RaceAB, nRace);
     uint8_t modABVSRaceBonus = 0;
     auto *pTargetCreature = Globals::AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pObject->m_idSelf);
     if (pTargetCreature)
     {
-        modABVSRaceBonus = g_plugin->m_RaceABVsRace[nRace][pTargetCreature->m_pStats->m_nRace];
-        auto parRace = g_plugin->m_RaceParent[pTargetCreature->m_pStats->m_nRace];
+        modABVSRaceBonus = Lookup(g_plugin->m_RaceABVsRace, nRace, pTargetCreature->m_pStats->m_nRace);
+        auto parRace = Lookup(g_plugin->m_RaceParent, pTargetCreature->m_pStats->m_nRace);
         if(parRace != RacialType::Invalid)
-            modABVSRaceBonus = g_plugin->m_RaceABVsRace[nRace][parRace];
+            modABVSRaceBonus = Lookup(g_plugin->m_RaceABVsRace, nRace, parRace);
     }
 
 
@@ -561,20 +578,20 @@ int32_t Race::GetTotalEffectBonusHook(CNWSCreature *pCreature, uint8_t nEffectBo
     auto nRace = pCreature->m_pStats->m_nRace;
     if (nEffectBonusType == 1)
     {
-        auto modABBonus = g_plugin->m_RaceAB[nRace];
+        auto modABBonus = Lookup(g_plugin->m_RaceAB, nRace);
         uint8_t modABVSRaceBonus = 0;
         if (pTargetCreature)
         {
-            modABVSRaceBonus = g_plugin->m_RaceABVsRace[nRace][pTargetCreature->m_pStats->m_nRace];
-            auto parRace = g_plugin->m_RaceParent[pTargetCreature->m_pStats->m_nRace];
+            modABVSRaceBonus = Lookup(g_plugin->m_RaceABVsRace, nRace, pTargetCreature->m_pStats->m_nRace);
+            auto parRace = Lookup(g_plugin->m_RaceParent, pTargetCreature->m_pStats->m_nRace);
             if(parRace != RacialType::Invalid)
-                modABVSRaceBonus = g_plugin->m_RaceABVsRace[nRace][parRace];
+                modABVSRaceBonus = Lookup(g_plugin->m_RaceABVsRace, nRace, parRace);
         }
         pServerExoApp->SetAttackBonusLimit(attackBonusLimit + modABBonus + modABVSRaceBonus);
     }
     else if (nEffectBonusType == 5)
     {
-        auto modSkillBonus = g_plugin->m_RaceSkill[nRace][nSkill];
+        auto modSkillBonus = Lookup(g_plugin->m_RaceSkill, nRace, nSkill);
         pServerExoApp->SetSkillBonusLimit(skillBonusLimit + modSkillBonus);
     }
 
