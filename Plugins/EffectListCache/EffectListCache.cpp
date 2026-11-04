@@ -24,10 +24,14 @@
 //   - when NWNX_Effect edits an applied effect in place (ReplaceEffect, ReplaceEffectByIndex), which broadcasts
 //     NWNX_EFFECT_APPLIED_EFFECT_EDITED with the object ID;
 //   - when the list's length differs from when the cache was built;
-//   - every REFRESH_SECONDS of world time, as a backstop for any edit nothing above sees.
+//   - every REFRESH_SECONDS of world time, as a backstop for any edit nothing above sees;
+//   - when CNWSPlayer::EatTURD gives a logging-in player's creature the object ID of its TURD (the one case where an
+//     ID is reused, possibly with a recycled CNWSObject pointer, so the pointer guard in Entry would not catch it).
 // After any call that is not skipped, the cache is rebuilt from the list as it stands after the call.
 //
-// Off unless NWNX_EFFECTLISTCACHE_ENABLE=true. If any hook fails to install the plugin stays inactive (fail closed).
+// Off unless NWNX_EFFECTLISTCACHE_ENABLE=true. The plugin stays inactive (fail closed: nothing hooked, or a pure
+// pass-through) if the server is not the engine build this analysis was made on (see EngineMatches), or if any hook
+// fails to install.
 // NWNX_EffectListCache_Disable() stops skipping at runtime; NWNX_EffectListCache_Enable() starts it again.
 
 #include "nwnx.hpp"
@@ -36,6 +40,8 @@
 #include "API/CExoString.hpp"
 #include "API/CGameEffect.hpp"
 #include "API/CNWSObject.hpp"
+#include "API/CNWSPlayer.hpp"
+#include "API/CNWSPlayerTURD.hpp"
 #include "API/CServerAIMaster.hpp"
 #include "API/CServerExoApp.hpp"
 #include "API/CWorldTimer.hpp"
@@ -45,6 +51,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
+#include <dlfcn.h>
+#include <link.h>
 #include <unordered_map>
 
 namespace EffectListCache {
@@ -52,6 +61,21 @@ namespace EffectListCache {
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
+
+// The engine build the UpdateEffectList analysis above was made on, and a fingerprint of that function's machine code
+// in it (FNV-1a 64 over the whole symbol: st_size bytes from its start). The plugin refuses to enable on anything else.
+//
+// After an engine upgrade: disassemble the new CNWSObject::UpdateEffectList and re-check every point in the comment at
+// the top of this file (which effect types do periodic work, the icon warning, the expiry comparison, and that nothing
+// else in the function does work); check that ApplyEffect, RemoveEffect and RemoveEffectById are still the only
+// writers of m_appliedEffects and still call OnEffectApplied / OnEffectRemoved, and that EatTURD is still the only
+// place an object ID is reused. Only then update the values below: start the server with ENABLE=true and the refusal
+// logged at startup prints the build, size and hash it found. Then run with VERIFY=true before plain ENABLE.
+static constexpr const char* ENGINE_BUILD = "8193";
+static constexpr const char* ENGINE_REVISION = "37";
+static constexpr const char* ENGINE_POSTFIX = "17";
+static constexpr size_t UPDATE_EFFECT_LIST_SIZE = 4696;
+static constexpr uint64_t UPDATE_EFFECT_LIST_FNV1A = 0x5a7a36d587564aa7ull;
 
 // The icon "about to expire" check in UpdateEffectList adds this to now before comparing with the expiry.
 static constexpr uint32_t ICON_WARNING_MS = 5000;
@@ -85,6 +109,7 @@ static uint64_t s_stats[StatCount], s_statsTotal[StatCount];
 static Hooks::Hook s_UpdateEffectListHook;
 static Hooks::Hook s_OnEffectAppliedHook;
 static Hooks::Hook s_OnEffectRemovedHook;
+static Hooks::Hook s_EatTURDHook;
 
 static inline void Count(Stat s) { s_stats[s]++; }
 
@@ -185,8 +210,6 @@ static bool Due(const Entry& e, CWorldTimer* pTimer, uint32_t nDay, uint32_t nTi
 
 static bool RefreshDue(const Entry& e, uint32_t nDay, uint32_t nTime)
 {
-    if (s_refreshMs == 0)
-        return false;
     return nDay != e.nBuiltDay || nTime < e.nBuiltTime || nTime - e.nBuiltTime >= s_refreshMs;
 }
 
@@ -298,16 +321,77 @@ static bool Installed(const Hooks::Hook& hook, F original)
     return hook && hook->GetOriginal() && hook->GetOriginal() != (void*)original;
 }
 
+static bool BuildStringIs(const CExoString* p, const char* expected)
+{
+    return p && p->m_sString && std::strcmp(p->m_sString, expected) == 0;
+}
+
+static const char* BuildString(const CExoString* p)
+{
+    return p && p->m_sString ? p->m_sString : "?";
+}
+
+// Whether this is the engine build, and UpdateEffectList machine code, the plugin was checked against; logs why not.
+// Must run before anything hooks UpdateEffectList, since a hook patches its first bytes.
+static bool EngineMatches()
+{
+    const auto* pBuild = Globals::BuildNumber();
+    const auto* pRevision = Globals::BuildRevision();
+    const auto* pPostfix = Globals::BuildPostfix();
+    const bool bBuildOk = BuildStringIs(pBuild, ENGINE_BUILD) && BuildStringIs(pRevision, ENGINE_REVISION) &&
+                          BuildStringIs(pPostfix, ENGINE_POSTFIX);
+
+    void* pFunction = (void*)&CNWSObject::UpdateEffectList;
+    Dl_info info{};
+    const ElfW(Sym)* pSym = nullptr;
+    size_t nSize = 0;
+    uint64_t nHash = 0;
+    if (dladdr1(pFunction, &info, (void**)&pSym, RTLD_DL_SYMENT) && pSym && info.dli_saddr == pFunction)
+    {
+        nSize = pSym->st_size;
+        nHash = 0xcbf29ce484222325ull;
+        const auto* pBytes = (const uint8_t*)pFunction;
+        for (size_t i = 0; i < nSize; i++)
+            nHash = (nHash ^ pBytes[i]) * 0x100000001b3ull;
+    }
+    const bool bCodeOk = nSize == UPDATE_EFFECT_LIST_SIZE && nHash == UPDATE_EFFECT_LIST_FNV1A;
+
+    if (bBuildOk && bCodeOk)
+    {
+        LOG_INFO("Engine %s.%s-%s, UpdateEffectList size %zu FNV-1a %016llx: as checked", ENGINE_BUILD,
+                 ENGINE_REVISION, ENGINE_POSTFIX, nSize, (unsigned long long)nHash);
+        return true;
+    }
+    LOG_ERROR("Not enabled: checked against engine %s.%s-%s with UpdateEffectList size %zu FNV-1a %016llx, but this "
+              "server is %s.%s-%s with UpdateEffectList size %zu FNV-1a %016llx%s. Re-verify the plugin against this "
+              "engine (see EffectListCache.cpp) before changing the expected values.",
+              ENGINE_BUILD, ENGINE_REVISION, ENGINE_POSTFIX, UPDATE_EFFECT_LIST_SIZE,
+              (unsigned long long)UPDATE_EFFECT_LIST_FNV1A, BuildString(pBuild), BuildString(pRevision),
+              BuildString(pPostfix), nSize, (unsigned long long)nHash,
+              nSize == 0 ? " (symbol not found)"
+                         : (bBuildOk ? " (code differs; a plugin loaded earlier that hooks it would also do this)" : ""));
+    return false;
+}
+
 void EffectListCache() __attribute__((constructor));
 void EffectListCache()
 {
     if (!Config::Get<bool>("ENABLE", false))
         return;
 
+    if (!EngineMatches())
+        return;
+
     auto nRefreshSeconds = Config::Get<int32_t>("REFRESH_SECONDS", 6);
-    if (nRefreshSeconds < 0 || nRefreshSeconds > 3600)
+    if (nRefreshSeconds < 1)
     {
-        LOG_WARNING("REFRESH_SECONDS must be 0-3600, using 6");
+        // The refresh is the backstop for in-place edits nothing else sees, so it can't be turned off.
+        LOG_WARNING("REFRESH_SECONDS must be at least 1, using 1");
+        nRefreshSeconds = 1;
+    }
+    else if (nRefreshSeconds > 3600)
+    {
+        LOG_WARNING("REFRESH_SECONDS must be 1-3600, using 6");
         nRefreshSeconds = 6;
     }
     s_refreshMs = (uint32_t)nRefreshSeconds * 1000;
@@ -339,6 +423,21 @@ void EffectListCache()
             return s_OnEffectRemovedHook->CallOriginal<int32_t>(pThis, pObject, pEffect);
         }, Hooks::Order::Early);
 
+    // A logging-in player's creature takes over its TURD's object ID. The cache may still hold an entry under that ID
+    // from the creature that logged out, and the new creature may sit at the same address: drop both IDs' entries.
+    s_EatTURDHook = Hooks::HookFunction(&CNWSPlayer::EatTURD,
+        +[](CNWSPlayer* pThis, CNWSPlayerTURD* pTURD) -> void
+        {
+            auto* pObject = Utils::AsNWSObject(Utils::GetGameObject(pThis->m_oidNWSObject));
+            Invalidate(pThis->m_oidNWSObject);
+            if (pTURD)
+                Invalidate(pTURD->m_idSelf);
+            s_EatTURDHook->CallOriginal<void>(pThis, pTURD);
+            Invalidate(pThis->m_oidNWSObject);
+            if (pObject)
+                Invalidate(pObject->m_idSelf);
+        }, Hooks::Order::Default);
+
     // NWNX_Effect edits applied effects in place (duration, expiry, integers, strings).
     MessageBus::Subscribe("NWNX_EFFECT_APPLIED_EFFECT_EDITED",
         [](const std::vector<std::string>& message)
@@ -351,6 +450,7 @@ void EffectListCache()
         { "CNWSObject::UpdateEffectList",     Installed(s_UpdateEffectListHook, &CNWSObject::UpdateEffectList) },
         { "CServerAIMaster::OnEffectApplied", Installed(s_OnEffectAppliedHook, &CServerAIMaster::OnEffectApplied) },
         { "CServerAIMaster::OnEffectRemoved", Installed(s_OnEffectRemovedHook, &CServerAIMaster::OnEffectRemoved) },
+        { "CNWSPlayer::EatTURD",              Installed(s_EatTURDHook, &CNWSPlayer::EatTURD) },
     };
     bool bAllHooked = !Config::Get<bool>("DEBUG_SIMULATE_HOOK_FAILURE", false);
     for (auto& h : hooks)
