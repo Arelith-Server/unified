@@ -57,7 +57,7 @@ If any hook fails to install, the plugin logs an error and stays inactive.
 | `NWNX_EFFECTLISTCACHE_REFRESH_SECONDS` | int | 6 | Rebuild each cached entry at least this often (world time), 1-3600. Values below 1 are raised to 1 with a warning. |
 | `NWNX_EFFECTLISTCACHE_ALL_OBJECTS` | true/false | false | Also cache placeables, doors and items, not only creatures. |
 | `NWNX_EFFECTLISTCACHE_LOG_SECONDS` | int | 60 | How often to log counters and drop entries for destroyed objects. |
-| `NWNX_EFFECTLISTCACHE_VERIFY` | true/false | false | Testing: on every skip, rebuild the entry from the list and log an error if something was due. |
+| `NWNX_EFFECTLISTCACHE_VERIFY` | true/false | false | Testing and first rollout: nothing is skipped. Wherever the plugin would skip, it rebuilds the entry from the list, calls `UpdateEffectList` anyway and logs a `Verify:` error if the entry was stale or the engine changed the effect list, an effect on it, or the object's hit points. Behaves like off; costs about one extra pass over the list per call. The "skipped" counter then counts calls that would have been skipped. |
 | `NWNX_EFFECTLISTCACHE_DEBUG_SIMULATE_HOOK_FAILURE` | true/false | false | Testing only: behave as if a hook failed to install. |
 
 ## NWScript

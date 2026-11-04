@@ -33,6 +33,8 @@
 // pass-through) if the server is not the engine build this analysis was made on (see EngineMatches), or if any hook
 // fails to install.
 // NWNX_EffectListCache_Disable() stops skipping at runtime; NWNX_EffectListCache_Enable() starts it again.
+// VERIFY=true (testing, first rollout) skips nothing: where it would skip it calls the engine anyway and logs an error
+// if the cache entry was stale or the call changed anything.
 
 #include "nwnx.hpp"
 
@@ -97,7 +99,7 @@ static std::unordered_map<ObjectID, Entry> s_cache;
 static bool s_configured; // ENABLE was set and every hook installed
 static bool s_active;     // skipping now (NWNX_EffectListCache_Disable/Enable toggle this)
 static bool s_allObjects; // also placeables, doors and items, not just creatures
-static bool s_verify;     // testing: on every skip, rebuild the entry and check nothing was due
+static bool s_verify;     // testing: skip nothing; where a skip would happen, check the entry and that the engine did nothing
 static uint32_t s_refreshMs;
 static std::chrono::steady_clock::duration s_logPeriod;
 static std::chrono::steady_clock::time_point s_nextLog;
@@ -247,6 +249,48 @@ static void LogAndCollect()
     }
 }
 
+// VERIFY only: a hash of everything UpdateEffectList can change on an object whose list has no periodic work: which
+// effects are on the list, their type, duration type, duration, expiry and integers, and the object's hit points.
+static uint64_t StateHash(CNWSObject* pObject)
+{
+    uint64_t h = 0xcbf29ce484222325ull;
+    auto mix = [&h](uint64_t v) { h = (h ^ v) * 0x100000001b3ull; };
+    mix((uint64_t)pObject->m_appliedEffects.num);
+    mix((uint64_t)(uint32_t)pObject->m_nCurrentHitPoints);
+    for (int32_t i = 0; i < pObject->m_appliedEffects.num; i++)
+    {
+        auto* pEffect = pObject->m_appliedEffects.element[i];
+        mix((uint64_t)(uintptr_t)pEffect);
+        if (!pEffect)
+            continue;
+        mix(pEffect->m_nID);
+        mix(((uint64_t)pEffect->m_nType << 16) | pEffect->m_nSubType);
+        uint32_t nDuration;
+        std::memcpy(&nDuration, &pEffect->m_fDuration, sizeof(nDuration));
+        mix(nDuration);
+        mix(((uint64_t)pEffect->m_nExpiryCalendarDay << 32) | pEffect->m_nExpiryTimeOfDay);
+        mix((uint64_t)pEffect->m_nNumIntegers);
+        for (int32_t j = 0; pEffect->m_nParamInteger && j < pEffect->m_nNumIntegers; j++)
+            mix((uint64_t)(uint32_t)pEffect->m_nParamInteger[j]);
+    }
+    return h;
+}
+
+// Rebuilds the entry from the list as it is after a call through. Looks the entry up again: the call may have run
+// scripts that changed the cache.
+static void RebuildAfterCall(CNWSObject* pThis, ObjectID oid, CWorldTimer* pTimer, uint32_t nDay, uint32_t nTime)
+{
+    if (pThis->m_appliedEffects.num == 0)
+    {
+        s_cache.erase(oid);
+        return;
+    }
+    if (!pTimer)
+        pTimer = ActiveTimer(oid);
+    Build(pThis, pTimer, nDay, nTime, s_cache[oid]);
+    Count(Rebuilt);
+}
+
 static void UpdateEffectListHook(CNWSObject* pThis, uint32_t nDay, uint32_t nTime)
 {
     if (!s_active || pThis->m_appliedEffects.num == 0 ||
@@ -283,35 +327,35 @@ static void UpdateEffectListHook(CNWSObject* pThis, uint32_t nDay, uint32_t nTim
                     Count(Skipped);
                     return;
                 }
+                // VERIFY: skip nothing. Check the entry against a fresh build, then call the engine anyway and
+                // check that it changed nothing a skip would have missed.
                 Entry fresh;
                 Build(pThis, pTimer, nDay, nTime, fresh);
-                if (!fresh.bPeriodic && !Due(fresh, pTimer, nDay, nTime))
+                const bool bCacheOk = !fresh.bPeriodic && !Due(fresh, pTimer, nDay, nTime);
+                const int32_t nBefore = pThis->m_appliedEffects.num;
+                const uint64_t nHashBefore = StateHash(pThis);
+                s_UpdateEffectListHook->CallOriginal<void>(pThis, nDay, nTime);
+                const bool bEngineOk = StateHash(pThis) == nHashBefore;
+                if (bCacheOk && bEngineOk)
                 {
                     Count(Skipped);
                     return;
                 }
                 Count(VerifyMisses);
                 if (s_stats[VerifyMisses] + s_statsTotal[VerifyMisses] <= 100)
-                    LOG_ERROR("Verify: stale cache on %x (%d effects): skipping would have missed due work",
-                              oid, pThis->m_appliedEffects.num);
+                    LOG_ERROR("Verify: skipping %x would have missed due work (%s; %d effects before, %d after)", oid,
+                              !bCacheOk ? (bEngineOk ? "stale cache entry" : "stale cache entry, engine changed the list")
+                                        : "engine changed the list or an effect",
+                              nBefore, pThis->m_appliedEffects.num);
+                RebuildAfterCall(pThis, oid, pTimer, nDay, nTime);
+                return;
             }
         }
     }
 
     Count(Full);
     s_UpdateEffectListHook->CallOriginal<void>(pThis, nDay, nTime);
-
-    // Rebuild from the list as it is now. Look the entry up again: the call may have run scripts that changed the
-    // cache (and invalidated `it`).
-    if (pThis->m_appliedEffects.num == 0)
-    {
-        s_cache.erase(oid);
-        return;
-    }
-    if (!pTimer)
-        pTimer = ActiveTimer(oid);
-    Build(pThis, pTimer, nDay, nTime, s_cache[oid]);
-    Count(Rebuilt);
+    RebuildAfterCall(pThis, oid, pTimer, nDay, nTime);
 }
 
 // A hook that failed to install leaves its trampoline pointing at the original function.
