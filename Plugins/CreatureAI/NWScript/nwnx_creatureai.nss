@@ -15,7 +15,8 @@ int NWNX_CreatureAI_SetHeightCache(int bOn);
 /// @return TRUE if the throttle was enabled at startup with every hook installed, so the switch took effect.
 int NWNX_CreatureAI_SetThrottle(int bOn);
 
-/// @brief Sets whether a creature whose current action is ActionWait counts as idle for the throttle.
+/// @brief Sets whether a creature that is only waiting (an ActionWait followed by nothing but ActionDoCommand) counts
+/// as idle for the throttle. A Wait with other actions behind it never does.
 /// @param bOn TRUE to include waiting creatures, FALSE to exclude them.
 /// @return TRUE if the throttle was enabled at startup with every hook installed, so the switch took effect.
 int NWNX_CreatureAI_SetThrottleWaiting(int bOn);

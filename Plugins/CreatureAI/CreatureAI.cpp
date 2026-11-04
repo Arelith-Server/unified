@@ -6,25 +6,29 @@
 //    walkmesh (CNWTileSurfaceMesh::FindTriangle) for the triangle under the point. In 8193.37 the result depends only
 //    on the area's tiles and on x and y: CNWSTile::ComputeHeight passes z = 0 to the walkmesh, and none of the
 //    functions involved write anything except a one-off lazy CNWTileSurfaceMesh::LoadWalkMesh. So this caches
-//    (area, x bits, y bits) -> height in a small direct-mapped table. A hit returns the exact float the engine would.
-//    The table is cleared when any area is destroyed (CNWSArea::~CNWSArea) and when a script changes tiles
-//    (CNWSArea::SetTile, CNWSArea::SetTileset: SetTileJson and friends). NWNX_Area_RotateArea rewrites tiles without
-//    going through either; Arelith doesn't call it. NWNX_Tileset only changes tiles while an area loads, before
-//    anything can be cached for it.
+//    (area, tile array, x bits, y bits) -> height in a small direct-mapped table. A hit returns the exact float the
+//    engine would. The table is marked stale when any area is destroyed (CNWSArea::~CNWSArea) and when a script
+//    changes tiles (CNWSArea::SetTile, CNWSArea::SetTileset: SetTileJson and friends), and is cleared once on the next
+//    lookup. NWNX_Area_RotateArea rewrites tiles without going through either, but it replaces the area's tile array,
+//    which is part of the key; the first lookup that meets an entry of that area with the old array clears the table.
+//    NWNX_Tileset only changes tiles while an area loads, before anything can be cached.
 //
 // 2. VERY_LOW throttle (NWNX_CREATUREAI_THROTTLE=true)
-//    A creature at AI level VERY_LOW, in an area with no players, with nothing queued and not in combat, has its
-//    AIUpdate run on one visit in THROTTLE_TICKS (default 4); the other visits return at once. Its AIUpdate measures
-//    elapsed time from the world time it stored on its last real update, so timers, effect durations, combat round
-//    and excited-state timers catch up in one step. The heartbeat also runs from AIUpdate (SpawnInHeartbeatPerception):
-//    at VERY_LOW it fires once the 6.0-7.2 s interval has passed and the creature has then had interval/64 more
-//    visits. Skipped visits are counted for it (CountSkippedHeartbeatCheck), so it fires at most THROTTLE_TICKS - 1
-//    visits later than without the throttle. Anything that gives the creature work makes it run on its
-//    very next visit: a queued action, combat, a player entering its area, or its AI level being raised. As a safety
-//    net a throttled creature also runs if THROTTLE_MAX_SKIP_MS (default 500) has passed since it last ran.
-//    With THROTTLE_WAITING=true a creature whose current action is ActionWait also counts as idle. Arelith's idle
-//    loop (gsAIActionNone: animation, ActionWait 2-4 s, repeat) leaves most heartbeat-AI NPCs with a queue forever,
-//    so without this few live creatures qualify.
+//    A creature at AI level VERY_LOW whose OnSpawn has run, in an area with no players, with nothing queued and not
+//    in combat, has its AIUpdate run on one visit in THROTTLE_TICKS (default 4); the other visits return at once. Its
+//    AIUpdate measures elapsed time from the world time it stored on its last real update, so timers, effect
+//    durations, combat round and excited-state timers catch up in one step. The heartbeat and the NPC visible-list
+//    (perception) update also run from AIUpdate (SpawnInHeartbeatPerception), and at VERY_LOW each waits for a number
+//    of further visits once its interval has passed. Skipped visits are counted for them (CountSkippedChecks), so each
+//    fires at most THROTTLE_TICKS - 1 visits later than without the throttle. Anything that gives the creature work
+//    makes it run on its very next visit: a queued action, combat, a player entering its area, or its AI level being
+//    raised. As a safety net a throttled creature also runs if THROTTLE_MAX_SKIP_MS (default 500) has passed since it
+//    last ran.
+//    With THROTTLE_WAITING=true a creature that is only waiting (an ActionWait at the head of the queue, followed by
+//    nothing but ActionDoCommand) also counts as idle. Arelith's idle loop (gsAIActionNone: animation, ActionWait
+//    2-4 s, ActionDoCommand to repeat) leaves most heartbeat-AI NPCs with a queue forever, so without this few live
+//    creatures qualify. A Wait the engine queues in front of other work (pathfinding waits, random-walk pauses,
+//    doors, follow, casting) has that work behind it, so it doesn't count.
 //
 // Each part installs its hooks only when enabled, and stays off if any of its hooks fails to install (fail closed).
 // NWNX_CreatureAI_SetHeightCache / SetThrottle switch a configured part off and on at runtime.
@@ -50,7 +54,9 @@
 
 #include <pthread.h>
 
+#include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <cstring>
 #include <unordered_map>
 #include <vector>
@@ -65,6 +71,22 @@ namespace CreatureAI {
 using namespace NWNXLib;
 using namespace NWNXLib::API;
 using namespace NWNXLib::API::Constants;
+
+// The skip path mirrors CNWSCreature::SpawnInHeartbeatPerception (0x47a750 in 8193.37), which reads these by offset.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(CNWSObject, m_nAILevel) == 0x7c, "Check SpawnInHeartbeatPerception against the API");
+static_assert(offsetof(CNWSCreature, m_bOnCreationScriptExecuted) == 0x540, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_nLastHeartbeatScriptCalendarDay) == 0x544, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_nLastHeartbeatScriptTimeOfDay) == 0x548, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_nHeartbeatInterval) == 0x54c, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_nLastVisibleCreaturesCheckCalendarDay) == 0x570, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_nLastVisibleCreaturesCheckTimeOfDay) == 0x574, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_nChecksVisibleList) == 0x578, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_nChecksHeartbeat) == 0x57c, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_nPersonalReputationHeartbeatCount) == 0x588, "Check SpawnInHeartbeatPerception");
+static_assert(offsetof(CNWSCreature, m_bPlayerCharacter) == 0x894, "Check SpawnInHeartbeatPerception");
+#pragma GCC diagnostic pop
 
 static pthread_t s_mainThread;
 
@@ -87,15 +109,19 @@ static uint32_t NowMs()
 
 struct HeightEntry
 {
-    CNWSArea* pArea; // nullptr = empty
+    CNWSArea* pArea;  // nullptr = empty
+    CNWSTile* pTiles; // the area's tile array when cached: a replaced array misses
     ObjectID oidArea;
-    uint32_t x, y;   // float bits
+    uint32_t x, y;    // float bits
     float fHeight;
 };
 
-static constexpr uint32_t HEIGHT_BITS = 13; // 8192 entries, 192 KiB
+static constexpr uint32_t HEIGHT_BITS = 13; // 8192 entries, 256 KiB
 static HeightEntry s_heights[1u << HEIGHT_BITS];
 static bool s_heightConfigured, s_heightActive;
+// Set when tiles change or an area goes away; the table is then cleared once, on the next lookup. SetTileJson and
+// friends call SetTile once per tile, so clearing there would memset the whole table for every tile.
+static bool s_heightStale;
 static uint64_t s_heightHits, s_heightMisses, s_heightClears;
 
 static Hooks::Hook s_ComputeHeightHook;
@@ -106,6 +132,7 @@ static Hooks::Hook s_SetTilesetHook;
 static void ClearHeights()
 {
     std::memset(s_heights, 0, sizeof(s_heights));
+    s_heightStale = false;
     s_heightClears++;
 }
 
@@ -120,18 +147,32 @@ static uint32_t HeightSlot(ObjectID oidArea, uint32_t x, uint32_t y)
 
 static float ComputeHeightHook(CNWSArea* pThis, Vector v)
 {
-    if (!s_heightActive || !pthread_equal(pthread_self(), s_mainThread))
+    if (!s_heightActive || !pThis || !pthread_equal(pthread_self(), s_mainThread))
         return s_ComputeHeightHook->CallOriginal<float>(pThis, v);
+    if (s_heightStale)
+        ClearHeights();
 
     uint32_t x = FloatBits(v.x), y = FloatBits(v.y);
-    auto& e = s_heights[HeightSlot(pThis->m_idSelf, x, y)];
-    if (e.pArea == pThis && e.oidArea == pThis->m_idSelf && e.x == x && e.y == y)
+    auto* e = &s_heights[HeightSlot(pThis->m_idSelf, x, y)];
+    if (e->pArea == pThis && e->oidArea == pThis->m_idSelf)
     {
-        s_heightHits++;
-        return e.fHeight;
+        if (e->pTiles == pThis->m_pTile)
+        {
+            if (e->x == x && e->y == y)
+            {
+                s_heightHits++;
+                return e->fHeight;
+            }
+        }
+        else
+        {
+            // This area's tile array was replaced (NWNX_Area_RotateArea). Drop everything, so no entry keyed on the
+            // old array can match if the allocator later hands the same address to another new array.
+            ClearHeights();
+        }
     }
     float fHeight = s_ComputeHeightHook->CallOriginal<float>(pThis, v);
-    e = { pThis, pThis->m_idSelf, x, y, fHeight };
+    *e = { pThis, pThis->m_pTile, pThis->m_idSelf, x, y, fHeight };
     s_heightMisses++;
     return fHeight;
 }
@@ -146,20 +187,32 @@ struct ThrottleState
     uint8_t nSkipped;
 };
 
-static std::unordered_map<ObjectID, ThrottleState> s_throttled;
+// The two containers are function-local statics: the plugin's constructor runs before this file's dynamic
+// initialisers, so a namespace-scope container set up there would be constructed again afterwards.
+static std::unordered_map<ObjectID, ThrottleState>& Throttled()
+{
+    static std::unordered_map<ObjectID, ThrottleState> s_map(4096);
+    return s_map;
+}
 static uint32_t s_throttleTicks;
 static uint32_t s_maxSkipMs;
 static bool s_throttleConfigured, s_throttleActive;
 static bool s_throttleWaiting;
-// Internal action id CNWSVirtualMachineCommands::ExecuteCommandWait queues (script ACTION_WAIT is 36).
+// Internal action ids: CNWSVirtualMachineCommands::ExecuteCommandWait queues 0x1e (script ACTION_WAIT is 36), and
+// CNWSObject::AddDoCommandAction (ActionDoCommand) queues 0x25.
 static constexpr uint32_t ACTION_ID_WAIT = 0x1e;
+static constexpr uint32_t ACTION_ID_DO_COMMAND = 0x25;
 static uint64_t s_nSkipped, s_nRunThrottled, s_nRunOther;
 
 static Hooks::Hook s_AIUpdateHook;
 
-// Objects a connected player controls this tick (their character, or a creature they or a DM possess). Rebuilt once
-// per tick before the AI walk; a possessed creature's area need not count a player, so check it directly.
-static std::vector<ObjectID> s_controlled;
+// Objects a connected player controls this tick (their character, or a creature they or a DM possess), sorted.
+// Rebuilt once per tick before the AI walk; a possessed creature's area need not count a player, so check it directly.
+static std::vector<ObjectID>& Controlled()
+{
+    static std::vector<ObjectID> s_vec = [] { std::vector<ObjectID> v; v.reserve(512); return v; }();
+    return s_vec;
+}
 // Read once per tick, before the AI walk, so the per-creature path makes no clock or timer calls.
 static uint32_t s_tickMs, s_tickWorldDay, s_tickWorldTime;
 
@@ -167,40 +220,54 @@ static void RefreshPerTick()
 {
     s_tickMs = NowMs();
     Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->GetWorldTime(&s_tickWorldDay, &s_tickWorldTime);
-    s_controlled.clear();
+    auto& controlled = Controlled();
+    controlled.clear();
     for (auto* pPlayer : Globals::AppManager()->m_pServerExoApp->GetPlayerList())
     {
         if (!pPlayer)
             continue;
-        s_controlled.push_back(pPlayer->m_oidNWSObject);
+        controlled.push_back(pPlayer->m_oidNWSObject);
         if (pPlayer->m_oidPCObject != pPlayer->m_oidNWSObject)
-            s_controlled.push_back(pPlayer->m_oidPCObject);
+            controlled.push_back(pPlayer->m_oidPCObject);
     }
+    std::sort(controlled.begin(), controlled.end());
 }
 
 static bool IsControlled(ObjectID oid)
 {
-    for (ObjectID o : s_controlled)
-        if (o == oid)
-            return true;
-    return false;
+    auto& controlled = Controlled();
+    return !controlled.empty() && std::binary_search(controlled.begin(), controlled.end(), oid);
+}
+
+// THROTTLE_WAITING: the queue is an ActionWait with nothing behind it but ActionDoCommand nodes, which only run once
+// the wait is over (Arelith's idle loop is Wait + DoCommand). AIActionWait compares world times, so a skipped visit
+// only ends the wait up to THROTTLE_TICKS visits later. A Wait with any other action behind it is the engine pausing
+// other work (AddPathfindingWaitActionToFront, random walk, follow, doors, counterspell, item cast): never throttled.
+static bool IsOnlyWaiting(CExoLinkedListInternal* pList)
+{
+    auto* pNode = pList->pHead;
+    if (!pNode || !pNode->pObject || static_cast<CNWSObjectActionNode*>(pNode->pObject)->m_nActionId != ACTION_ID_WAIT)
+        return false;
+    for (pNode = pNode->pNext; pNode; pNode = pNode->pNext)
+    {
+        if (!pNode->pObject || static_cast<CNWSObjectActionNode*>(pNode->pObject)->m_nActionId != ACTION_ID_DO_COMMAND)
+            return false;
+    }
+    return true;
 }
 
 static bool CanThrottle(CNWSCreature* pCreature)
 {
     if (pCreature->m_nAILevel != AIPriority::VeryLow)
         return false;
+    // OnSpawn runs from SpawnInHeartbeatPerception on the creature's first AIUpdate: never delay it.
+    if (!pCreature->m_bOnCreationScriptExecuted)
+        return false;
     if (pCreature->m_bPlayerCharacter || !pCreature->m_pStats || pCreature->m_pStats->m_bIsPC)
         return false;
     auto* pList = pCreature->m_lQueuedActions.m_pcExoLinkedListInternal;
-    if (pList && pList->m_nCount > 0)
-    {
-        // Optionally treat a creature whose current action is ActionWait as idle: AIActionWait compares world times,
-        // so a skipped visit only ends the wait up to THROTTLE_TICKS visits later.
-        if (!s_throttleWaiting || !pList->pHead || !pList->pHead->pObject ||
-            static_cast<CNWSObjectActionNode*>(pList->pHead->pObject)->m_nActionId != ACTION_ID_WAIT)
-            return false;
-    }
+    if (pList && pList->m_nCount > 0 && (!s_throttleWaiting || !IsOnlyWaiting(pList)))
+        return false;
     if (pCreature->m_bCombatState ||
         pCreature->m_oidAttackTarget != Constants::OBJECT_INVALID ||
         pCreature->m_oidAttemptedAttackTarget != Constants::OBJECT_INVALID)
@@ -215,40 +282,62 @@ static bool CanThrottle(CNWSCreature* pCreature)
     return true;
 }
 
-// At VERY_LOW the engine fires the heartbeat only once m_nHeartbeatInterval ms have passed AND it has then counted
-// m_nHeartbeatInterval / 64 further AIUpdate visits (m_nChecksHeartbeat, in SpawnInHeartbeatPerception). A skipped visit
-// would not count, stretching the heartbeat. So do the engine's count step for it: the heartbeat then fires on the
-// first real run after the engine would have fired it, at most THROTTLE_TICKS - 1 visits late.
-static void CountSkippedHeartbeatCheck(CNWSCreature* pCreature)
+// Time-of-day part of (world time at the start of this tick - the given time), which is all the engine compares.
+// The engine reads the object's active timer, which is the world timer unless the game is paused; the difference is
+// a few ms at most.
+static uint32_t TimeOfDayDiff(uint32_t nDay, uint32_t nTime)
 {
-    if (!pCreature->m_bOnCreationScriptExecuted)
-        return;
-    // World time as of the start of this tick (read once per tick in the UpdateState hook). The engine reads the
-    // object's active timer, which is the world timer unless the game is paused; the difference is a few ms at most.
-    uint32_t nDiffMs;
-    if (s_tickWorldDay == pCreature->m_nLastHeartbeatScriptCalendarDay &&
-        s_tickWorldTime >= pCreature->m_nLastHeartbeatScriptTimeOfDay)
-        nDiffMs = s_tickWorldTime - pCreature->m_nLastHeartbeatScriptTimeOfDay;
-    else
+    if (s_tickWorldDay == nDay && s_tickWorldTime >= nTime)
+        return s_tickWorldTime - nTime;
+    uint32_t nDiffDay = 0, nDiffMs = 0;
+    Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->SubtractWorldTimes(s_tickWorldDay, s_tickWorldTime,
+        nDay, nTime, &nDiffDay, &nDiffMs);
+    return nDiffMs;
+}
+
+// At VERY_LOW, SpawnInHeartbeatPerception(1) waits for further AIUpdate visits once an interval has passed, and a
+// skipped visit would not count, stretching the interval. So do the engine's counting steps for a skipped visit; the
+// event then fires on the first real run after the engine would have fired it, at most THROTTLE_TICKS - 1 visits late.
+// Only reached for a non-PC VERY_LOW creature whose OnSpawn has run (CanThrottle).
+static void CountSkippedChecks(CNWSCreature* pCreature)
+{
+    // Heartbeat (0x47a9a0): once m_nHeartbeatInterval ms have passed, count the visit; at VERY_LOW the heartbeat fires
+    // when the count reaches interval / 64. A visit that counts without firing also steps the personal reputation
+    // counter (0x47aa3b), which cleans the personal reputation list every 30 steps. On a visit where the engine
+    // would fire, leave the reputation step to the real run that fires.
+    if (TimeOfDayDiff(pCreature->m_nLastHeartbeatScriptCalendarDay, pCreature->m_nLastHeartbeatScriptTimeOfDay) >=
+        pCreature->m_nHeartbeatInterval)
     {
-        uint32_t nDiffDay = 0;
-        nDiffMs = 0;
-        Globals::AppManager()->m_pServerExoApp->GetWorldTimer()->SubtractWorldTimes(s_tickWorldDay, s_tickWorldTime,
-            pCreature->m_nLastHeartbeatScriptCalendarDay, pCreature->m_nLastHeartbeatScriptTimeOfDay, &nDiffDay, &nDiffMs);
+        uint32_t nChecks = ++pCreature->m_nChecksHeartbeat;
+        if (nChecks < (pCreature->m_nHeartbeatInterval >> 6))
+        {
+            if (pCreature->m_nPersonalReputationHeartbeatCount == 30)
+            {
+                pCreature->CleanOutPersonalReputationList();
+                pCreature->m_nPersonalReputationHeartbeatCount = 1;
+            }
+            else
+                pCreature->m_nPersonalReputationHeartbeatCount++;
+        }
     }
-    // The engine compares only the time-of-day part of the difference.
-    if (nDiffMs >= pCreature->m_nHeartbeatInterval)
-        pCreature->m_nChecksHeartbeat++;
+    // Visible list (0x47ac78 -> 0x47ac92 -> 0x47a8e0): for a creature that isn't a PC or a possessed familiar, once
+    // more than 3999 ms have passed since the last visible-list check, count the visit; at VERY_LOW UpdateVisibleList
+    // runs when the count passes 149 (0x47a8f8), on the real run.
+    if (!pCreature->m_bPlayerCharacter && !pCreature->GetIsPossessedFamiliar() &&
+        TimeOfDayDiff(pCreature->m_nLastVisibleCreaturesCheckCalendarDay,
+                      pCreature->m_nLastVisibleCreaturesCheckTimeOfDay) > 3999)
+        pCreature->m_nChecksVisibleList++;
 }
 
 static void AIUpdateHook(CNWSCreature* pThis)
 {
     if (s_throttleActive && pThis)
     {
+        auto& throttled = Throttled();
         if (CanThrottle(pThis))
         {
             uint32_t nNow = s_tickMs;
-            auto [it, bNew] = s_throttled.try_emplace(pThis->m_idSelf);
+            auto [it, bNew] = throttled.try_emplace(pThis->m_idSelf);
             auto& st = it->second;
             if (bNew)
             {
@@ -260,7 +349,7 @@ static void AIUpdateHook(CNWSCreature* pThis)
             {
                 st.nSkipped++;
                 s_nSkipped++;
-                CountSkippedHeartbeatCheck(pThis);
+                CountSkippedChecks(pThis);
                 return;
             }
             st.nSkipped = 0;
@@ -270,8 +359,8 @@ static void AIUpdateHook(CNWSCreature* pThis)
         else
         {
             // Out of the throttle: run on every visit from now on, and start a fresh cycle if it comes back.
-            if (!s_throttled.empty())
-                s_throttled.erase(pThis->m_idSelf);
+            if (!throttled.empty())
+                throttled.erase(pThis->m_idSelf);
             s_nRunOther++;
         }
     }
@@ -290,11 +379,12 @@ static size_t s_nForgotten;
 // Creatures destroyed while throttled leave an entry behind; drop them.
 static void Purge()
 {
-    for (auto it = s_throttled.begin(); it != s_throttled.end();)
+    auto& throttled = Throttled();
+    for (auto it = throttled.begin(); it != throttled.end();)
     {
         if (!Utils::AsNWSCreature(Utils::GetGameObject(it->first)))
         {
-            it = s_throttled.erase(it);
+            it = throttled.erase(it);
             s_nForgotten++;
         }
         else
@@ -309,7 +399,7 @@ static void LogStatsNow()
         Purge();
         LOG_INFO("Throttle%s: %llu skipped, %llu run (throttled), %llu run (other); %zu tracked, %zu forgotten",
                  s_throttleActive ? "" : " (off)", (unsigned long long)s_nSkipped, (unsigned long long)s_nRunThrottled,
-                 (unsigned long long)s_nRunOther, s_throttled.size(), s_nForgotten);
+                 (unsigned long long)s_nRunOther, Throttled().size(), s_nForgotten);
         s_nSkipped = s_nRunThrottled = s_nRunOther = 0;
         s_nForgotten = 0;
     }
@@ -383,7 +473,7 @@ static void InitHeightCache()
         +[](CNWSArea* pThis) -> void
         {
             if (s_heightConfigured)
-                ClearHeights();
+                s_heightStale = true;
             s_AreaDtorHook->CallOriginal<void>(pThis);
         }, Hooks::Order::Early);
     s_SetTileHook = Hooks::HookFunction(&_ZN8CNWSArea7SetTileEP8CNWSTileiii,
@@ -391,14 +481,14 @@ static void InitHeightCache()
         {
             s_SetTileHook->CallOriginal<void>(pThis, pTile, a, b, c);
             if (s_heightConfigured)
-                ClearHeights();
+                s_heightStale = true;
         }, Hooks::Order::Early);
     s_SetTilesetHook = Hooks::HookFunction(&_ZN8CNWSArea10SetTilesetERK7CResRef,
         +[](CNWSArea* pThis, const CResRef& resRef) -> void
         {
             s_SetTilesetHook->CallOriginal<void>(pThis, resRef);
             if (s_heightConfigured)
-                ClearHeights();
+                s_heightStale = true;
         }, Hooks::Order::Early);
 
     HookCheck hooks[] = {
@@ -436,8 +526,6 @@ static void InitThrottle()
     }
     s_maxSkipMs = (uint32_t)nMaxSkipMs;
     s_throttleWaiting = Config::Get<bool>("THROTTLE_WAITING", false);
-    s_throttled.reserve(4096);
-    s_controlled.reserve(512);
 
     s_AIUpdateHook = Hooks::HookFunction(Functions::_ZN12CNWSCreature8AIUpdateEv, &AIUpdateHook, Hooks::Order::Early);
     HookCheck hooks[] = {
@@ -500,14 +588,16 @@ NWNX_EXPORT ArgumentStack SetThrottle(ArgumentStack&& args)
     if (!s_throttleConfigured)
         return 0;
     if (!bOn)
-        s_throttled.clear();
+        Throttled().clear();
+    else if (!s_throttleActive)
+        RefreshPerTick(); // the per-tick state isn't kept up while off; the rest of this tick needs it current
     s_throttleActive = bOn;
     LOG_DEBUG("Throttle %s at runtime", bOn ? "on" : "off");
     return 1;
 }
 
-// Sets whether a creature whose current action is ActionWait counts as idle (THROTTLE_WAITING). Returns TRUE if the
-// throttle is configured, so the switch took effect.
+// Sets whether a creature that is only waiting (ActionWait, followed by nothing but ActionDoCommand) counts as idle
+// (THROTTLE_WAITING). Returns TRUE if the throttle is configured, so the switch took effect.
 NWNX_EXPORT ArgumentStack SetThrottleWaiting(ArgumentStack&& args)
 {
     const auto bOn = args.extract<int32_t>() != 0;
@@ -522,7 +612,7 @@ NWNX_EXPORT ArgumentStack SetThrottleWaiting(ArgumentStack&& args)
 NWNX_EXPORT ArgumentStack GetIsThrottled(ArgumentStack&& args)
 {
     const auto oid = args.extract<ObjectID>();
-    return (int32_t)(s_throttleActive && s_throttled.find(oid) != s_throttled.end());
+    return (int32_t)(s_throttleActive && Throttled().find(oid) != Throttled().end());
 }
 
 // Logs the counters now (and resets them), as the periodic log line does.
