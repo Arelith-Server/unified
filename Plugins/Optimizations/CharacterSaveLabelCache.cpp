@@ -8,6 +8,7 @@
 
 #include <cstring>
 #include <unordered_map>
+#include <vector>
 
 namespace Optimizations {
 
@@ -23,7 +24,10 @@ using namespace NWNXLib::API;
 //  - every GFF created with CreateGFFFile during the save (the character file, and any GFF that something
 //    called from inside the save creates, e.g. a nested object serialisation), and
 //  - the GFF passed to SaveCreature.
-// AddLabel on one of those GFFs is answered from its index; AddLabel on any other GFF goes to the engine.
+// SaveCreature covers every creature save, not only player characters (e.g. object serialisation, area saves).
+// AddLabel on one of those GFFs is answered from its index once the label table has more than 64 entries (a
+// shorter table is scanned faster than an index is built); AddLabel on any other GFF goes to the engine. The maps
+// of finished saves are kept for reuse, so a save does not allocate its index again.
 // The index is filled in table order, so for a label that appears more than once it holds the highest index,
 // the one the engine's backwards scan returns; a hit is also checked against the table entry. Labels not in the
 // index go through the engine's AddLabel, which scans and appends them exactly as before, so the label table,
@@ -65,6 +69,7 @@ static Hooks::Hook s_InitializeForWritingHook;
 static Hooks::Hook s_GetDataFromPointerHook;
 static Hooks::Hook s_AddLabelHook;
 
+static constexpr uint32_t MIN_LABELS_FOR_INDEX = 64;
 static int s_nSaveDepth;
 // GFFs indexed during the current save, normally one or two. Node-based, so a LabelIndex* stays valid until
 // that entry is erased. s_pLast/s_pLastIndex cache the most recent lookup, which is nearly every AddLabel call.
@@ -89,46 +94,62 @@ static void DropIndex(CResGFF *pGff)
         s_pLastIndex = nullptr;
 }
 
+// Maps of finished saves, kept (cleared, with their bucket arrays) so a save does not allocate them again.
+static std::vector<std::unordered_map<LabelKey, uint32_t, LabelKeyHash>> s_mapPool;
+
 static LabelIndex* StartIndex(CResGFF *pGff)
 {
     auto& idx = s_indexes[pGff];
     idx.nIndexed = 0;
     idx.map.clear();
-    if (idx.map.bucket_count() < 512)
-        idx.map.reserve(512);
+    if (idx.map.bucket_count() < 64 && !s_mapPool.empty())
+    {
+        idx.map.swap(s_mapPool.back());
+        s_mapPool.pop_back();
+    }
     s_pLast = pGff;
     s_pLastIndex = &idx;
     return &idx;
 }
 
-static void LeaveSave()
+namespace {
+// Depth of nested saves; all indexes are dropped when the outermost save returns, also if it unwinds.
+struct SaveScope
 {
-    if (--s_nSaveDepth == 0)
+    SaveScope() { s_nSaveDepth++; }
+    ~SaveScope()
     {
-        s_indexes.clear();
-        s_pLast = nullptr;
-        s_pLastIndex = nullptr;
+        if (--s_nSaveDepth == 0)
+        {
+            for (auto& entry : s_indexes)
+            {
+                if (s_mapPool.size() >= 4)
+                    break;
+                entry.second.map.clear();
+                s_mapPool.push_back(std::move(entry.second.map));
+            }
+            s_indexes.clear();
+            s_pLast = nullptr;
+            s_pLastIndex = nullptr;
+        }
     }
+};
 }
 
 static BOOL SaveServerCharacter(CNWSPlayer *pThis, BOOL bBackupPlayer)
 {
-    s_nSaveDepth++;
-    auto ret = s_SaveServerCharacterHook->CallOriginal<BOOL>(pThis, bBackupPlayer);
-    LeaveSave();
-    return ret;
+    SaveScope scope;
+    return s_SaveServerCharacterHook->CallOriginal<BOOL>(pThis, bBackupPlayer);
 }
 
 static BOOL SaveCreature(CNWSCreature *pThis, CResGFF *pRes, CResStruct *pStruct, BOOL bStoreAssociateList,
                          BOOL bUseDesiredAreaInfo, BOOL bExportingChar, BOOL bSaveOIDs)
 {
-    s_nSaveDepth++;
+    SaveScope scope;
     if (pRes && !FindIndex(pRes))
-        StartIndex(pRes);   // filled from the existing table on the first AddLabel
-    auto ret = s_SaveCreatureHook->CallOriginal<BOOL>(pThis, pRes, pStruct, bStoreAssociateList, bUseDesiredAreaInfo,
-                                                      bExportingChar, bSaveOIDs);
-    LeaveSave();
-    return ret;
+        StartIndex(pRes);   // filled from the existing table once it is large enough
+    return s_SaveCreatureHook->CallOriginal<BOOL>(pThis, pRes, pStruct, bStoreAssociateList, bUseDesiredAreaInfo,
+                                                  bExportingChar, bSaveOIDs);
 }
 
 static BOOL CreateGFFFile(CResGFF *pThis, CResStruct *pStruct, const CExoString& sFileType, const CExoString& sVersion)
@@ -160,11 +181,17 @@ static uint32_t AddLabel(CResGFF *pThis, const char *szFieldID)
         return s_AddLabelHook->CallOriginal<uint32_t>(pThis, szFieldID);
 
     const uint32_t nCount = pThis->m_pFileHeader->m_nLabelCount;
+    // A short table is scanned faster than an index is built and hashed; the engine answers until the table is
+    // larger. The index catches up with the entries added meanwhile on the first call above the limit.
+    if (nCount <= MIN_LABELS_FOR_INDEX)
+        return s_AddLabelHook->CallOriginal<uint32_t>(pThis, szFieldID);
     if (nCount < idx->nIndexed)
     {
         idx->map.clear();
         idx->nIndexed = 0;
     }
+    if (idx->nIndexed == 0)
+        idx->map.reserve(512);
     for (uint32_t i = idx->nIndexed; i < nCount; i++)
     {
         LabelKey k;
