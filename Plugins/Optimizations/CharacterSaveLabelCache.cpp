@@ -30,10 +30,11 @@ using namespace NWNXLib::API;
 // and with it the saved file, is byte-for-byte unchanged.
 //
 // An index is dropped when its GFF gets a new label table: CreateGFFFile (which starts a fresh, empty index),
-// InitializeForWriting, or loading data (GetDataFromPointer, GetDataFromFile and resource demands all end in
-// OnResourceServiced). A CResGFF can only get a label table through one of those, so a GFF freed during the save
-// and a new one at the same address can never share an index. All indexes are dropped when the outermost save
-// returns.
+// InitializeForWriting, or loading data with GetDataFromPointer (GetDataFromFile calls it). A GFF obtained from a
+// resource demand is read-only; the engine only writes to it after InitializeForWriting. So a GFF freed during the
+// save and a new one at the same address can never share an index. All indexes are dropped when the outermost save
+// returns. (OnResourceServiced, which every load ends in, cannot be hooked: its first instructions cannot be
+// relocated by the hook library.)
 //
 // Main thread only: the engine saves characters and creatures on the main thread, and this state is not
 // synchronised.
@@ -61,7 +62,7 @@ static Hooks::Hook s_SaveServerCharacterHook;
 static Hooks::Hook s_SaveCreatureHook;
 static Hooks::Hook s_CreateGFFFileHook;
 static Hooks::Hook s_InitializeForWritingHook;
-static Hooks::Hook s_OnResourceServicedHook;
+static Hooks::Hook s_GetDataFromPointerHook;
 static Hooks::Hook s_AddLabelHook;
 
 static int s_nSaveDepth;
@@ -145,11 +146,11 @@ static void InitializeForWriting(CResGFF *pThis)
     s_InitializeForWritingHook->CallOriginal<void>(pThis);
 }
 
-static BOOL OnResourceServiced(CResGFF *pThis)
+static BOOL GetDataFromPointer(CResGFF *pThis, void *pData, int32_t nDataSize, bool bTakeOwnership)
 {
     if (!s_indexes.empty())
         DropIndex(pThis);
-    return s_OnResourceServicedHook->CallOriginal<BOOL>(pThis);
+    return s_GetDataFromPointerHook->CallOriginal<BOOL>(pThis, pData, nDataSize, bTakeOwnership);
 }
 
 static uint32_t AddLabel(CResGFF *pThis, const char *szFieldID)
@@ -202,7 +203,7 @@ void CharacterSaveLabelCache()
         s_SaveCreatureHook = Hooks::HookFunction(&CNWSCreature::SaveCreature, &SaveCreature, Hooks::Order::Earliest);
         s_CreateGFFFileHook = Hooks::HookFunction(&CResGFF::CreateGFFFile, &CreateGFFFile, Hooks::Order::Earliest);
         s_InitializeForWritingHook = Hooks::HookFunction(&CResGFF::InitializeForWriting, &InitializeForWriting, Hooks::Order::Earliest);
-        s_OnResourceServicedHook = Hooks::HookFunction(&CResGFF::OnResourceServiced, &OnResourceServiced, Hooks::Order::Earliest);
+        s_GetDataFromPointerHook = Hooks::HookFunction(&CResGFF::GetDataFromPointer, &GetDataFromPointer, Hooks::Order::Earliest);
         s_AddLabelHook = Hooks::HookFunction(&CResGFF::AddLabel, &AddLabel, Hooks::Order::Earliest);
     }
 }
