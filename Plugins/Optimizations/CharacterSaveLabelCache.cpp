@@ -18,13 +18,25 @@ using namespace NWNXLib::API;
 // scan of the GFF's label table. A character file has a few hundred distinct labels and tens of thousands of
 // fields (item local variables and item properties), so the scans are a large share of SaveServerCharacter.
 //
-// While a creature is being saved (CNWSPlayer::SaveServerCharacter, CNWSCreature::SaveCreature), this keeps a
-// hash index of the label table of each GFF that AddLabel is called on, and answers AddLabel from it. The index
-// is filled in table order, so for a label that appears more than once it holds the highest index, the one the
-// engine's backwards scan returns; a hit is also checked against the table entry. Labels not in the index go
-// through the engine's AddLabel, which scans and appends them exactly as before, so the label table, and with it
-// the saved file, is byte-for-byte unchanged. The indexes are dropped when the outermost save returns, and an
-// index is reset when its GFF is re-created with CreateGFFFile.
+// While a creature is being saved (CNWSPlayer::SaveServerCharacter, CNWSCreature::SaveCreature, including
+// anything that runs inside them), this keeps a hash index of the label table of:
+//  - every GFF created with CreateGFFFile during the save (the character file, and any GFF that something
+//    called from inside the save creates, e.g. a nested object serialisation), and
+//  - the GFF passed to SaveCreature.
+// AddLabel on one of those GFFs is answered from its index; AddLabel on any other GFF goes to the engine.
+// The index is filled in table order, so for a label that appears more than once it holds the highest index,
+// the one the engine's backwards scan returns; a hit is also checked against the table entry. Labels not in the
+// index go through the engine's AddLabel, which scans and appends them exactly as before, so the label table,
+// and with it the saved file, is byte-for-byte unchanged.
+//
+// An index is dropped when its GFF gets a new label table: CreateGFFFile (which starts a fresh, empty index),
+// InitializeForWriting, or loading data (GetDataFromPointer, GetDataFromFile and resource demands all end in
+// OnResourceServiced). A CResGFF can only get a label table through one of those, so a GFF freed during the save
+// and a new one at the same address can never share an index. All indexes are dropped when the outermost save
+// returns.
+//
+// Main thread only: the engine saves characters and creatures on the main thread, and this state is not
+// synchronised.
 
 namespace {
 
@@ -39,8 +51,7 @@ struct LabelKeyHash
 };
 struct LabelIndex
 {
-    CResGFF *pGff;
-    uint32_t nIndexed;   // label table entries [0, nIndexed) are in the map
+    uint32_t nIndexed = 0;   // label table entries [0, nIndexed) are in the map
     std::unordered_map<LabelKey, uint32_t, LabelKeyHash> map;
 };
 
@@ -49,23 +60,54 @@ struct LabelIndex
 static Hooks::Hook s_SaveServerCharacterHook;
 static Hooks::Hook s_SaveCreatureHook;
 static Hooks::Hook s_CreateGFFFileHook;
+static Hooks::Hook s_InitializeForWritingHook;
+static Hooks::Hook s_OnResourceServicedHook;
 static Hooks::Hook s_AddLabelHook;
 
 static int s_nSaveDepth;
-static std::vector<LabelIndex> s_indexes;  // GFFs written during the current save (normally one)
+// GFFs indexed during the current save, normally one or two. Node-based, so a LabelIndex* stays valid until
+// that entry is erased. s_pLast/s_pLastIndex cache the most recent lookup, which is nearly every AddLabel call.
+static std::unordered_map<CResGFF*, LabelIndex> s_indexes;
+static CResGFF *s_pLast;
+static LabelIndex *s_pLastIndex;
 
 static LabelIndex* FindIndex(CResGFF *pGff)
 {
-    for (auto& idx : s_indexes)
-        if (idx.pGff == pGff)
-            return &idx;
-    return nullptr;
+    if (pGff == s_pLast)
+        return s_pLastIndex;
+    auto it = s_indexes.find(pGff);
+    s_pLast = pGff;
+    s_pLastIndex = it == s_indexes.end() ? nullptr : &it->second;
+    return s_pLastIndex;
+}
+
+static void DropIndex(CResGFF *pGff)
+{
+    s_indexes.erase(pGff);
+    if (pGff == s_pLast)
+        s_pLastIndex = nullptr;
+}
+
+static LabelIndex* StartIndex(CResGFF *pGff)
+{
+    auto& idx = s_indexes[pGff];
+    idx.nIndexed = 0;
+    idx.map.clear();
+    if (idx.map.bucket_count() < 512)
+        idx.map.reserve(512);
+    s_pLast = pGff;
+    s_pLastIndex = &idx;
+    return &idx;
 }
 
 static void LeaveSave()
 {
     if (--s_nSaveDepth == 0)
+    {
         s_indexes.clear();
+        s_pLast = nullptr;
+        s_pLastIndex = nullptr;
+    }
 }
 
 static BOOL SaveServerCharacter(CNWSPlayer *pThis, BOOL bBackupPlayer)
@@ -80,6 +122,8 @@ static BOOL SaveCreature(CNWSCreature *pThis, CResGFF *pRes, CResStruct *pStruct
                          BOOL bUseDesiredAreaInfo, BOOL bExportingChar, BOOL bSaveOIDs)
 {
     s_nSaveDepth++;
+    if (pRes && !FindIndex(pRes))
+        StartIndex(pRes);   // filled from the existing table on the first AddLabel
     auto ret = s_SaveCreatureHook->CallOriginal<BOOL>(pThis, pRes, pStruct, bStoreAssociateList, bUseDesiredAreaInfo,
                                                       bExportingChar, bSaveOIDs);
     LeaveSave();
@@ -90,28 +134,29 @@ static BOOL CreateGFFFile(CResGFF *pThis, CResStruct *pStruct, const CExoString&
 {
     auto ret = s_CreateGFFFileHook->CallOriginal<BOOL>(pThis, pStruct, sFileType, sVersion);
     if (s_nSaveDepth > 0)
-    {
-        if (auto *idx = FindIndex(pThis))
-        {
-            idx->nIndexed = 0;
-            idx->map.clear();
-        }
-    }
+        StartIndex(pThis);
     return ret;
+}
+
+static void InitializeForWriting(CResGFF *pThis)
+{
+    if (!s_indexes.empty())
+        DropIndex(pThis);
+    s_InitializeForWritingHook->CallOriginal<void>(pThis);
+}
+
+static BOOL OnResourceServiced(CResGFF *pThis)
+{
+    if (!s_indexes.empty())
+        DropIndex(pThis);
+    return s_OnResourceServicedHook->CallOriginal<BOOL>(pThis);
 }
 
 static uint32_t AddLabel(CResGFF *pThis, const char *szFieldID)
 {
-    if (s_nSaveDepth == 0 || !pThis->m_pFileHeader || !pThis->m_pLabel)
+    LabelIndex *idx;
+    if (s_nSaveDepth == 0 || !pThis->m_pFileHeader || !pThis->m_pLabel || !(idx = FindIndex(pThis)))
         return s_AddLabelHook->CallOriginal<uint32_t>(pThis, szFieldID);
-
-    LabelIndex *idx = FindIndex(pThis);
-    if (!idx)
-    {
-        s_indexes.push_back(LabelIndex{pThis, 0, {}});
-        idx = &s_indexes.back();
-        idx->map.reserve(512);
-    }
 
     const uint32_t nCount = pThis->m_pFileHeader->m_nLabelCount;
     if (nCount < idx->nIndexed)
@@ -156,6 +201,8 @@ void CharacterSaveLabelCache()
         s_SaveServerCharacterHook = Hooks::HookFunction(&CNWSPlayer::SaveServerCharacter, &SaveServerCharacter, Hooks::Order::Earliest);
         s_SaveCreatureHook = Hooks::HookFunction(&CNWSCreature::SaveCreature, &SaveCreature, Hooks::Order::Earliest);
         s_CreateGFFFileHook = Hooks::HookFunction(&CResGFF::CreateGFFFile, &CreateGFFFile, Hooks::Order::Earliest);
+        s_InitializeForWritingHook = Hooks::HookFunction(&CResGFF::InitializeForWriting, &InitializeForWriting, Hooks::Order::Earliest);
+        s_OnResourceServicedHook = Hooks::HookFunction(&CResGFF::OnResourceServiced, &OnResourceServiced, Hooks::Order::Earliest);
         s_AddLabelHook = Hooks::HookFunction(&CResGFF::AddLabel, &AddLabel, Hooks::Order::Earliest);
     }
 }
