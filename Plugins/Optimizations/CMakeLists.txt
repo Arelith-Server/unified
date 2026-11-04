@@ -8,4 +8,6 @@ add_plugin(Optimizations
         "GetObjectByTag.cpp"
         "CacheDebuggerInstances.cpp"
         "CacheScripts.cpp"
+        "CoalesceCharacterExports.cpp"
+        "CharacterSaveLabelCache.cpp"
 )
