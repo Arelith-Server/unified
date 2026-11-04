@@ -1,0 +1,87 @@
+== nwengineLog.txt: every line about the affected player, plus connection lines for windows they used ==
+  2117: I [18:08:41] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerB' with key '<cdkey>' at window 0
+  2118: I [18:08:41] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerB' with key '<cdkey>' at window 0
+  2146: I [18:08:59] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerC' with key '<cdkey>' at window 3
+  2147: I [18:08:59] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerC' with key '<cdkey>' at window 3
+  2196: I [18:09:42] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerD' with key '<cdkey>' at window 3
+  2197: I [18:09:42] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerD' with key '<cdkey>' at window 3
+  2273: I [18:11:48] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerE' with key '<cdkey>' at window 10
+  2274: I [18:11:48] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerE' with key '<cdkey>' at window 10
+  3783: I [18:23:23] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerF' with key '<cdkey>' at window 24
+  3784: I [18:23:23] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerF' with key '<cdkey>' at window 24
+  4370: I [18:32:32] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerG' with key '<cdkey>' at window 24
+  4371: I [18:32:32] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerG' with key '<cdkey>' at window 24
+  6870: I [18:49:26] (netlayerinternal.cpp:3121:HandleBNCSMessage): Connection Attempt made by PlayerA (<cdkey>)
+  6871: I [18:49:26] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerA' with key '<cdkey>' at window 24
+  6872: I [18:49:26] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerA' with key '<cdkey>' at window 24
+  6873: I [18:49:26] Engine (serverexoappinternal.cpp:3396:PlayerListChange): PlayerA (<cdkey>) Joined as Player 27
+  6874: I [18:49:26] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerA Left as a Player (26 players left)
+  6923: I [18:50:14] (netlayerinternal.cpp:3121:HandleBNCSMessage): Connection Attempt made by PlayerA (<cdkey>)
+  6924: I [18:50:14] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerA' with key '<cdkey>' at window 10
+  6925: I [18:50:14] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerA' with key '<cdkey>' at window 10
+  6926: I [18:50:14] Engine (serverexoappinternal.cpp:3396:PlayerListChange): PlayerA (<cdkey>) Joined as Player 25
+  7034: I [18:50:32] (netlayerinternal.cpp:3121:HandleBNCSMessage): Connection Attempt made by PlayerA (<cdkey>)
+  7035: I [18:50:32] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerA' with key '<cdkey>' at window 10
+  7036: I [18:50:32] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerA' with key '<cdkey>' at window 10
+  7037: I [18:50:32] Engine (serverexoappinternal.cpp:3396:PlayerListChange): PlayerA (<cdkey>) Joined as Player 26
+  8094: I [18:51:33] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerH' with key '<cdkey>' at window 24
+  8095: I [18:51:33] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerH' with key '<cdkey>' at window 24
+  8106: I [18:51:42] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerG' with key '<cdkey>' at window 24
+  8107: I [18:51:42] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerG' with key '<cdkey>' at window 24
+ 11030: I [18:59:03] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerI' with key '<cdkey>' at window 24
+ 11031: I [18:59:03] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerI' with key '<cdkey>' at window 24
+ 13648: I [19:07:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerA Left as a Player (40 players left)
+ 13688: I [19:08:55] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerJ' with key '<cdkey>' at window 3
+ 13689: I [19:08:55] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerJ' with key '<cdkey>' at window 3
+ 13712: I [19:09:17] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerG' with key '<cdkey>' at window 10
+ 13713: I [19:09:17] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerG' with key '<cdkey>' at window 10
+ 13770: I [19:10:03] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerK' with key '<cdkey>' at window 3
+ 13771: I [19:10:03] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerK' with key '<cdkey>' at window 3
+ 14102: I [19:10:41] (netlayerinternal.cpp:3121:HandleBNCSMessage): Connection Attempt made by PlayerA (<cdkey>)
+ 14103: I [19:10:41] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerA' with key '<cdkey>' at window 3
+ 14104: I [19:10:41] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerA' with key '<cdkey>' at window 3
+ 14105: I [19:10:41] Engine (serverexoappinternal.cpp:3396:PlayerListChange): PlayerA (<cdkey>) Joined as Player 30
+ 15006: I [19:12:17] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerA Left as a Player (29 players left)
+ 16672: I [19:16:37] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerC' with key '<cdkey>' at window 3
+ 16673: I [19:16:37] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerC' with key '<cdkey>' at window 3
+ 17100: I [19:20:25] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerI' with key '<cdkey>' at window 3
+ 17101: I [19:20:25] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerI' with key '<cdkey>' at window 3
+ 17138: I [19:21:20] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerL' with key '<cdkey>' at window 3
+ 17139: I [19:21:20] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerL' with key '<cdkey>' at window 3
+181263: I [11:15:37] (netlayerinternal.cpp:3121:HandleBNCSMessage): Connection Attempt made by PlayerA (<cdkey>)
+181266: I [11:15:38] Network (serverexoappinternal.cpp:5118:ConnectionLibMainLoop): Accepted community name for player 'PlayerA' with key '<cdkey>' at window 0
+181267: I [11:15:38] Network (serverexoappinternal.cpp:5083:ConnectionLibMainLoop): Accepted key auth for player 'PlayerA' with key '<cdkey>' at window 0
+181268: I [11:15:38] Engine (serverexoappinternal.cpp:3396:PlayerListChange): PlayerA (<cdkey>) Joined as Player 13
+181867: I [11:22:29] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerA Left as a Player (11 players left)
+
+== nwengineLog.txt: join/leave counts for the whole run ==
+joins=1028 leaves=1027
+
+== nwengineLog.txt: last 25 lines (shutdown) ==
+E [16:47:07] (nwseffectlist.cpp:699:OnEffectApplied): EXOWARNING: Error! Invalid effect getting applied! 0
+E [16:47:07] (nwseffectlist.cpp:699:OnEffectApplied): EXOWARNING: Error! Invalid effect getting applied! 0
+E [16:47:07] (nwseffectlist.cpp:699:OnEffectApplied): EXOWARNING: Error! Invalid effect getting applied! 0
+E [16:47:07] (nwseffectlist.cpp:699:OnEffectApplied): EXOWARNING: Error! Invalid effect getting applied! 0
+I [16:47:14] Network (exonetinternal.cpp:1321:ClearUnusedNetworkAddresses): [Server] Cleared connection 18: <ip:port>
+I [16:47:50] Engine (serverexoappinternal.cpp:3784:StopServices): Server shutting down
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerE Left as a Player (19 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerI Left as a Player (18 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerM Left as a Player (17 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerN Left as a Player (16 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerO Left as a Player (15 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerP Left as a Player (14 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerQ Left as a Player (13 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerR Left as a Player (12 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerS Left as a Player (11 players left)
+I [16:47:50] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerT Left as a Player (10 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerU Left as a Player (9 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerV Left as a Player (8 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerW Left as a Player (7 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerX Left as a Player (6 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): PlayerY Left as a Player (5 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): OtherPlayer Left as a Player (4 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): OtherPlayer Left as a Player (3 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): OtherPlayer Left as a Player (2 players left)
+I [16:47:51] Engine (serverexoappinternal.cpp:3474:PlayerListChange): OtherPlayer Left as a Player (1 players left)
+
+(nwserverLog1.txt shows the same: the last line logged is "... Left as a Player (1 players left)" at 16:47:51 UTC; nothing further is logged until the process is killed at ~17:09:16 UTC.)

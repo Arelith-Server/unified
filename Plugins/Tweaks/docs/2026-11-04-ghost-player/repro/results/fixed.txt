@@ -1,0 +1,12 @@
+I [19:43:44] [NWNX_Tweaks] [FixGhostPlayers.cpp:126] Player objects are removed when their netlayer slot is reset (fixes ghost players and the shutdown hang).
+I [19:46:35] [NWNX_GhostRepro] [GhostRepro.cpp:56] GHOSTREPRO start slot=200 players=0
+I [19:46:35] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
+I [19:46:35] [NWNX_GhostRepro] [GhostRepro.cpp:60] GHOSTREPRO after first login: objects on slot=1 total=1
+W [19:46:35] [NWNX_Tweaks] [FixGhostPlayers.cpp:104] Netlayer slot 200 is being reset while player object 0x7f000000 still uses it; removing it with the normal leave.
+I [19:46:35] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (0 players left)
+I [19:46:35] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
+I [19:46:35] [NWNX_GhostRepro] [GhostRepro.cpp:66] GHOSTREPRO after second login: objects on slot=1 total=1
+I [19:46:35] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer Left as a Player (0 players left)
+I [19:46:35] [NWNX_GhostRepro] [GhostRepro.cpp:70] GHOSTREPRO after leave: objects on slot=0 total=0 slotInUse=0 -> NO GHOST
+I [19:46:50] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) Server shutting down
+Container exited with code 0, 16 s after the console 'exit'.

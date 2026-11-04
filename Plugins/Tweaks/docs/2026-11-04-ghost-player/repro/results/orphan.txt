@@ -1,0 +1,8 @@
+I [19:54:54] [NWNX_Tweaks] [FixGhostPlayers.cpp:126] Player objects are removed when their netlayer slot is reset (fixes ghost players and the shutdown hang).
+I [20:01:42] [NWNX_GhostRepro] [GhostRepro.cpp:58] GHOSTREPRO start slot=200 players=0
+I [20:01:42] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) GhostReproPlayer () Joined as Player 1
+I [20:01:42] [NWNX_GhostRepro] [GhostRepro.cpp:62] GHOSTREPRO after first login: objects on slot=1 total=1
+I [20:01:42] [NWNX_GhostRepro] [GhostRepro.cpp:70] GHOSTREPRO orphan made: objects on slot=1 total=1 slotInUse=0
+I [20:05:00] [NWNX_ServerLogRedirector] [ServerLogRedirector.cpp:29] (Server) Server shutting down
+W [20:05:00] [NWNX_Tweaks] [FixGhostPlayers.cpp:55] Removing orphaned player object for player ID 200 (object 0x7f000000); its netlayer slot is no longer in use. The character is not saved.
+Container exited with code 0, 18 s after the console 'exit'.
