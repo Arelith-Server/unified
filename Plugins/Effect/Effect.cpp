@@ -150,6 +150,13 @@ void ResolvePack(CGameEffect *eff, ArgumentStack& args, bool bReplace)
         eff->UpdateLinked();
 }
 
+// Applied effects edited in place: plugins caching anything derived from an object's effect list (EffectListCache)
+// listen for this.
+static void NotifyAppliedEffectEdited(ObjectID oid)
+{
+    MessageBus::Broadcast("NWNX_EFFECT_APPLIED_EFFECT_EDITED", { std::to_string(oid) });
+}
+
 NWNX_EXPORT ArgumentStack PackEffect(ArgumentStack&& args)
 {
     CGameEffect *eff = new CGameEffect(true);
@@ -198,6 +205,8 @@ NWNX_EXPORT ArgumentStack ReplaceEffect(ArgumentStack&& args)
                 found++;
             }
         }
+        if (found)
+            NotifyAppliedEffectEdited(objId);
     }
     return found;
 }
@@ -230,6 +239,7 @@ NWNX_EXPORT ArgumentStack ReplaceEffectByIndex(ArgumentStack&& args)
           ASSERT_OR_THROW(index < pObject->m_appliedEffects.num);
 
         ResolvePack(pObject->m_appliedEffects[index], args, true);
+        NotifyAppliedEffectEdited(pObject->m_idSelf);
     }
 
     return {};
