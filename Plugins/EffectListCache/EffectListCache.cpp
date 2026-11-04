@@ -454,17 +454,27 @@ void EffectListCache()
     s_OnEffectAppliedHook = Hooks::HookFunction(&CServerAIMaster::OnEffectApplied,
         +[](CServerAIMaster* pThis, CNWSObject* pObject, CGameEffect* pEffect, BOOL bLoadingGame) -> int32_t
         {
+            // Before and after: anything that cached the list during the original may have seen it mid-change.
+            const ObjectID oid = pObject ? pObject->m_idSelf : Constants::OBJECT_INVALID;
             if (pObject)
-                Invalidate(pObject->m_idSelf);
-            return s_OnEffectAppliedHook->CallOriginal<int32_t>(pThis, pObject, pEffect, bLoadingGame);
+                Invalidate(oid);
+            auto ret = s_OnEffectAppliedHook->CallOriginal<int32_t>(pThis, pObject, pEffect, bLoadingGame);
+            if (pObject)
+                Invalidate(oid);
+            return ret;
         }, Hooks::Order::Early);
 
     s_OnEffectRemovedHook = Hooks::HookFunction(&CServerAIMaster::OnEffectRemoved,
         +[](CServerAIMaster* pThis, CNWSObject* pObject, CGameEffect* pEffect) -> int32_t
         {
+            // Before and after: anything that cached the list during the original may have seen it mid-change.
+            const ObjectID oid = pObject ? pObject->m_idSelf : Constants::OBJECT_INVALID;
             if (pObject)
-                Invalidate(pObject->m_idSelf);
-            return s_OnEffectRemovedHook->CallOriginal<int32_t>(pThis, pObject, pEffect);
+                Invalidate(oid);
+            auto ret = s_OnEffectRemovedHook->CallOriginal<int32_t>(pThis, pObject, pEffect);
+            if (pObject)
+                Invalidate(oid);
+            return ret;
         }, Hooks::Order::Early);
 
     // A logging-in player's creature takes over its TURD's object ID. The cache may still hold an entry under that ID
