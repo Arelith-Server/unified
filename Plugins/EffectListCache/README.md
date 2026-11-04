@@ -16,7 +16,8 @@ What `UpdateEffectList` does (8193.37 disassembly), per effect:
 - Icon, on a creature, temporary, not yet flagged: sets the "about to expire" flag once now + 5 s reaches the expiry.
 - Any temporary effect: removed once now is past its expiry.
 
-Nothing else in the function does work, so a skipped call is one that would have done nothing.
+Nothing else in the function does work, so a skipped call is one that would have done nothing. This list is from
+the 8193.37 disassembly: re-check it (or run with `VERIFY=true`) on every engine upgrade.
 
 The cached due time is dropped when an effect is applied to or removed from the object
 (`CServerAIMaster::OnEffectApplied` / `OnEffectRemoved`), when `NWNX_Effect_ReplaceEffect` or
