@@ -17,6 +17,7 @@
 #include "API/Constants/Effect.hpp"
 #include "API/Globals.hpp"
 #include "API/Functions.hpp"
+#include <algorithm>
 #include <cmath>
 
 using namespace NWNXLib;
@@ -35,6 +36,32 @@ NWNX_PLUGIN_ENTRY Plugin* PluginLoad(Services::ProxyServiceList* services)
 
 
 namespace Feat {
+
+// Read-only map lookups. Unlike operator[] they never insert, so a modifier map stays empty unless a
+// modifier of that kind was registered with SetFeatModifier, and the hooks below can skip all per-feat
+// work when nothing that could apply is registered. A missing key reads as a value-initialised entry
+// (0 / empty), which is what operator[] returned before.
+template <typename Map>
+static const typename Map::mapped_type* FindIn(const Map& map, const typename Map::key_type& key)
+{
+    auto it = map.find(key);
+    return it == map.end() ? nullptr : &it->second;
+}
+
+template <typename Map>
+static typename Map::mapped_type Lookup(const Map& map, const typename Map::key_type& key)
+{
+    auto it = map.find(key);
+    return it == map.end() ? typename Map::mapped_type{} : it->second;
+}
+
+template <typename Map, typename Key, typename... Keys>
+static auto Lookup(const Map& map, const typename Map::key_type& key, const Key& next, const Keys&... rest)
+{
+    using Leaf = decltype(Lookup(map.begin()->second, next, rest...));
+    auto it = map.find(key);
+    return it == map.end() ? Leaf{} : Lookup(it->second, next, rest...);
+}
 
 static Hooks::Hook s_GetTotalEffectBonusHook;
 static Hooks::Hook s_SavingThrowRollHook;
@@ -110,7 +137,7 @@ void Feat::DoEffect(CNWSCreature *pCreature,
 void Feat::ApplyFeatEffects(CNWSCreature *pCreature, uint16_t nFeat)
 {
     // AB
-    auto modAB = g_plugin->m_FeatAB[nFeat];
+    auto modAB = Lookup(g_plugin->m_FeatAB, nFeat);
     if (modAB != 0)
     {
         g_plugin->DoEffect(pCreature, nFeat,
@@ -119,7 +146,8 @@ void Feat::ApplyFeatEffects(CNWSCreature *pCreature, uint16_t nFeat)
     }
 
     // ABILITY
-    for (auto &abilityMod : g_plugin->m_FeatAbility[nFeat])
+    if (auto *pAbilityMods = FindIn(g_plugin->m_FeatAbility, nFeat))
+    for (auto &abilityMod : *pAbilityMods)
     {
         auto abilityType = abilityMod.first;
         auto mod = abilityMod.second;
@@ -132,7 +160,8 @@ void Feat::ApplyFeatEffects(CNWSCreature *pCreature, uint16_t nFeat)
     }
 
     // ABVSRACE
-    for (auto &ABVsRaceMod : g_plugin->m_FeatABVsRace[nFeat])
+    if (auto *pABVsRaceMods = FindIn(g_plugin->m_FeatABVsRace, nFeat))
+    for (auto &ABVsRaceMod : *pABVsRaceMods)
     {
         auto vsRace = ABVsRaceMod.first;
         auto modVsRace = ABVsRaceMod.second;
@@ -260,7 +289,8 @@ void Feat::ApplyFeatEffects(CNWSCreature *pCreature, uint16_t nFeat)
     }
 
     // SAVE
-    for (auto &saveMod : g_plugin->m_FeatSave[nFeat])
+    if (auto *pSaveMods = FindIn(g_plugin->m_FeatSave, nFeat))
+    for (auto &saveMod : *pSaveMods)
     {
         auto saveType = saveMod.first;
         auto mod = saveMod.second;
@@ -273,10 +303,11 @@ void Feat::ApplyFeatEffects(CNWSCreature *pCreature, uint16_t nFeat)
     }
 
     // SAVEVSRACE
-    for (auto &saveMod : g_plugin->m_FeatSaveVsRace[nFeat])
+    if (auto *pSaveVsRaceMods = FindIn(g_plugin->m_FeatSaveVsRace, nFeat))
+    for (auto &saveMod : *pSaveVsRaceMods)
     {
         auto saveType = saveMod.first;
-        for (auto &saveVsFeatMod : g_plugin->m_FeatSaveVsRace[nFeat][saveType])
+        for (auto &saveVsFeatMod : saveMod.second)
         {
             auto saveVsRace = saveVsFeatMod.first;
             auto modVsRace = saveVsFeatMod.second;
@@ -290,10 +321,11 @@ void Feat::ApplyFeatEffects(CNWSCreature *pCreature, uint16_t nFeat)
     }
 
     // SAVEVSTYPE
-    for (auto &saveMod : g_plugin->m_FeatSaveVsType[nFeat])
+    if (auto *pSaveVsTypeMods = FindIn(g_plugin->m_FeatSaveVsType, nFeat))
+    for (auto &saveMod : *pSaveVsTypeMods)
     {
         auto saveType = saveMod.first;
-        for (auto &saveVsTypeMod : g_plugin->m_FeatSaveVsType[nFeat][saveType])
+        for (auto &saveVsTypeMod : saveMod.second)
         {
             auto saveVsType = saveVsTypeMod.first;
             auto modVsType = saveVsTypeMod.second;
@@ -307,13 +339,14 @@ void Feat::ApplyFeatEffects(CNWSCreature *pCreature, uint16_t nFeat)
     }
 
     // SAVEVSTYPERACE
-    for (auto &saveMod : g_plugin->m_FeatSaveVsTypeRace[nFeat])
+    if (auto *pSaveVsTypeRaceMods = FindIn(g_plugin->m_FeatSaveVsTypeRace, nFeat))
+    for (auto &saveMod : *pSaveVsTypeRaceMods)
     {
         auto saveType = saveMod.first;
-        for (auto &saveVsTypeMod : g_plugin->m_FeatSaveVsTypeRace[nFeat][saveType])
+        for (auto &saveVsTypeMod : saveMod.second)
         {
             auto saveVsType = saveVsTypeMod.first;
-            for (auto &saveVsTypeRaceMod : g_plugin->m_FeatSaveVsTypeRace[nFeat][saveType][saveVsType])
+            for (auto &saveVsTypeRaceMod : saveVsTypeMod.second)
             {
                 auto saveVsRace = saveVsTypeRaceMod.first;
                 auto modVsTypeRace = saveVsTypeRaceMod.second;
@@ -430,25 +463,37 @@ uint8_t Feat::SavingThrowRollHook(CNWSCreature *pCreature, uint8_t nSaveType, ui
     uint16_t savingThrowBonusLimit = pServerExoApp->GetSavingThrowBonusLimit();
 
     auto *pTargetCreature = pServerExoApp->GetCreatureByGameObjectID(oidSaveVersus);
-    for (int32_t j = 0; j < pCreature->m_pStats->m_lstFeats.num; j++)
+
+    const auto &featSave = g_plugin->m_FeatSave;
+    const auto &featSaveVsRace = g_plugin->m_FeatSaveVsRace;
+    const auto &featSaveVsType = g_plugin->m_FeatSaveVsType;
+    const auto &featSaveVsTypeRace = g_plugin->m_FeatSaveVsTypeRace;
+    const bool bCheckVsRace = pTargetCreature && (!featSaveVsRace.empty() || !featSaveVsTypeRace.empty());
+
+    if (!featSave.empty() || !featSaveVsType.empty() || bCheckVsRace)
     {
-        auto nListFeat = pCreature->m_pStats->m_lstFeats.element[j];
-        auto modSaveBonus = g_plugin->m_FeatSave[nFeat][nSaveType] + g_plugin->m_FeatSave[nListFeat][Constants::SavingThrow::All];
-        uint8_t modSaveVSRaceBonus = 0;
-        if (pTargetCreature)
+        // Keyed on the feat the save is rolled for (nFeat) and added once per listed feat, as before.
+        const auto modSaveBonusForFeat = Lookup(featSave, nFeat, nSaveType);
+        for (int32_t j = 0; j < pCreature->m_pStats->m_lstFeats.num; j++)
         {
-            std::list<uint8_t> saveBonuses = {};
-            for (int32_t k = 0; k <= Constants::SavingThrow::MAX; k++)
+            auto nListFeat = pCreature->m_pStats->m_lstFeats.element[j];
+            auto modSaveBonus = modSaveBonusForFeat + Lookup(featSave, nListFeat, Constants::SavingThrow::All);
+            uint8_t modSaveVSRaceBonus = 0;
+            if (bCheckVsRace)
             {
-                saveBonuses.push_front(g_plugin->m_FeatSaveVsRace[nListFeat][k][pTargetCreature->m_pStats->m_nRace]);
-                saveBonuses.push_front(g_plugin->m_FeatSaveVsTypeRace[nListFeat][k][nSpecificType][pTargetCreature->m_pStats->m_nRace]);
+                auto nTargetRace = pTargetCreature->m_pStats->m_nRace;
+                for (int32_t k = 0; k <= Constants::SavingThrow::MAX; k++)
+                {
+                    modSaveVSRaceBonus = std::max(modSaveVSRaceBonus, uint8_t(Lookup(featSaveVsRace, nListFeat, k, nTargetRace)));
+                    modSaveVSRaceBonus = std::max(modSaveVSRaceBonus, uint8_t(Lookup(featSaveVsTypeRace, nListFeat, k, nSpecificType, nTargetRace)));
+                }
             }
-            modSaveVSRaceBonus = *std::max_element(saveBonuses.begin(), saveBonuses.end());
+            auto modSaveVSTypeBonus = Lookup(featSaveVsType, nListFeat, nSaveType, nSpecificType) +
+                                      Lookup(featSaveVsType, nListFeat, Constants::SavingThrow::All, nSpecificType);
+            auto modTotal = modSaveBonus + modSaveVSRaceBonus + modSaveVSTypeBonus;
+            if (modTotal != 0)
+                pServerExoApp->SetSavingThrowBonusLimit(pServerExoApp->GetSavingThrowBonusLimit() + modTotal);
         }
-        auto modSaveVSTypeBonus = g_plugin->m_FeatSaveVsType[nListFeat][nSaveType][nSpecificType] +
-                                  g_plugin->m_FeatSaveVsType[nListFeat][Constants::SavingThrow::All][nSpecificType];
-        pServerExoApp->SetSavingThrowBonusLimit(
-                pServerExoApp->GetSavingThrowBonusLimit() + modSaveBonus + modSaveVSRaceBonus + modSaveVSTypeBonus);
     }
 
     auto retVal = s_SavingThrowRollHook->CallOriginal<uint8_t>(pCreature, nSaveType, nDifficultyClass, nSpecificType,
@@ -468,44 +513,70 @@ int32_t Feat::GetTotalEffectBonusHook(CNWSCreature *pCreature, uint8_t nEffectBo
     uint16_t abilityBonusLimit = pServerExoApp->GetAbilityBonusLimit();
     uint16_t saveBonusLimit = pServerExoApp->GetSavingThrowBonusLimit();
 
-    CNWSCreature* pTargetCreature = nullptr;
-    if (pObject != nullptr)
-    {
-        pTargetCreature = pServerExoApp->GetCreatureByGameObjectID(pObject->m_idSelf);
-    }
+    const auto &featAB = g_plugin->m_FeatAB;
+    const auto &featABVsRace = g_plugin->m_FeatABVsRace;
+    const auto &featAbility = g_plugin->m_FeatAbility;
+    const auto &featSaveVsRace = g_plugin->m_FeatSaveVsRace;
 
-    for (int32_t j = 0; j < pCreature->m_pStats->m_lstFeats.num; j++)
+    // This hook runs on every stat recalculation (e.g. each player character sheet update check),
+    // so skip the per-feat loop when no modifier that this bonus type reads is registered.
+    bool bModifiersRegistered = false;
+    if (nEffectBonusType == 1)
+        bModifiersRegistered = !featAB.empty() || !featABVsRace.empty();
+    else if (nEffectBonusType == 3)
+        bModifiersRegistered = !featAbility.empty() || !featSaveVsRace.empty();
+    else if (nEffectBonusType == 4)
+        bModifiersRegistered = !featAbility.empty();
+
+    if (bModifiersRegistered)
     {
-        auto nFeat = pCreature->m_pStats->m_lstFeats.element[j];
-        if (nEffectBonusType == 1)
+        CNWSCreature* pTargetCreature = nullptr;
+        if (pObject != nullptr)
         {
-            auto modABBonus = g_plugin->m_FeatAB[nFeat];
-            uint8_t modABVSRaceBonus = 0;
-            if (pTargetCreature)
-                modABVSRaceBonus = g_plugin->m_FeatABVsRace[nFeat][pTargetCreature->m_pStats->m_nRace];
-            pServerExoApp->SetAttackBonusLimit(pServerExoApp->GetAttackBonusLimit() + modABBonus + modABVSRaceBonus);
+            pTargetCreature = pServerExoApp->GetCreatureByGameObjectID(pObject->m_idSelf);
         }
-        else if (nEffectBonusType == 3)
+
+        for (int32_t j = 0; j < pCreature->m_pStats->m_lstFeats.num; j++)
         {
-            auto modSaveBonus = g_plugin->m_FeatAbility[nFeat][nSkill];
-            uint8_t modSaveVSRaceBonus = 0;
-            if (pTargetCreature)
+            auto nFeat = pCreature->m_pStats->m_lstFeats.element[j];
+            if (nEffectBonusType == 1)
             {
-                std::list<uint8_t> saveBonuses = {};
-                auto featRace = g_plugin->m_FeatSaveVsRace[nFeat][pTargetCreature->m_pStats->m_nRace];
-                saveBonuses.push_front(featRace[Constants::SavingThrow::All]);
-                saveBonuses.push_front(featRace[Constants::SavingThrow::Fortitude]);
-                saveBonuses.push_front(featRace[Constants::SavingThrow::Reflex]);
-                saveBonuses.push_front(featRace[Constants::SavingThrow::Will]);
-                modSaveVSRaceBonus = *std::max_element(saveBonuses.begin(), saveBonuses.end());
+                auto modABBonus = Lookup(featAB, nFeat);
+                uint8_t modABVSRaceBonus = 0;
+                if (pTargetCreature)
+                    modABVSRaceBonus = Lookup(featABVsRace, nFeat, pTargetCreature->m_pStats->m_nRace);
+                if (modABBonus + modABVSRaceBonus != 0)
+                    pServerExoApp->SetAttackBonusLimit(pServerExoApp->GetAttackBonusLimit() + modABBonus + modABVSRaceBonus);
             }
-            pServerExoApp->SetSavingThrowBonusLimit(
-                    pServerExoApp->GetSavingThrowBonusLimit() + modSaveBonus + modSaveVSRaceBonus);
-        }
-        else if (nEffectBonusType == 4)
-        {
-            auto modAbilityBonus = g_plugin->m_FeatAbility[nFeat][nAbilityScore];
-            pServerExoApp->SetAbilityBonusLimit(pServerExoApp->GetAbilityBonusLimit() + modAbilityBonus);
+            else if (nEffectBonusType == 3)
+            {
+                // Reads the ability map by skill, and the vs-race map by race then save type, as before.
+                auto modSaveBonus = Lookup(featAbility, nFeat, nSkill);
+                uint8_t modSaveVSRaceBonus = 0;
+                if (pTargetCreature)
+                {
+                    if (auto *pFeatRaceMods = FindIn(featSaveVsRace, nFeat))
+                    {
+                        if (auto *pFeatRace = FindIn(*pFeatRaceMods, pTargetCreature->m_pStats->m_nRace))
+                        {
+                            for (auto nSave : {Constants::SavingThrow::All, Constants::SavingThrow::Fortitude,
+                                               Constants::SavingThrow::Reflex, Constants::SavingThrow::Will})
+                            {
+                                modSaveVSRaceBonus = std::max(modSaveVSRaceBonus, uint8_t(Lookup(*pFeatRace, nSave)));
+                            }
+                        }
+                    }
+                }
+                if (modSaveBonus + modSaveVSRaceBonus != 0)
+                    pServerExoApp->SetSavingThrowBonusLimit(
+                            pServerExoApp->GetSavingThrowBonusLimit() + modSaveBonus + modSaveVSRaceBonus);
+            }
+            else if (nEffectBonusType == 4)
+            {
+                auto modAbilityBonus = Lookup(featAbility, nFeat, nAbilityScore);
+                if (modAbilityBonus != 0)
+                    pServerExoApp->SetAbilityBonusLimit(pServerExoApp->GetAbilityBonusLimit() + modAbilityBonus);
+            }
         }
     }
 
@@ -527,15 +598,21 @@ int32_t Feat::GetWeaponPowerHook(CNWSCreature *pCreature, CNWSObject *pObject, i
     auto *pServerExoApp = Globals::AppManager()->m_pServerExoApp;
     uint16_t attackBonusLimit = pServerExoApp->GetAttackBonusLimit();
 
-    for (int32_t j = 0; j < pCreature->m_pStats->m_lstFeats.num; j++)
+    const auto &featAB = g_plugin->m_FeatAB;
+    const auto &featABVsRace = g_plugin->m_FeatABVsRace;
+    if (pCreature->m_pStats->m_lstFeats.num > 0 && (!featAB.empty() || !featABVsRace.empty()))
     {
-        auto nFeat = pCreature->m_pStats->m_lstFeats.element[j];
-        auto modABBonus = g_plugin->m_FeatAB[nFeat];
-        uint8_t modABVSRaceBonus = 0;
         auto *pTargetCreature = pServerExoApp->GetCreatureByGameObjectID(pObject->m_idSelf);
-        if (pTargetCreature)
-            modABVSRaceBonus = g_plugin->m_FeatABVsRace[nFeat][pTargetCreature->m_pStats->m_nRace];
-        pServerExoApp->SetAttackBonusLimit(pServerExoApp->GetAttackBonusLimit() + modABBonus + modABVSRaceBonus);
+        for (int32_t j = 0; j < pCreature->m_pStats->m_lstFeats.num; j++)
+        {
+            auto nFeat = pCreature->m_pStats->m_lstFeats.element[j];
+            auto modABBonus = Lookup(featAB, nFeat);
+            uint8_t modABVSRaceBonus = 0;
+            if (pTargetCreature)
+                modABVSRaceBonus = Lookup(featABVsRace, nFeat, pTargetCreature->m_pStats->m_nRace);
+            if (modABBonus + modABVSRaceBonus != 0)
+                pServerExoApp->SetAttackBonusLimit(pServerExoApp->GetAttackBonusLimit() + modABBonus + modABVSRaceBonus);
+        }
     }
 
     auto retVal = s_GetWeaponPowerHook->CallOriginal<int32_t>(pCreature, pObject, bOffHand);
@@ -584,10 +661,13 @@ void Feat::RemoveFeatEffects(CNWSCreatureStats *pCreatureStats, uint16_t featId)
 
 void Feat::AddRemoveBonusSpell(CNWSCreatureStats *pCreatureStats, uint16_t featId, bool bAdd)
 {
-    for (auto &bonusSpellMod : g_plugin->m_FeatBonusSpell[featId])
+    auto *pBonusSpellMods = FindIn(g_plugin->m_FeatBonusSpell, featId);
+    if (!pBonusSpellMods)
+        return;
+    for (auto &bonusSpellMod : *pBonusSpellMods)
     {
         auto classType = bonusSpellMod.first;
-        for (auto &bonusSpellModClass : g_plugin->m_FeatBonusSpell[featId][classType])
+        for (auto &bonusSpellModClass : bonusSpellMod.second)
         {
             uint8_t classLevel = bonusSpellModClass.first;
             int32_t classLevelBonus = bonusSpellModClass.second;
