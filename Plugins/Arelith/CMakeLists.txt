@@ -8,6 +8,7 @@ if (${OPENSSL_FOUND})
         "Source/CanUse.cpp"
         "Source/DoorsNoBudge.cpp"
         "Source/GetItemAppearance.cpp"
+        "Source/HolyAvengerTransitionGuard.cpp"
         "Source/MaxStorePricePerStack.cpp"
         "Source/WeaponPower.cpp"
         "Source/ItemPosition.cpp")
