@@ -86,9 +86,12 @@ static_assert(offsetof(CNWSObject, m_oidDialogOwner) == 0x74);
 // index rather than a hash lookup.
 //
 // The engine hands out server object IDs from 0 upwards and never reuses them (CGameObjectArray::AddInternalObject;
-// character objects count down from 0x7FFFFFFF), so the IDs of dormant objects are dense from 0 and the array only
-// grows to the highest one made dormant. IDs at or above DENSE_LIMIT (character objects, or a server that has made
-// tens of millions of objects) go in s_stateOverflow instead, which is empty, and costs one test, otherwise.
+// character objects count down from 0x7FFFFFFF), so the IDs of dormant objects are dense from 0 and the array grows
+// to the highest one made dormant. That is bounded by the highest ID handed out since restart, not by how many are
+// dormant: an item created late and made dormant grows it, and it never shrinks while the plugin runs (Disable
+// releases it). The sweep log line shows its size. IDs at or above DENSE_LIMIT (character objects, or a server that
+// has made tens of millions of objects) go in s_stateOverflow instead, which is empty, and costs one test,
+// otherwise.
 static constexpr uint8_t STATE_LIST = 0x7f;      // AI list + 1; 0: not dormant
 static constexpr uint8_t STATE_IN_RECHECK = 0x80; // queued in s_recheck
 static constexpr ObjectID DENSE_LIMIT = 1u << 26; // 64 MB at most, in practice a few MB
@@ -308,8 +311,9 @@ static void WakeAll(CServerAIMaster* pMaster)
             if (nState & STATE_LIST)
                 take(oid, (nState & STATE_LIST) - 1);
     }
-    std::fill(s_state.begin(), s_state.end(), 0);
-    s_stateOverflow.clear();
+    // Nothing is dormant now: release the memory rather than keep an array sized for the highest ID seen.
+    std::vector<uint8_t>().swap(s_state);
+    std::unordered_map<ObjectID, uint8_t>().swap(s_stateOverflow);
     s_nDormant = 0;
     s_recheck.clear();
     s_recheckPos = 0;
@@ -451,8 +455,9 @@ static void Sweep(CServerAIMaster* pMaster)
 
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
     LOG_INFO("Sweep: %d made dormant; since last: %d woken by hooks, %d by re-check, %d destroyed; %zu dormant, "
-             "%d left in the AI lists; took %lld us",
-             nDropped, s_nHookWoken, s_nWoken, s_nGone, s_nDormant, nRemaining, (long long)us);
+             "%d left in the AI lists; state array %zu KB (+%zu overflow); took %lld us",
+             nDropped, s_nHookWoken, s_nWoken, s_nGone, s_nDormant, nRemaining, s_state.capacity() / 1024,
+             s_stateOverflow.size(), (long long)us);
     s_nWoken = s_nHookWoken = s_nGone = 0;
 }
 
