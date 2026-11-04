@@ -12,12 +12,17 @@
 //     ActionDoDoorAction use the latter two),
 //   - a script changes one of its event scripts (SetEventScript, CNWSVirtualMachineCommands::
 //     ExecuteCommandEventScriptManagement), so a heartbeat set at runtime starts at once,
-//   - and, re-checked a slice per tick, if it gained a heartbeat script, actions or a non-permanent effect some
-//     other way.
+//   - it joins a conversation (CNWSObject::SetDialogOwner): UpdateState calls UpdateDialog on every object it walks,
+//     and that is what plays a conversation's delayed entries,
+//   - NWNX_Effect edits one of its applied effects in place (the NWNX_EFFECT_APPLIED_EFFECT_EDITED message),
+//   - and, re-checked a slice per tick, if it gained a heartbeat script, actions, a non-permanent effect or a
+//     conversation some other way.
 // If the engine itself adds or removes a dormant object (CServerAIList::AddObject, CServerAIMaster::RemoveObject),
 // the plugin forgets it.
 //
-// Off unless NWNX_DORMANTOBJECTS_ENABLE=true. If any hook fails to install the plugin stays inactive (fail closed).
+// Off unless NWNX_DORMANTOBJECTS_ENABLE=true. If a hook the AI lists depend on fails to install the plugin stays
+// inactive (fail closed). The SetEventScript and SetDialogOwner hooks only wake objects sooner, so if one of those
+// fails the plugin logs a warning and the re-check does their job.
 // NWNX_DormantObjects_Disable() wakes every dormant object and stops; NWNX_DormantObjects_Enable() starts it again.
 
 #include "nwnx.hpp"
@@ -66,8 +71,13 @@ static constexpr int TRIGGER_SCRIPT_HEARTBEAT = 0;
 static_assert(offsetof(CNWSPlaceable, m_sScripts) + PLACEABLE_SCRIPT_HEARTBEAT * sizeof(CExoString) == 0x418);
 static_assert(offsetof(CNWSDoor, m_sScripts) + DOOR_SCRIPT_HEARTBEAT * sizeof(CExoString) == 0x350);
 // CNWSPlaceable::AIUpdate never takes its early return for a placeable with m_bDieWhenEmpty (+0x4fc; body bags):
-// the full update destroys it once its inventory is empty and nobody has it open.
+// the full update destroys it if it has an inventory (m_bHasInventory, +0x4f0), the inventory is empty and nobody
+// has it open. Without an inventory the full update has nothing more to do than the early return.
 static_assert(offsetof(CNWSPlaceable, m_bDieWhenEmpty) == 0x4fc);
+static_assert(offsetof(CNWSPlaceable, m_bHasInventory) == 0x4f0);
+// CNWSObject::UpdateDialog returns at once when m_oidDialogOwner (+0x74) is OBJECT_INVALID. Otherwise the object is
+// in a conversation (as its owner or a partner) and UpdateState's call to UpdateDialog plays delayed entries.
+static_assert(offsetof(CNWSObject, m_oidDialogOwner) == 0x74);
 #pragma GCC diagnostic pop
 
 // Per-object state, one byte per object ID: the low bits are the AI list the object was taken from plus one (0: not
@@ -111,6 +121,7 @@ static Hooks::Hook s_AddActionAfterFrontHook;
 static Hooks::Hook s_AddObjectHook;
 static Hooks::Hook s_RemoveObjectHook;
 static Hooks::Hook s_EventScriptHook;
+static Hooks::Hook s_SetDialogOwnerHook;
 
 static CServerAIMaster* AIMaster()
 {
@@ -189,6 +200,11 @@ static bool HasQueuedActions(CNWSObject* pObject)
     return pList && pList->m_nCount > 0;
 }
 
+static bool InDialog(CNWSObject* pObject)
+{
+    return pObject->m_oidDialogOwner != Constants::OBJECT_INVALID;
+}
+
 static bool IsDormant(CGameObject* pGameObject)
 {
     if (!pGameObject)
@@ -199,7 +215,8 @@ static bool IsDormant(CGameObject* pGameObject)
     // RunActions. Placeables have one more step: one with m_bDieWhenEmpty (a body bag) is destroyed by its own
     // AIUpdate once its inventory is empty and it isn't open, so those are never dormant. Inventory and trap flags
     // play no other part, so containers and trapped objects are as idle as any other. CNWSTrigger::AIUpdate only
-    // runs the heartbeat timer and RunActions.
+    // runs the heartbeat timer and RunActions. UpdateState also calls UpdateDialog on every object it walks, which
+    // plays the delayed entries of a conversation the object is in, so an object in a conversation is never dormant.
     // Each case has tested m_nObjectType, so it casts directly: the same as Utils::AsNWS*, without the call into
     // NWNXLib.
     switch (pGameObject->m_nObjectType)
@@ -210,9 +227,10 @@ static bool IsDormant(CGameObject* pGameObject)
                 return false;
             auto* pPlaceable = static_cast<CNWSPlaceable*>(pGameObject);
             return (s_containers || (!pPlaceable->m_bHasInventory && !pPlaceable->m_bTrapFlag)) &&
-                   !pPlaceable->m_bDieWhenEmpty &&
+                   !(pPlaceable->m_bHasInventory && pPlaceable->m_bDieWhenEmpty) &&
                    pPlaceable->m_sScripts[PLACEABLE_SCRIPT_HEARTBEAT].IsEmpty() &&
                    !HasQueuedActions(pPlaceable) &&
+                   !InDialog(pPlaceable) &&
                    !pPlaceable->GetDead() &&
                    EffectsNeverExpire(pPlaceable);
         }
@@ -221,7 +239,7 @@ static bool IsDormant(CGameObject* pGameObject)
             if (!s_items)
                 return false;
             auto* pItem = static_cast<CNWSItem*>(pGameObject);
-            return !HasQueuedActions(pItem) && EffectsNeverExpire(pItem);
+            return !HasQueuedActions(pItem) && !InDialog(pItem) && EffectsNeverExpire(pItem);
         }
         case ObjectType::Door:
         {
@@ -230,6 +248,7 @@ static bool IsDormant(CGameObject* pGameObject)
             auto* pDoor = static_cast<CNWSDoor*>(pGameObject);
             return pDoor->m_sScripts[DOOR_SCRIPT_HEARTBEAT].IsEmpty() &&
                    !HasQueuedActions(pDoor) &&
+                   !InDialog(pDoor) &&
                    !pDoor->GetDead() &&
                    EffectsNeverExpire(pDoor);
         }
@@ -239,7 +258,8 @@ static bool IsDormant(CGameObject* pGameObject)
                 return false;
             auto* pTrigger = static_cast<CNWSTrigger*>(pGameObject);
             return pTrigger->m_sScripts[TRIGGER_SCRIPT_HEARTBEAT].IsEmpty() &&
-                   !HasQueuedActions(pTrigger);
+                   !HasQueuedActions(pTrigger) &&
+                   !InDialog(pTrigger);
         }
         default:
             return false;
@@ -447,6 +467,17 @@ static inline void WakeFromHook(CServerAIMaster* pMaster, CNWSObject* pObject)
     }
 }
 
+// Wakes oid if it's dormant and no longer qualifies (it gained work). A destroyed object isn't dormant either; Wake
+// only re-adds what GetGameObject still finds, and the re-check forgets the rest.
+static void WakeIfBusy(ObjectID oid)
+{
+    if (oid == Constants::OBJECT_INVALID || DormantList(oid) < 0)
+        return;
+    auto* pGameObject = Utils::GetGameObject(oid);
+    if (pGameObject && !IsDormant(pGameObject) && Wake(AIMaster(), oid))
+        s_nHookWoken++;
+}
+
 // A hook that failed to install leaves its trampoline pointing at the original function.
 template <typename F>
 static bool Installed(const Hooks::Hook& hook, F original)
@@ -571,17 +602,43 @@ void DormantObjects()
                 }
             }
             auto nRet = s_EventScriptHook->CallOriginal<int32_t>(pThis, nCommandId, nParameters);
-            if (oid != Constants::OBJECT_INVALID && DormantList(oid) >= 0 && !IsDormant(Utils::GetGameObject(oid)))
-            {
-                // A destroyed object isn't dormant either; Wake only re-adds what GetGameObject still finds.
-                if (Utils::GetGameObject(oid) && Wake(AIMaster(), oid))
-                    s_nHookWoken++;
-            }
+            WakeIfBusy(oid);
             return nRet;
         }, Hooks::Order::Early);
 
-    // NWNX's hook ASSERTs only log, so check every hook ourselves and stay off if one is missing: a missing wake or
-    // forget hook would leave objects frozen or in two lists.
+    // Every write of a valid ID to m_oidDialogOwner goes through SetDialogOwner (8193.37-17: StartDialog and the
+    // CNWSDialog reply handling); StopDialog and the constructor only clear it. Wake the object as it joins.
+    s_SetDialogOwnerHook = Hooks::HookFunction(&CNWSObject::SetDialogOwner,
+        +[](CNWSObject* pThis, ObjectID oidDialogOwner) -> void
+        {
+            s_SetDialogOwnerHook->CallOriginal<void>(pThis, oidDialogOwner);
+            if (oidDialogOwner != Constants::OBJECT_INVALID)
+                WakeFromHook(nullptr, pThis);
+        }, Hooks::Order::Early);
+
+    // NWNX_Effect_ReplaceEffect and ReplaceEffectByIndex edit applied effects in place (a permanent effect can become
+    // temporary) and broadcast this. If the Effect plugin doesn't send it, nothing does, so subscribing is harmless.
+    MessageBus::Subscribe("NWNX_EFFECT_APPLIED_EFFECT_EDITED",
+        [](const std::vector<std::string>& message)
+        {
+            if (!message.empty() && s_nDormant)
+                WakeIfBusy((ObjectID)std::strtoul(message[0].c_str(), nullptr, 10));
+        });
+
+    // These two only wake objects sooner than the re-check would: warn and carry on without them.
+    struct { const char* name; bool ok; } optionalHooks[] = {
+        { "CNWSVirtualMachineCommands::ExecuteCommandEventScriptManagement",
+          Installed(s_EventScriptHook, &CNWSVirtualMachineCommands::ExecuteCommandEventScriptManagement) },
+        { "CNWSObject::SetDialogOwner",       Installed(s_SetDialogOwnerHook, &CNWSObject::SetDialogOwner) },
+    };
+    for (auto& h : optionalHooks)
+    {
+        if (!h.ok)
+            LOG_WARNING("Hook on %s did not install; the objects it would wake wait for the re-check", h.name);
+    }
+
+    // NWNX's hook ASSERTs only log, so check every other hook ourselves and stay off if one is missing: a missing
+    // wake or forget hook would leave objects frozen or in two lists.
     struct { const char* name; bool ok; } hooks[] = {
         { "CServerAIMaster::UpdateState",     Installed(s_UpdateStateHook, &CServerAIMaster::UpdateState) },
         { "CServerAIMaster::OnEffectApplied", Installed(s_OnEffectAppliedHook, &CServerAIMaster::OnEffectApplied) },
@@ -590,8 +647,6 @@ void DormantObjects()
         { "CNWSObject::AddActionAfterFront",  Installed(s_AddActionAfterFrontHook, &CNWSObject::AddActionAfterFront) },
         { "CServerAIList::AddObject",         Installed(s_AddObjectHook, &CServerAIList::AddObject) },
         { "CServerAIMaster::RemoveObject",    Installed(s_RemoveObjectHook, &CServerAIMaster::RemoveObject) },
-        { "CNWSVirtualMachineCommands::ExecuteCommandEventScriptManagement",
-          Installed(s_EventScriptHook, &CNWSVirtualMachineCommands::ExecuteCommandEventScriptManagement) },
     };
     bool bAllHooked = !Config::Get<bool>("DEBUG_SIMULATE_HOOK_FAILURE", false);
     for (auto& h : hooks)
@@ -680,8 +735,9 @@ NWNX_EXPORT ArgumentStack LogCensus(ArgumentStack&&)
                 if (!p->m_sScripts[PLACEABLE_SCRIPT_HEARTBEAT].IsEmpty()) why += "hb ";
                 if (p->m_bHasInventory) why += "inventory ";
                 if (p->m_bTrapFlag) why += "trap ";
-                if (p->m_bDieWhenEmpty) why += "die-when-empty ";
+                if (p->m_bDieWhenEmpty) why += p->m_bHasInventory ? "die-when-empty " : "(die-when-empty, no inventory) ";
                 if (HasQueuedActions(p)) why += "actions ";
+                if (InDialog(p)) why += "dialog ";
                 if (p->GetDead()) why += "dead ";
                 fx();
             }
@@ -690,6 +746,7 @@ NWNX_EXPORT ArgumentStack LogCensus(ArgumentStack&&)
                 auto* p = Utils::AsNWSDoor(pGameObject);
                 if (!p->m_sScripts[DOOR_SCRIPT_HEARTBEAT].IsEmpty()) why += "hb ";
                 if (HasQueuedActions(p)) why += "actions ";
+                if (InDialog(p)) why += "dialog ";
                 if (p->GetDead()) why += "dead ";
                 fx();
             }
@@ -698,10 +755,12 @@ NWNX_EXPORT ArgumentStack LogCensus(ArgumentStack&&)
                 auto* p = Utils::AsNWSTrigger(pGameObject);
                 if (!p->m_sScripts[TRIGGER_SCRIPT_HEARTBEAT].IsEmpty()) why += "hb ";
                 if (HasQueuedActions(p)) why += "actions ";
+                if (InDialog(p)) why += "dialog ";
             }
             else if (nType == ObjectType::Item)
             {
                 if (HasQueuedActions(pObject)) why += "actions ";
+                if (InDialog(pObject)) why += "dialog ";
                 fx();
             }
             else if (nType == ObjectType::Creature)
