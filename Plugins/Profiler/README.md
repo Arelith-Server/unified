@@ -34,9 +34,10 @@ Acquires shared hooks to expose various useful metrics.
 Both are off by default, so the PlotPath series and the log are unchanged unless they are turned on.
 
 - `NWNX_PROFILER_PATHING_MOVER_TAGS=true` adds two tags to the PlotPath timing:
-  - `Mover`: `pc-click` (a player character moving because the client clicked), `pc-script` (a player character moving
-    for any other reason, such as following or a scripted move), `dm` (a DM avatar), `copy` (no template resref, such as
-    CopyObject clones or creatures made from JSON), or `npc`.
+  - `Mover`: `pc-click` (a player character moving because the client clicked the ground), `pc-script` (a player
+    character moving for any other reason, such as clicking an object to talk, loot or attack, following, or a scripted
+    move), `dm` (a DM avatar), `no-resref` (no template resref, such as creatures made from JSON), or `npc` (this
+    includes possessed familiars and DM-possessed creatures).
   - `HasTarget`: `yes` when the path is to an object (following, chasing, moving to an object), `no` for a point.
 
   These add at most 10 series per ResRef and Area pair; the cost is a few field reads per call.
@@ -44,4 +45,6 @@ Both are off by default, so the PlotPath series and the log are unchanged unless
   `NWNX_PROFILER_PATHING_SLOW_LOG_MS`. The line has the creature (character name for player characters, tag otherwise),
   its object ID and Mover value, the area resref, the start and end points, the tag of the object it moves to, the
   duration and the engine's call counter for the current path. At most `NWNX_PROFILER_PATHING_SLOW_LOG_PER_MINUTE`
-  lines are written each minute; the rest are counted and reported as "suppressed" in the next minute.
+  lines are written each minute. The rest are counted, and the count is logged before the next line that is written.
+  Names and tags are cut to 64 characters, with control characters replaced by `?`. The points are as the engine stores
+  them, so on a reversed or multi-area search they can be swapped or an area-exit point.

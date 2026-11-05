@@ -40,13 +40,14 @@ static const char* GetMover(CNWSCreature* creature, CPathfindInformation* pfi)
     if (creature->m_bPlayerCharacter)
         return pfi->m_bClientMoving ? "pc-click" : "pc-script";
     if (!creature->m_sTemplate.m_sString || !creature->m_sTemplate.m_sString[0])
-        return "copy";
+        return "no-resref";
     return "npc";
 }
 
 static MetricData::Tags BuildTags(CPathfindInformation* pfi)
 {
     MetricData::Tags tags;
+    tags.reserve(4);
     if (!pfi)
         return tags;
 
@@ -81,10 +82,21 @@ static std::string ResRefString(CResRef& resRef)
     return std::string(s, strnlen(s, 16));
 }
 
+// Names and tags can be set by script: keep them on one short log line.
+static std::string LogSafe(const char* s)
+{
+    std::string out(s ? s : "", 0, 64);
+    for (auto& c : out)
+        if ((unsigned char)c < 0x20)
+            c = '?';
+    return out;
+}
+
 struct PathRequest
 {
     OBJECT_ID oidSelf;
     OBJECT_ID oidMovingTo;
+    const char* mover;
     float startX, startY, startZ;
     float endX, endY, endZ;
 };
@@ -100,7 +112,7 @@ static void LogSlowCall(const PathRequest& req, CPathfindInformation* pfi, std::
     if (now - s_windowStart >= std::chrono::minutes(1))
     {
         if (s_suppressed)
-            LOG_INFO("PlotPath slow-call log: suppressed %u lines in the last minute", s_suppressed);
+            LOG_INFO("PlotPath slow-call log: %u slow calls not logged (rate limit) since the previous line", s_suppressed);
         s_windowStart = now;
         s_logged = 0;
         s_suppressed = 0;
@@ -114,15 +126,14 @@ static void LogSlowCall(const PathRequest& req, CPathfindInformation* pfi, std::
     ++s_logged;
 
     CServerExoApp* server = AppManager()->m_pServerExoApp;
-    std::string who = "(unknown)", mover = "-", areaResRef = "(none)", target = "(none)";
+    std::string who = "(unknown)", areaResRef = "(none)", target = "(none)";
 
     if (auto* creature = server->GetCreatureByGameObjectID(req.oidSelf))
     {
-        mover = GetMover(creature, pfi);
         if (creature->m_bPlayerCharacter && creature->m_pStats)
-            who = creature->m_pStats->GetFullName().CStr();
+            who = LogSafe(creature->m_pStats->GetFullName().CStr());
         else
-            who = creature->m_sTag.CStr();
+            who = LogSafe(creature->m_sTag.CStr());
         if (auto* area = server->GetAreaByGameObjectID(creature->m_oidArea))
             areaResRef = ResRefString(area->m_cResRef);
     }
@@ -131,12 +142,12 @@ static void LogSlowCall(const PathRequest& req, CPathfindInformation* pfi, std::
     {
         auto* gameObject = server->GetGameObject(req.oidMovingTo);
         auto* object = gameObject ? gameObject->AsNWSObject() : nullptr;
-        target = object ? std::string(object->m_sTag.CStr()) : "(gone)";
+        target = object ? LogSafe(object->m_sTag.CStr()) : "(gone)";
     }
 
     LOG_INFO("Slow PlotPath: %.1f ms by '%s' (0x%x, %s) in %s from (%.1f, %.1f, %.1f) to (%.1f, %.1f, %.1f)"
              " target '%s' calls %d result %d",
-             elapsed.count() / 1e6, who.c_str(), req.oidSelf, mover.c_str(), areaResRef.c_str(),
+             elapsed.count() / 1e6, who.c_str(), req.oidSelf, req.mover, areaResRef.c_str(),
              req.startX, req.startY, req.startZ, req.endX, req.endY, req.endZ,
              target.c_str(), pfi->m_nCallsToPlotPath, ret);
 }
@@ -150,8 +161,10 @@ static int32_t PlotPathHook(CNWSModule* module, CPathfindInformation* pfi, uint3
         return s_PlotPathHook->CallOriginal<int32_t>(module, pfi, timeSlice);
     }
 
-    // PlotPath may reset the path fields, so copy the request first.
-    const PathRequest req = { pfi->m_oidSelf, pfi->m_oidMovingTo,
+    // PlotPath may reset the path fields, so copy the request first. The points are
+    // as stored: on a reversed or multi-area search slice they can be swapped or interim.
+    CNWSCreature* self = AppManager()->m_pServerExoApp->GetCreatureByGameObjectID(pfi->m_oidSelf);
+    const PathRequest req = { pfi->m_oidSelf, pfi->m_oidMovingTo, self ? GetMover(self, pfi) : "-",
                               pfi->m_fNewPointStartX, pfi->m_fNewPointStartY, pfi->m_fNewPointStartZ,
                               pfi->m_fNewPointEndX, pfi->m_fNewPointEndY, pfi->m_fNewPointEndZ };
 
